@@ -540,3 +540,37 @@ temperatura — linha de base 0,29, ETS 0,30, SARIMA 0,45, Prophet 0,17; sensaç
   mostrar o mesmo número.
 - **Posicionamento importa:** um aviso dentro de uma tabela com rolagem é cortado pela borda dela;
   posicionar em relação à janela resolve em qualquer lugar.
+
+---
+
+## Etapa 8 — Relatório final (2026-11-26)
+
+### Decisões do usuário antes da etapa
+- A seção **"Isto é IA?"** entra no relatório, só como explicação (mapa dos níveis).
+- O próximo ponto de evolução é o **Chronos**; ML e deep learning próprios **não** entram nos
+  próximos passos.
+- Ainda não há métrica real do cliente: o relatório usa um **exemplo genérico** (vendas diárias).
+- Ajuste no frontend: os seletores do topo estavam desalinhados (a descrição do modelo empurrava
+  o bloco "Modelo" para cima); alinhados pelo topo em `Seletores.tsx`.
+
+### O que foi feito
+- `docs/relatorio-final.md` escrito para o cliente, em 11 seções: resumo executivo, objetivo,
+  dados, gráficos, como cada modelo foi decidido e configurado (com todos os termos explicados no
+  próprio arquivo), comparação, modelo vencedor, caso de estudo, "Isto é IA?", limites e próximos
+  passos.
+- Números conferidos contra a API em execução (`/api/metricas`, `/api/previsao`): iguais aos do
+  diário (retrato de 26-11-2026).
+
+### Resultado
+- **Modelo recomendado: SARIMA** — 2º na temperatura (0,38 °C, −18% vs regra simples) e 1º na
+  sensação (0,29 °C, −15%), sempre melhor que a régua. O Prophet teve o melhor número isolado
+  (0,31 °C na temperatura), mas foi o pior na sensação (+13%).
+- Erro esperado na próxima semana: ~0,3 a 0,4 °C por dia.
+
+### O que aprendi
+- **Escrever para o cliente obriga a escolher:** o diário tem tudo; o relatório precisa de uma
+  recomendação clara e dos cuidados com ela (teste de 10 dias, fase de subida sazonal).
+- **Consistência x melhor número:** "vencedor" depende do critério. Para uma ferramenta que prevê
+  séries novas todo dia, ficar sempre acima da régua pesa mais que ganhar um teste isolado.
+- **Ser honesto sobre "IA"** evita expectativa errada: a POC é estatística clássica, e o caminho
+  para IA moderna (Chronos) já está desenhado e encaixa na interface comum.

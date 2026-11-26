@@ -8,7 +8,8 @@ Usamos 90 dias de **temperatura média** e **sensação térmica média** diári
 (fonte: [Open-Meteo](https://open-meteo.com/), gratuita e sem cadastro), comparamos 4 modelos
 (linha de base, ETS, SARIMA e Prophet) e prevemos os próximos 7 dias com faixa de incerteza.
 
-> Status: em construção — veja o andamento em [docs/diario.md](docs/diario.md).
+> Status: **POC concluída** (etapas 0 a 8). Resultados e recomendação no
+> [relatório final](docs/relatorio-final.md); andamento detalhado em [docs/diario.md](docs/diario.md).
 
 ## Estrutura
 

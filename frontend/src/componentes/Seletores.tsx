@@ -20,7 +20,9 @@ export function Seletores(props: {
   )
 
   return (
-    <div className="flex flex-wrap items-end gap-6">
+    // items-start: os rótulos e os controles ficam na mesma linha no topo; a descrição do
+    // modelo cresce para baixo sem empurrar os vizinhos (com items-end, ficavam desalinhados).
+    <div className="flex flex-wrap items-start gap-6">
       <fieldset>
         <legend className="mb-1 text-xs font-medium uppercase tracking-wide text-tinta-2">
           Variável

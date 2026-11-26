@@ -53,15 +53,12 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 - Monorepo: `/backend`, `/frontend`, `/docs`.
 
 ## Estado atual e como retomar (atualizado em 26-11-2026)
-- **Próximo passo: Etapa 8 — relatório final** (`docs/relatorio-final.md`). O esqueleto já tem a
-  estrutura e os itens "Já identificado"; falta escrever as seções com os resultados das etapas 2–5.
-- **Pendências a confirmar com o usuário na etapa 8:**
-  - Incluir no relatório as seções "Isto é IA?" (mapa: regras → estatística → ML → deep learning;
-    o projeto usa estatística clássica) e "Como evoluir para outras métricas" — propostas, sem
-    resposta explícita ainda.
-  - O cliente tem uma métrica real (vendas, demanda...) para citar como próximo caso de teste?
-- **Já decidido para o relatório:** seção autossuficiente sobre cada modelo (pedido do usuário);
-  melhorias futuras = textos por IA (opção b), Chronos, outras métricas, publicação online.
+- **Todas as etapas (0–8) concluídas.** Relatório final em `docs/relatorio-final.md`:
+  recomendação = **SARIMA** (mais consistente); seções "Isto é IA?" e próximos passos.
+- **Próximo ponto de evolução (decisão do usuário): Chronos** como 5º modelo, pela interface
+  comum (D27). NÃO propor roteiro de ML/DL próprio (LightGBM, redes treinadas do zero).
+  Outras melhorias registradas no relatório: textos por IA (Gemma/Gemini), outras métricas
+  (cliente ainda sem métrica real — exemplo genérico: vendas diárias), publicação online.
 - **Última decisão registrada: D46** — a próxima é D47 (`docs/decisoes.md`).
 - **Para retomar:** leia o fim de `docs/diario.md` (inclui as dúvidas discutidas). Para ver a tela:
   suba `backend` e `frontend` pelo `.claude/launch.json`. Os números da documentação são um retrato
@@ -79,7 +76,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 6. API Flask ✅
 7. Frontend ✅ (+ ajustes pedidos depois: atualização automática D44, tela robusta D45,
    linguagem simples D46)
-8. Relatório final ← **próxima**
+8. Relatório final ✅
 
 Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 
@@ -91,6 +88,8 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
    explicar opções, dizer qual foi escolhida e por quê — e registrar em `docs/decisoes.md`.
 4. Código simples e **comentado em português**, pensado para quem está aprendendo.
 5. **Commit no Git ao final de cada etapa**, com mensagem clara.
+6. **Nunca incluir `Co-Authored-By: Claude` (nem outra atribuição ao Claude) nos commits** — pedido
+   do usuário; o histórico foi reescrito em 26-11-2026 para remover essas linhas.
 
 ## Documentação (em português) — manter sempre atualizada
 - `README.md`: o que é, como instalar e rodar.
