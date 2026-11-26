@@ -244,3 +244,31 @@ conhece**; ele não sabe que o mundo pode mudar. Ex.: o SARIMA "só antes" teve 
 **Reversão à média** — modelos sem tendência (ex.: SARIMA com d = 0 e sem tendência) puxam a
 previsão de volta para a média do treino. Se o treino é de um regime antigo, puxam para o nível
 errado.
+
+## API e web
+
+**Endpoint (rota)** — um "endereço" da API que responde a um tipo de pedido. Ex.:
+`/api/previsao`.
+
+**Método HTTP** — o tipo de pedido. **GET** = consultar (não altera nada); POST/PUT/DELETE =
+criar, alterar, apagar. Nossa API só tem GET.
+
+**Parâmetros de URL (query string)** — o que vem depois do `?` no endereço, no formato
+`nome=valor`, separados por `&`. Ex.: `/api/previsao?variavel=sensacao&horizonte=7`.
+
+**Código de status HTTP** — número que resume o resultado: **200** = deu certo; **400** = pedido
+inválido (culpa de quem pediu); **404** = rota não existe; **405** = método não permitido;
+**500** = erro no servidor.
+
+**Cache** — guardar um resultado já calculado para devolvê-lo na hora da próxima vez, em vez de
+calcular de novo. Na API, treinar o SARIMA leva ~6 s na primeira vez e ~3 ms depois.
+
+**Application factory (`create_app`)** — padrão do Flask em que o app é criado dentro de uma
+função. Facilita os testes (cada teste cria um app novo) e o comando `flask --app app run`.
+
+**Cliente de teste do Flask** — simula requisições à API dentro do Python, sem subir servidor
+nem usar a rede. É o que os testes da API usam.
+
+**Origem (origin)** — a combinação protocolo + endereço + porta de um site. Ex.:
+`http://localhost:5173`. Duas portas diferentes = duas origens diferentes (por isso o frontend
+precisa de CORS para chamar a API na porta 5000).

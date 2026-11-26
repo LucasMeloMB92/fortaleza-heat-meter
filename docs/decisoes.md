@@ -369,3 +369,50 @@ durante o projeto e aprovadas.
   mensurável, repetir o desvio dela. Série curta demais (< 17 dias) → erro claro.
 - **Por quê:** simples e sem inventar dados; limitação documentada no código: nesses casos a faixa
   para de crescer e tende a ficar estreita demais.
+
+## D37 — Quando treinar os modelos na API: sob demanda, com cache em memória
+- **Decisão:** em que momento a API treina os modelos (substitui a ideia do plano inicial de
+  "treinar tudo ao iniciar o servidor").
+- **Opções consideradas:** (a) treinar tudo quando o servidor inicia; (b) treinar no primeiro
+  pedido e guardar na memória (`functools.lru_cache`); (c) script que pré-calcula arquivos JSON
+  e a API só os lê.
+- **Escolha:** (b).
+- **Por quê:** (a) faria cada início levar ~1–2 min (só o caso de estudo leva ~30 s), e o modo
+  `--debug` reinicia o servidor a cada edição de código. (c) é rápido mas cria arquivos que
+  ficam velhos e um passo a mais para lembrar. Com (b), o primeiro pedido de cada combinação
+  demora (o frontend mostra "carregando") e os seguintes levam milissegundos (medido: SARIMA
+  6,3 s → 3 ms; caso de estudo 29 s → 5 ms). Limitação: dois pedidos iguais simultâneos antes
+  do cache podem calcular duas vezes — aceitável numa POC.
+
+## D38 — Formato da API: rotas, parâmetros e respostas
+- **Decisão:** como expor os resultados.
+- **Opções consideradas:** uma rota única com tudo; uma rota por necessidade da tela; GET x POST;
+  nomes de variável iguais às colunas (`temperatura_media`) ou curtos.
+- **Escolha:** 7 rotas `GET` (saude, opcoes, serie, previsao, metricas, teste, caso-estudo);
+  parâmetros na URL com padrões (`variavel=temperatura`, `modelo=sarima`, `horizonte=7`);
+  identificadores curtos `temperatura`/`sensacao`; datas `AAAA-MM-DD`, números com 2 casas, `null`
+  no lugar de NaN; `/api/previsao` devolve histórico + previsão juntos.
+- **Por quê:** cada rota corresponde a um elemento da tela (o frontend faz pedidos pequenos e
+  independentes). GET porque nada é alterado — e respostas GET podem ser guardadas em cache pelo
+  navegador e pelo TanStack Query. `/api/opcoes` evita repetir a lista de modelos no frontend.
+  Horizonte limitado a 14 dias: com 90 dias de treino, além disso a previsão vira uma reta sem
+  sentido. Padrão `sarima` = o mais consistente na etapa 4.
+
+## D39 — CORS só para o frontend de desenvolvimento
+- **Decisão:** quais sites podem chamar a API pelo navegador.
+- **Opções consideradas:** qualquer origem (`*`); só o frontend; usar um proxy no Vite e
+  dispensar CORS.
+- **Escolha:** Flask-CORS liberando só `http://localhost:5173` e `http://127.0.0.1:5173`, nas
+  rotas `/api/*`. (O proxy do Vite também será configurado na etapa 7.)
+- **Por quê:** `*` deixaria qualquer página aberta no navegador consultar a API local. Liberar só
+  a origem do frontend é o mínimo necessário. Para outro endereço (ex.: produção), basta
+  acrescentá-lo em `ORIGENS_PERMITIDAS` no `app.py`.
+
+## D40 — Erros sempre em JSON, em português, sem vazar detalhes internos
+- **Decisão:** como a API responde quando algo dá errado.
+- **Opções consideradas:** páginas HTML padrão do Flask (em inglês); JSON padronizado.
+- **Escolha:** JSON com `erro` (mensagem em português) e `parametro`/`valores_aceitos` (400) ou
+  `status` (404, 405, 500). Erro 500 devolve mensagem genérica; o detalhe vai só para o terminal.
+- **Por quê:** o frontend consegue ler e mostrar a mensagem; a lista de valores aceitos ajuda
+  quem chama a API a corrigir o pedido. Esconder detalhes do erro 500 evita expor caminhos e
+  código do servidor.

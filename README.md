@@ -80,6 +80,15 @@ causa da busca do SARIMA):
 .venv\Scripts\python -m scripts.etapa5_caso_estudo
 ```
 
+**Subir a API** (em `http://127.0.0.1:5000/api`; documentação em [docs/api.md](docs/api.md)):
+
+```powershell
+.venv\Scripts\python -m flask --app app run --port 5000
+```
+
+A primeira chamada de cada previsão treina o modelo (alguns segundos; o caso de estudo, ~30 s);
+as seguintes são instantâneas.
+
 **Testes e qualidade do código:**
 
 ```powershell

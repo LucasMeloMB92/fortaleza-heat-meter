@@ -55,7 +55,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 3. Modelagem ✅
 4. Validação ✅
 5. Caso de estudo ✅
-6. API Flask
+6. API Flask ✅
 7. Frontend
 8. Relatório final
 
@@ -81,7 +81,14 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
   Deve ter uma seção explicando o que foi decidido e configurado em **cada modelo**, com todos os
   termos técnicos explicados **no próprio arquivo** (sem depender do glossário) — pedido do usuário.
 
+### API (etapa 6)
+- `backend/app.py` (rotas, erros, CORS) + `backend/previsao/servico.py` (respostas + cache).
+- 7 rotas GET em `/api`: saude, opcoes, serie, previsao, metricas, teste, caso-estudo. Parâmetros
+  `variavel` (temperatura|sensacao), `modelo`, `horizonte` (1–14). Detalhes em `docs/api.md`.
+- Cache em memória, calcula no 1º pedido (D37). CORS só `http://localhost:5173` (D39).
+
 ## Comandos úteis (a partir de `backend/`)
+- API: `.venv\Scripts\python -m flask --app app run --port 5000`
 - Scripts de etapa: `.venv\Scripts\python -m scripts.etapaN_nome` (ex.: `scripts.etapa1_coleta`)
 - Testes: `.venv\Scripts\python -m pytest`
 - Lint: `.venv\Scripts\python -m ruff check .` e `.venv\Scripts\python -m ruff format .`
