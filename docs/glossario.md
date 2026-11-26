@@ -21,6 +21,18 @@ ficar acima da temperatura real.
 Ex.: usar umidade e vento para prever a sensação. O problema: para prever o futuro, é preciso
 saber também o valor futuro da variável externa. (Não usamos neste projeto — decisão D19.)
 
+**Reanálise (ERA5)** — "histórico reconstruído" do clima: um modelo meteorológico é rodado de
+novo sobre o passado, corrigido por todas as observações disponíveis (estações, satélites,
+balões). É muito consistente, mas sai com alguns dias de atraso e tem grade grossa (~25 km).
+
+**Modelo meteorológico / resolução de grade** — o modelo divide o mapa em quadrados (células) e
+calcula um valor por célula. Quanto menor a célula (maior resolução), mais detalhes locais, como a
+diferença entre a cidade e o mar ao lado.
+
+**Viés** — erro sistemático, sempre para o mesmo lado. Ex.: a ERA5 pura fica, em média, 0,6 °C
+abaixo do `best_match` em Fortaleza. Diferente do erro aleatório, que ora é para cima, ora para
+baixo.
+
 **Tendência** — direção de longo prazo da série (subindo, descendo ou estável).
 
 **Sazonalidade** — padrão que se repete num período fixo. Ex.: mais calor de dia que à noite

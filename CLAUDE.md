@@ -14,9 +14,11 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 - **Variáveis (2 séries):** temperatura média diária (`temperature_2m_mean`) e sensação térmica
   média diária (`apparent_temperature_mean`) de Fortaleza-CE.
 - Local: lat -3.72, lon -38.54, fuso `America/Fortaleza`.
-- Fonte: API histórica do Open-Meteo (gratuita, sem cadastro). Dias recentes faltando por atraso
-  da base → completar com `past_days` da API de previsão (coluna `fonte` indica a origem).
-- Período: últimos 90 dias até hoje. Armazenamento: CSV em `backend/data/`.
+- Fonte: API histórica do Open-Meteo com `models=best_match` (gratuita, sem cadastro). Dias
+  recentes faltando → reserva com `past_days` da API de previsão (coluna `fonte` indica a origem).
+  NÃO usar `era5` puro: é ~0,6 °C mais frio e criaria salto artificial (D21).
+- Período: 90 dias terminando ONTEM (D20). CSV: `backend/data/fortaleza_diario.csv`.
+- Sensação é prevista sozinha (não é apoio da temperatura); sem umidade/vento (D02, D19).
 
 ### Modelagem
 - Horizonte: 7 dias. Validação: últimos 10 dias como teste.
@@ -34,7 +36,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 
 ## Etapas (ordem fixa)
 0. Preparação ✅
-1. Coleta de dados
+1. Coleta de dados ✅
 2. Exploração
 3. Modelagem
 4. Validação
@@ -64,5 +66,6 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 - `docs/relatorio-final.md`: resumo para o cliente (gráficos, modelo vencedor, erro em °C, limites).
 
 ## Comandos úteis (a partir de `backend/`)
+- Scripts de etapa: `.venv\Scripts\python -m scripts.etapaN_nome` (ex.: `scripts.etapa1_coleta`)
 - Testes: `.venv\Scripts\python -m pytest`
 - Lint: `.venv\Scripts\python -m ruff check .` e `.venv\Scripts\python -m ruff format .`
