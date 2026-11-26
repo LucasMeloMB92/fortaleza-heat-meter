@@ -107,16 +107,50 @@ independente**, cada uma só pelo seu próprio histórico.
   temperatura e 0,87 na sensação). É isso que torna a previsão possível.
 - **Não há padrão semanal:** o clima não sabe que dia da semana é. Os modelos foram configurados
   sem ciclo de 7 dias.
-- **2026 está mais quente que o normal:** comparando com o mesmo período de 2024 e 2025, 2026 está
-  +0,66 °C acima na temperatura e +1,58 °C na sensação, e subiu mais um degrau em meados de
-  outubro (base do caso de estudo, seção 8).
+- **2026 está mais quente que o normal:** detalhes logo abaixo.
 
 ![Séries de 90 dias](img/etapa2_series.png)
 
-![Contexto de 3 anos](img/etapa2_contexto.png)
+### Comparação com os anos anteriores
 
-*Os dados de 3 anos foram usados só para **entender** a série (estação x anomalia), nunca para
-treinar os modelos.*
+Para saber se a alta recente é "normal para a época" ou algo diferente, comparamos os nossos 90
+dias com **o mesmo período do calendário (28/08 a 25/11) em 2024 e 2025**. Os dados vão até
+25-11-2026 e começam em 26-11-2023, então há **2 anos anteriores completos** para comparar.
+
+- **Normal:** a média de 2024 e 2025 no mesmo dia do calendário (suavizada em 7 dias, porque a
+  média de só 2 anos ainda oscila muito).
+- **Anomalia:** quanto 2026 ficou acima (+) ou abaixo (−) do normal no mesmo dia.
+- **Subida no período:** a média dos últimos 15 dias menos a dos primeiros 15. Se todo ano sobe,
+  é a **estação do ano** (de agosto a novembro Fortaleza esquenta).
+
+| Mesmo período (28/08–25/11) | Temp. média | Subida no período | Sensação média | Subida no período |
+|---|---|---|---|---|
+| 2024 | 27,34 °C | +0,95 °C | 28,96 °C | +2,67 °C |
+| 2025 | 27,63 °C | +0,55 °C | 29,63 °C | +0,75 °C |
+| **2026** | **28,15 °C** | **+0,94 °C** | **30,87 °C** | **+1,58 °C** |
+
+| Anomalia de 2026 | Temperatura | Sensação |
+|---|---|---|
+| No período (média) | +0,66 °C | +1,58 °C |
+| Nos últimos 10 dias | +0,79 °C | +1,54 °C |
+| Degrau (mudança de patamar) | **15-10-2026**: +0,49 → +0,86 °C | **23-10-2026**: +1,35 → +1,96 °C |
+
+![Mesmo período em cada ano](img/etapa2_contexto.png)
+
+![Anomalia de 2026](img/etapa2_anomalia.png)
+
+**O que isso mostra:**
+1. **Parte da alta é estação:** todo ano a temperatura e a sensação sobem nesse período — em 2024
+   e 2025 também.
+2. **Parte é anomalia:** 2026 inteiro está acima do normal (+0,66 °C na temperatura, +1,58 °C na
+   sensação), e a partir de meados de outubro a diferença subiu mais um degrau.
+3. **O degrau é a base do caso de estudo (seção 8):** as datas 15-10 e 23-10 foram encontradas
+   automaticamente na anomalia, testando cada data de corte e escolhendo a que melhor divide a
+   série em dois trechos com médias diferentes (D26).
+
+*Os dados dos anos anteriores servem só para **entender** a série; os modelos continuam usando só
+os últimos 90 dias (D24). Na ferramenta web, esta comparação está na aba **"Anos anteriores"** do
+card **"Visão geral dos modelos"**, recalculada todo dia.*
 
 ---
 

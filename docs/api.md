@@ -341,3 +341,56 @@ antes x depois**.
 - `horizonte`: dias previstos a partir do fim do treino de cada cenário (o "só antes" prevê de
   mais longe). As `metricas` usam só os dias do período de `teste`.
 - **Erros:** 400 (`variavel` ou `modelo` inválidos).
+
+---
+
+## GET `/api/contexto`
+
+Os 90 dias de agora comparados com **o mesmo período do calendário nos anos anteriores** (D24,
+D26, D50). Separa o que é estação do ano do que é anomalia. Alimenta a aba **"Anos anteriores"**
+do card "Visão geral dos modelos". Os dados servem só para **entender** a série (os modelos não
+os usam).
+
+- **Parâmetros:** nenhum (vêm as duas variáveis).
+- **Requisição:** `GET /api/contexto`
+- **Cálculo leve, fora da fila dos modelos:** responde em menos de 1 s mesmo quando a fila está
+  ocupada (trava própria, `_calculo_leve`). Fica em cache até o dia virar (D44).
+- **Resposta 200** (listas encurtadas):
+
+```json
+{
+  "ano_atual": 2026,
+  "anos_anteriores": [2024, 2025],
+  "dias_subida": 15,
+  "dias_anomalia_recente": 10,
+  "variaveis": [
+    {
+      "id": "temperatura",
+      "nome": "Temperatura média",
+      "anos": [
+        { "ano": 2024, "inicio": "2024-08-28", "fim": "2024-11-25", "dias": 90, "media": 27.34, "subida": 0.95 },
+        { "ano": 2025, "inicio": "2025-08-28", "fim": "2025-11-25", "dias": 90, "media": 27.63, "subida": 0.55 },
+        { "ano": 2026, "inicio": "2026-08-28", "fim": "2026-11-25", "dias": 90, "media": 28.15, "subida": 0.94 }
+      ],
+      "anomalia_media": 0.66,
+      "anomalia_recente": 0.79,
+      "mudanca": { "data": "2026-10-15", "anomalia_antes": 0.49, "anomalia_depois": 0.86 },
+      "dias": [
+        { "data": "2026-08-28", "valores": { "2024": 27.3, "2025": 27.8, "2026": 27.8 }, "normal": 27.29, "anomalia": 0.51 }
+      ]
+    }
+  ]
+}
+```
+
+| Campo | Significado |
+|---|---|
+| `anos[].media` | média da variável no mesmo período do calendário naquele ano |
+| `anos[].subida` | média dos últimos `dias_subida` dias − média dos primeiros (se todo ano sobe = estação) |
+| `anomalia_media` | quanto o período atual ficou acima (+) ou abaixo (−) do normal, em média |
+| `anomalia_recente` | o mesmo, só nos últimos `dias_anomalia_recente` dias |
+| `mudanca` | data em que a anomalia mudou de patamar (a mesma do caso de estudo) e as médias antes/depois |
+| `dias[].valores` | valor de cada ano naquele dia do calendário (anos anteriores "transportados" para as datas atuais) |
+| `dias[].normal` | média dos anos anteriores no mesmo dia, suavizada em 7 dias |
+
+- **Erros:** nenhum específico (sem parâmetros); 500 se o arquivo de contexto estiver ausente.

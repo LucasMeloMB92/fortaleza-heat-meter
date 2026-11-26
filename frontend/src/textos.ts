@@ -8,6 +8,7 @@ import type {
   RespostaMetricas,
   RespostaPrevisao,
   RespostaTeste,
+  VariavelContexto,
 } from './api'
 import { formatarComSinal, formatarData, formatarDiaMes, formatarGraus, formatarNumero } from './formatacao'
 import { acertosSoAntes, type ImpactoMudanca, impactos, LIMITE_PIOROU } from './casoGeral'
@@ -52,6 +53,10 @@ export const AJUDA = {
   posicaoMedia:
     'Média das posições do modelo na temperatura e na sensação (1 = menor erro). Quanto menor, mais regular: o 1º geral é o que foi bem nas duas.',
   erroMedioGeral: 'Média simples do erro médio na temperatura e na sensação. Mostra quem erra menos no total.',
+  subidaPeriodo:
+    'Quanto a média subiu dentro do período: média dos últimos 15 dias − média dos primeiros 15. Se sobe todo ano, é a estação do ano.',
+  anomalia:
+    'Anomalia: quanto o valor de agora ficou acima (+) ou abaixo (−) do normal — a média dos anos anteriores no mesmo dia do calendário.',
   piorou:
     'Erro do modelo que só conhecia os dias antes da mudança ÷ erro do modelo que conhecia todos os dias. 2,0× = errou o dobro; abaixo de 1,3× = quase não sentiu.',
   faixaSoAntes:
@@ -258,6 +263,46 @@ export function textoCasoEstudoGeral(temperatura: RespostaCasoEstudo, sensacao: 
     'Lição: quando o comportamento muda, os modelos precisam dos dados recentes — por isso esta ferramenta atualiza os dados e refaz os modelos todo dia.',
   )
   return frases.join(' ')
+}
+
+/** Anomalia "perto do normal" abaixo de 0,3 °C (a variação típica da temperatura é ~0,5 °C). */
+const LIMITE_ANOMALIA = 0.3
+/** "Subiu no período" a partir de 0,2 °C (o mesmo limite do "estável" da tendência, D46). */
+const LIMITE_SUBIDA = 0.2
+
+/**
+ * Texto da aba "Anos anteriores" para UMA variável (D50). Regras:
+ * - nível: anomalia média ≥ 0,3 °C = acima do normal; ≤ −0,3 = abaixo; senão perto do normal;
+ * - estação: se TODOS os anos subiram ≥ 0,2 °C no período, a subida é da estação do ano;
+ * - degrau: a data em que a anomalia mudou de patamar (a mesma do caso de estudo).
+ */
+export function textoAnosAnteriores(v: VariavelContexto, anosAnteriores: number[]): string {
+  const atual = v.anos.at(-1)
+  if (!atual) return ''
+  const nome = v.nome.toLowerCase()
+  const anom = v.anomalia_media ?? 0
+  const normalDe = `a média de ${juntarNomes(anosAnteriores.map(String))} no mesmo dia`
+  const nivel =
+    anom >= LIMITE_ANOMALIA
+      ? `${erro(anom)} acima do normal (${normalDe})`
+      : anom <= -LIMITE_ANOMALIA
+        ? `${erro(Math.abs(anom))} abaixo do normal (${normalDe})`
+        : `perto do normal (${normalDe}; diferença de ${formatarComSinal(anom)})`
+  let texto = `Em ${atual.ano}, a ${nome} do período (média dos ${atual.dias} dias) foi ${graus(atual.media)} — ${nivel}.`
+
+  const subidas = v.anos.map((a) => `${a.ano}: ${formatarComSinal(a.subida)}`).join('; ')
+  const todosSobem = v.anos.every((a) => (a.subida ?? 0) >= LIMITE_SUBIDA)
+  texto += todosSobem
+    ? ` Todo ano ela sobe nesse período (${subidas}) — essa parte é a estação do ano.`
+    : ` A subida dentro do período variou entre os anos (${subidas}).`
+
+  if (anom >= LIMITE_ANOMALIA || anom <= -LIMITE_ANOMALIA) {
+    const m = v.mudanca
+    texto +=
+      ` O que muda em ${atual.ano} é o nível; e a partir de ${formatarData(m.data)} a diferença para o normal ` +
+      `mudou de patamar (de ${formatarComSinal(m.anomalia_antes)} para ${formatarComSinal(m.anomalia_depois)}).`
+  }
+  return texto
 }
 
 export function textoComparacao(resposta: RespostaMetricas): string {

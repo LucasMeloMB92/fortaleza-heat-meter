@@ -638,3 +638,29 @@ durante o projeto e aprovadas.
     cada vez.
 - **Por quê:** menos rolagem e um lugar só para "olhar tudo junto". Montar só a aba aberta evita
   que a tela dispare o cálculo pesado sem necessidade.
+
+## D50 — Aba "Anos anteriores" e rota `/api/contexto` _(usuário)_
+- **Decisão:** como mostrar na tela (e deixar mais clara no relatório) a comparação do período
+  atual com o mesmo período dos anos anteriores, que até então só existia nos scripts e no diário.
+- **Opções consideradas:** (a) imagens prontas da etapa 2 na tela; (b) rota nova que calcula na
+  hora com as funções da etapa 2; (c) calcular no frontend a partir de `/api/serie` (não serve: a
+  série da API só tem 90 dias).
+- **Escolha:** (b) — `GET /api/contexto`, sem parâmetros, as duas variáveis: média e subida no
+  período por ano, anomalia média e recente, o degrau (mesma detecção do caso de estudo, D26) e a
+  série diária com os anos sobrepostos e o "normal". Reaproveita `mesmo_periodo_por_ano`,
+  `climatologia`, `anomalia` e `detectar_mudanca`.
+  - **Trava própria (`_calculo_leve`):** no teste da tela, a aba esperava ~1 minuto na fila atrás
+    do caso de estudo, embora o cálculo leve menos de 1 s. Cálculos leves agora têm trava
+    própria e leem o CSV direto (sem `_tabela()`, que usa a fila). Resultado: 0,7 s com a fila
+    ocupada.
+  - Texto por regras (`textoAnosAnteriores`, D46): anomalia ≥ 0,3 °C = acima do normal; todos os
+    anos subindo ≥ 0,2 °C no período = "essa parte é a estação do ano"; com anomalia, cita o degrau.
+  - Gráfico (D25): anos anteriores em cinza, ano atual na cor da variável, "normal" tracejado,
+    linha vertical no degrau.
+  - Relatório: subseção "Comparação com os anos anteriores" na seção 3, com tabelas, o gráfico da
+    anomalia (antes só no diário) e a ligação com o caso de estudo.
+- **Por quê:** (a) congelaria os números de 26-11-2026, e a ferramenta atualiza os dados todo dia
+  (D44); (b) mantém tela e relatório com os mesmos cálculos da etapa 2.
+- **Limite:** são **2 anos anteriores**, não 3: o arquivo de contexto começa em 26-11-2023, antes
+  do período de 2023. Incluir 2023 exige baixar mais 3 meses (e mudaria um pouco o "normal" e as
+  datas do degrau).

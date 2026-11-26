@@ -3,12 +3,13 @@
 // Cada aba busca os próprios dados só quando é aberta (o caso de estudo é o cálculo mais pesado).
 import { useState } from 'react'
 import type { Modelo } from '../api'
-import { useCasoEstudoTodos, useMetricas } from '../consultas'
+import { useCasoEstudoTodos, useContexto, useMetricas } from '../consultas'
+import { AnosAnteriores } from './AnosAnteriores'
 import { Cartao, EstadoConsulta } from './Cartao'
 import { CasoEstudoGeral } from './CasoEstudoGeral'
 import { RankingGeral } from './RankingGeral'
 
-type Aba = 'ranking' | 'caso'
+type Aba = 'ranking' | 'caso' | 'anos'
 
 const ABAS: { id: Aba; rotulo: string; subtitulo: string }[] = [
   {
@@ -22,6 +23,12 @@ const ABAS: { id: Aba; rotulo: string; subtitulo: string }[] = [
     rotulo: 'Caso de estudo',
     subtitulo:
       'E se o modelo só conhecesse os dias antes da mudança de outubro? Todos os modelos, nas duas variáveis, avaliados no mesmo período de teste.',
+  },
+  {
+    id: 'anos',
+    rotulo: 'Anos anteriores',
+    subtitulo:
+      'O período de agora comparado com o mesmo período do calendário nos anos anteriores: o que é estação do ano e o que é anomalia.',
   },
 ]
 
@@ -79,6 +86,22 @@ function PainelCaso(props: { modelo: Modelo; aoSelecionar: (m: Modelo) => void }
   )
 }
 
+function PainelAnos() {
+  const contexto = useContexto()
+  return (
+    <EstadoConsulta
+      carregando={contexto.isPending}
+      erro={contexto.error}
+      aoTentarDeNovo={() => contexto.refetch()}
+      alturaEsqueleto="h-64"
+      mensagemCarregando="Comparando com os anos anteriores…"
+      dicaCarregando="Cálculo leve, separado da fila dos modelos: costuma levar menos de 1 segundo."
+    >
+      {contexto.data && <AnosAnteriores resposta={contexto.data} />}
+    </EstadoConsulta>
+  )
+}
+
 export function VisaoGeral(props: { modelo: Modelo; aoSelecionar: (m: Modelo) => void }) {
   const [aba, setAba] = useState<Aba>('ranking')
   const atual = ABAS.find((a) => a.id === aba) ?? ABAS[0]
@@ -108,6 +131,7 @@ export function VisaoGeral(props: { modelo: Modelo; aoSelecionar: (m: Modelo) =>
         {/* Só o painel aberto é montado: o caso de estudo só é calculado quando alguém abre a aba. */}
         {aba === 'ranking' && <PainelRanking modelo={props.modelo} aoSelecionar={props.aoSelecionar} />}
         {aba === 'caso' && <PainelCaso modelo={props.modelo} aoSelecionar={props.aoSelecionar} />}
+        {aba === 'anos' && <PainelAnos />}
       </div>
     </Cartao>
   )

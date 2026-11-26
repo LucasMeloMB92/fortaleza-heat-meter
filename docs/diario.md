@@ -696,3 +696,26 @@ faixa na maioria dos dias mesmo errando o nível — só porque a faixa era larg
 - **Juntar os modelos mostra dois jeitos de errar:** faixa estreita no lugar errado (SARIMA: 0 de
   10 dias, largura 1,77 °C) e faixa tão larga que "acerta" sem informar (ETS na sensação: 5,92 °C).
   Olhando um modelo por vez, isso não aparecia.
+
+## Visão geral — aba "Anos anteriores" (2026-11-26)
+
+### O que foi feito (D50)
+- `GET /api/contexto` (`servico.contexto`): mesmo período em 2024, 2025 e 2026, normal, anomalia
+  e degrau, com as funções da etapa 2. Teste novo na API (backend: 69 testes).
+- Aba "Anos anteriores": texto por regras (`textoAnosAnteriores`), gráfico com os anos
+  sobrepostos (`GraficoAnos.tsx`), tabela por ano e a diferença para o normal. Frontend: 42 testes.
+- Relatório, seção 3: subseção "Comparação com os anos anteriores" (tabelas + gráfico da anomalia).
+
+### Resultado (tela)
+"Em 2026, a temperatura média do período (média dos 90 dias) foi 28,2 °C — 0,66 °C acima do normal
+(a média de 2024 e 2025 no mesmo dia). Todo ano ela sobe nesse período (2024: +0,95 °C; 2025:
++0,55 °C; 2026: +0,94 °C) — essa parte é a estação do ano. O que muda em 2026 é o nível; e a
+partir de 15-10-2026 a diferença para o normal mudou de patamar (de +0,49 °C para +0,86 °C)."
+Os números batem com os da etapa 2.
+
+### O que aprendi
+- **Fila única tem custo para o que é leve:** a aba (< 1 s de cálculo) esperava ~1 minuto atrás do
+  caso de estudo. A fila (D37) existe para cálculos pesados; o leve ganhou trava própria e passou
+  a responder em 0,7 s com a fila ocupada.
+- **Só 2 anos anteriores:** o contexto de "3 anos" termina ontem, então só cobre 2 períodos
+  completos antes de 2026 — o relatório agora diz isso explicitamente.

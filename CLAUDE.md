@@ -66,15 +66,16 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
   Melhorias ainda registradas no relatório: textos por IA (Gemma/Gemini), outras métricas
   (cliente ainda sem métrica real — exemplo genérico: vendas diárias), publicação online,
   repetir a comparação em várias semanas.
-- **Em andamento: card "Visão geral dos modelos" com abas (D49)** — todos os modelos, as duas
-  variáveis, sem depender dos seletores; só a aba aberta busca dados. Abas: Ranking ✅ (D48,
-  `ranking.ts`), Caso de estudo ✅ (`casoGeral.ts`), **Anos anteriores — falta** (rota nova
-  `/api/contexto` + subseção na seção 3 do relatório). Uma aba por vez.
-- **Última decisão registrada: D49** — a próxima é D50 (`docs/decisoes.md`).
+- **Card "Visão geral dos modelos" com abas (D49) ✅** — no topo da tela, todos os modelos e as duas
+  variáveis, sem depender dos seletores; só a aba aberta busca dados. Abas: Ranking (D48,
+  `ranking.ts`), Caso de estudo (`casoGeral.ts`), Anos anteriores (D50, `/api/contexto`;
+  relatório seção 3 "Comparação com os anos anteriores"). Compara com 2 anos anteriores (2024,
+  2025): o CSV de contexto começa em 26-11-2023.
+- **Última decisão registrada: D50** — a próxima é D51 (`docs/decisoes.md`).
 - **Para retomar:** leia o fim de `docs/diario.md` (inclui as dúvidas discutidas). Para ver a tela:
   suba `backend` e `frontend` pelo `.claude/launch.json`. Os números da documentação são um retrato
   de 26-11-2026; a ferramenta atualiza os dados sozinha todo dia (D44).
-- **Qualidade atual:** backend 68 testes (pytest) + ruff limpo; frontend 40 testes (Vitest) +
+- **Qualidade atual:** backend 69 testes (pytest) + ruff limpo; frontend 42 testes (Vitest) +
   tsc + oxlint + build limpos.
 
 ## Etapas (ordem fixa)
@@ -117,7 +118,8 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 
 ### API (etapa 6)
 - `backend/app.py` (rotas, erros, CORS) + `backend/previsao/servico.py` (respostas + cache).
-- 7 rotas GET em `/api`: saude, opcoes, serie, previsao, metricas, teste, caso-estudo. Parâmetros
+- 8 rotas GET em `/api`: saude, opcoes, serie, previsao, metricas, teste, caso-estudo, contexto (D50,
+  sem parâmetros; cálculo leve com trava própria `_calculo_leve`, fora da fila dos modelos). Parâmetros
   `variavel` (temperatura|sensacao), `modelo`, `horizonte` (1–14). Detalhes em `docs/api.md`.
 - Cache em memória, calcula no 1º pedido, em fila única com RLock (D37 + atualização). CORS só
   `http://localhost:5173` (D39).

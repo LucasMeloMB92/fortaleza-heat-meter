@@ -53,3 +53,6 @@ export const useCasoEstudoTodos = (variavel: Variavel) =>
     queryKey: ['caso-estudo', variavel, 'todos'],
     queryFn: () => api.casoEstudo(variavel),
   })
+
+// Comparação com anos anteriores (aba da visão geral, D50). Cálculo leve, sem parâmetros.
+export const useContexto = () => useQuery({ queryKey: ['contexto'], queryFn: api.contexto })
