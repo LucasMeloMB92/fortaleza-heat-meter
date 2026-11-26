@@ -14,3 +14,5 @@ select = ["E", "F", "I", "B", "UP"]
 testpaths = ["tests"]
 # Permite "import previsao" nos testes sem instalar o pacote.
 pythonpath = ["."]
+# Aviso interno do Prophet sobre um recurso do pandas que será removido — não é do nosso código.
+filterwarnings = ["ignore:The inplace keyword in DataFrame.drop"]
