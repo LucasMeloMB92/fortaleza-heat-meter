@@ -42,13 +42,29 @@ O ambiente virtual (`.venv`) isola as bibliotecas deste projeto das do resto do 
 
 ## Rodando o backend
 
+Todos os comandos abaixo são executados a partir da pasta `backend/`:
+
 ```powershell
 cd backend
-.venv\Scripts\python -m pytest            # testes
-.venv\Scripts\python -m ruff check .      # verificação de qualidade do código
 ```
 
-_Comandos para coletar dados, rodar os modelos e subir a API serão adicionados nas próximas etapas._
+**Coletar os dados** (90 dias até ontem, do Open-Meteo → `data/fortaleza_diario.csv`):
+
+```powershell
+.venv\Scripts\python -m scripts.etapa1_coleta
+```
+
+**Testes e qualidade do código:**
+
+```powershell
+.venv\Scripts\python -m pytest
+```
+
+```powershell
+.venv\Scripts\python -m ruff check .
+```
+
+_Comandos para rodar os modelos e subir a API serão adicionados nas próximas etapas._
 
 ## Frontend
 

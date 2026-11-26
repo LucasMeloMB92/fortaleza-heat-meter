@@ -14,6 +14,8 @@ durante o projeto e aprovadas.
   tem alguns dias de atraso), completar com o parâmetro `past_days` da API de previsão.
 - **Por quê:** gratuita, sem cadastro nem chave de API, devolve JSON pronto por dia e por fuso
   horário. A complementação com `past_days` garante a série "até hoje".
+- **Atualização (etapa 1):** na prática, a API histórica com `models=best_match` já vem completa
+  até ontem; o `past_days` ficou como reserva. Ver D21.
 
 ## D02 — Variáveis monitoradas _(usuário)_
 - **Decisão:** quais séries prever.
@@ -120,7 +122,9 @@ durante o projeto e aprovadas.
 ## D14 — Armazenamento: CSV
 - **Decisão:** onde guardar os dados coletados.
 - **Opções consideradas:** CSV; SQLite.
-- **Escolha:** CSV em `backend/data/`.
+- **Escolha:** CSV em `backend/data/fortaleza_diario.csv` (colunas `data`, `temperatura_media`,
+  `sensacao_media`, `fonte`). O nome mudou de `temperatura_fortaleza.csv` porque o arquivo guarda
+  as duas variáveis.
 - **Por quê:** são ~90 linhas — um CSV abre no Excel, é lido direto pelo pandas e o Git mostra
   as mudanças linha a linha. SQLite só compensaria com consultas complexas ou muitos dados.
 
@@ -170,3 +174,36 @@ durante o projeto e aprovadas.
   variáveis externas (comparação desigual), e com só 90 dias cada variável a mais aumenta o risco
   de overfitting. A limitação fica registrada no relatório final, e o uso de variáveis externas
   entra como próximo passo para produção.
+
+## D20 — Último dia da série: ontem, não hoje
+- **Decisão:** qual é o último dia dos "90 dias até hoje".
+- **Opções consideradas:** incluir hoje; terminar ontem.
+- **Escolha:** os 90 dias que terminam **ontem** (o último dia completo).
+- **Por quê:** durante o dia, a "média de hoje" mistura horas já observadas com horas ainda
+  previstas — seria um dado incompleto se passando por real. Hoje passa a ser o **primeiro dia
+  previsto**, e não o último observado.
+
+## D21 — Modelo da API histórica: `best_match` (e `past_days` só como reserva)
+- **Decisão:** qual modelo meteorológico pedir à API histórica e como tratar os dias recentes.
+- **Opções consideradas:** (a) `era5` puro (reanálise, ~6 dias de atraso) + `past_days` da API
+  de previsão para os dias faltantes — o plano original; (b) `best_match` (o Open-Meteo escolhe o
+  melhor modelo para o local), com `past_days` só como reserva.
+- **Escolha:** (b).
+- **Por quê:** medimos as duas opções (25/11/2026):
+  - `best_match` veio completo até ontem e é **idêntico** à API de previsão nos 30 dias em comum
+    (diferença 0,0 °C) — ou seja, é a mesma fonte, sem emenda.
+  - `era5` puro termina 6 dias antes e é **sistematicamente mais frio**: −0,6 °C na temperatura e
+    −0,9 °C na sensação (correlação 0,86 e 0,96 com o `best_match`). Hipótese: a célula da ERA5
+    (~25 km) inclui parte do oceano.
+  - Com (a), os últimos 6 dias viriam de outra fonte, ~0,6–0,9 °C mais quente: um **salto
+    artificial** justamente no período do caso de estudo, que o modelo confundiria com mudança real.
+  - O `past_days=30` continua no código: se a API histórica atrasar, ele preenche os buracos, e a
+    comparação da sobreposição mostra se as fontes divergem.
+
+## D22 — Testes da coleta sem internet
+- **Decisão:** como testar o código que chama a API.
+- **Opções consideradas:** testar chamando a API de verdade; usar respostas falsas montadas à mão.
+- **Escolha:** respostas falsas no formato do Open-Meteo; a chamada real fica no script da etapa.
+- **Por quê:** testes que dependem da internet falham por motivos alheios ao código (rede fora,
+  API lenta) e mudam de resultado com o tempo. Com dados falsos, testamos exatamente os casos
+  difíceis (null, buraco, duplicata, prioridade entre fontes) sempre do mesmo jeito.
