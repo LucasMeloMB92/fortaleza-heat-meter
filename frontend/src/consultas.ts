@@ -4,7 +4,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { api, type Modelo, type Variavel } from './api'
 
-export const useSaude = () => useQuery({ queryKey: ['saude'], queryFn: api.saude })
+// /api/saude é consultada de tempos em tempos (e ao voltar para a aba): é ela que revela que
+// o dia virou e os dados foram atualizados no servidor (D44). Ver App.tsx.
+export const useSaude = () =>
+  useQuery({
+    queryKey: ['saude'],
+    queryFn: api.saude,
+    staleTime: 5 * 60_000, // 5 min
+    refetchInterval: 15 * 60_000, // 15 min
+    refetchOnWindowFocus: true,
+  })
 
 export const useOpcoes = () => useQuery({ queryKey: ['opcoes'], queryFn: api.opcoes })
 

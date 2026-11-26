@@ -4,10 +4,12 @@ Para os testes serem rápidos, trocamos a lista de modelos por só os dois mais 
 (linha de base e ETS). A lógica da API é a mesma; os modelos já têm testes próprios.
 """
 
+from datetime import timedelta
+
 import pytest
 
 from app import create_app
-from previsao import modelos, servico
+from previsao import coleta, modelos, servico
 
 
 @pytest.fixture
@@ -15,6 +17,10 @@ def cliente(monkeypatch):
     rapidos = {nome: modelos.MODELOS[nome] for nome in ("linha_base", "ets")}
     monkeypatch.setattr(modelos, "MODELOS", rapidos)
     monkeypatch.setattr(servico, "MODELO_PADRAO", "ets")
+    # "Hoje" = dia seguinte ao último dado: assim a atualização automática (D44) nunca dispara
+    # nos testes — eles não dependem da internet nem sobrescrevem o CSV real.
+    ultimo_dia = coleta.carregar_csv()["data"].max().date()
+    monkeypatch.setattr(servico, "hoje_em_fortaleza", lambda: ultimo_dia + timedelta(days=1))
     servico.limpar_cache()  # cada teste começa sem resultados guardados
     yield create_app().test_client()
     servico.limpar_cache()

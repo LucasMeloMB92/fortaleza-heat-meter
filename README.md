@@ -91,6 +91,10 @@ causa da busca do SARIMA):
 A primeira chamada de cada previsão treina o modelo (alguns segundos; o caso de estudo, ~30 s);
 as seguintes são instantâneas.
 
+**Atualização automática:** os dados vão sempre até **ontem**. No primeiro acesso de cada dia a
+API baixa os dias novos do Open-Meteo sozinha (não é preciso rodar a coleta). Sem internet, ela
+continua com os dados que tem e a tela mostra um aviso.
+
 **Testes e qualidade do código:**
 
 ```powershell
@@ -120,8 +124,9 @@ npm run dev
 ```
 
 Abra `http://localhost:5173`. O Vite repassa os pedidos `/api/...` para o Flask. No primeiro
-acesso os modelos são treinados: o gráfico principal aparece em ~10 s e o caso de estudo em
-~1 min e meio; depois, tudo fica instantâneo até o servidor reiniciar.
+acesso do dia os modelos são treinados: cada seção mostra um bloco "carregando" com contador de
+segundos — o gráfico principal aparece em ~10 s e o caso de estudo em ~1 min e meio; depois,
+tudo fica instantâneo. Se o backend estiver desligado, a tela avisa e oferece "Tentar de novo".
 
 **Testes e qualidade** (na pasta `frontend/`):
 

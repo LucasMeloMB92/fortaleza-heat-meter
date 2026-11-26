@@ -18,6 +18,10 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
   recentes faltando → reserva com `past_days` da API de previsão (coluna `fonte` indica a origem).
   NÃO usar `era5` puro: é ~0,6 °C mais frio e criaria salto artificial (D21).
 - Período: 90 dias terminando ONTEM (D20). CSV: `backend/data/fortaleza_diario.csv`.
+- **Atualização automática (D44):** a API recoleta sozinha quando os dados não vão até ontem
+  (fuso America/Fortaleza), grava de forma atômica e limpa o cache; falha → mantém dados e avisa
+  em `/api/saude`. Testes NUNCA podem tocar nos CSVs reais nem depender do dia (congelar
+  `servico.hoje_em_fortaleza`).
 - Sensação é prevista sozinha (não é apoio da temperatura); sem umidade/vento (D02, D19).
 - Contexto de 3 anos (`backend/data/fortaleza_contexto_3anos.csv`) só para entender, nunca para
   treinar (D24). Achados da etapa 2: não estacionária em torno de nível fixo (mas a sensação é
@@ -93,6 +97,8 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 - **Datas exibidas SEMPRE em DD-MM-AAAA** via `formatarData` (`src/formatacao.ts`) — pedido do
   usuário (D41). API continua em AAAA-MM-DD. Números com vírgula (`29,10 °C`). Não usar `new Date()`
   para formatar (bug de fuso).
+- Nunca tela branca (D45): limites de erro (seção, faixa, página), esqueletos com contador,
+  `lazy` + `Suspense` nos gráficos, faixa de aviso no topo (`AvisoTopo`), "Tentar de novo".
 - Proxy do Vite `/api` → Flask :5000 (D42). Eixos/cores/formatação centralizados
   (`componentes/eixos.ts`, `cores.ts`, `formatacao.ts`).
 - Comandos (em `frontend/`): `npm install`, `npm run dev`, `npm test`, `npm run lint`,

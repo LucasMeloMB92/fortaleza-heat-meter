@@ -20,6 +20,10 @@
      térmica; temperatura e sensação são previstas de forma independente (D19).
    - Já identificado: com 90 dias, o modelo não conhece o ciclo anual (~2 °C em Fortaleza); a
      tendência de alta de nov/2026 é parte estação, que se estabiliza em dezembro (D23, D24).
+   - Já identificado: os números do relatório são um retrato de 26-11-2026; a ferramenta atualiza
+     os dados todo dia (D44), então a tela mostra números atuais. O caso de estudo muda com o
+     tempo: quando a mudança de outubro sair da janela de 90 dias, o detector ainda aponta
+     alguma data, mesmo sem mudança forte.
    - Já identificado: a faixa de 95% não protege contra quebras — um modelo desatualizado fica
      confiante no regime errado (cobertura de 0–10% no caso de estudo, D35).
 9. **Próximos passos** — o que seria necessário para levar a produção.

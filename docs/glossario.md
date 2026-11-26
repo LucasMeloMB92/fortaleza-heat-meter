@@ -299,3 +299,22 @@ não acelera — só deixa todos lentos. Na API, usamos uma fila (D37).
 
 **Trava (lock) / fila** — mecanismo que faz tarefas esperarem a vez. **Reentrante (RLock)** = a
 mesma tarefa pode "entrar de novo" sem travar a si mesma.
+
+## Robustez
+
+**Gravação atômica** — escrever o arquivo novo com outro nome (temporário) e só no fim trocar
+pelo definitivo. Ou o arquivo fica todo novo, ou todo antigo — nunca pela metade.
+
+**Fuso horário (`zoneinfo`)** — "hoje" depende de onde você está. A API calcula "ontem" no fuso
+`America/Fortaleza`, e não no do computador que roda o servidor. No Windows, o banco de fusos vem
+do pacote `tzdata`.
+
+**Error boundary (limite de erro)** — componente React que "segura" um erro de desenho dentro
+dele e mostra um aviso no lugar, em vez de deixar a página inteira em branco.
+
+**Skeleton (esqueleto)** — bloco cinza pulsando no formato do conteúdo que ainda vai aparecer.
+Mostra que algo está carregando e onde vai aparecer.
+
+**Suspense / `React.lazy` / code splitting** — `lazy` faz um componente ser baixado só quando
+for usado (o código é dividido em pedaços: *code splitting*); `Suspense` mostra algo no lugar
+(o esqueleto) enquanto esse pedaço chega.

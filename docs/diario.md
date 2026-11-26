@@ -469,3 +469,39 @@ temperatura — linha de base 0,29, ETS 0,30, SARIMA 0,45, Prophet 0,17; sensaç
   bug clássico de fuso horário.
 - **Uma regra visual, um lugar:** eixos, cores e formatação ficam em arquivos únicos
   (`eixos.ts`, `cores.ts`, `formatacao.ts`); corrigir o "°C" foi uma mudança só.
+
+---
+
+## Ajustes antes da etapa 8 — atualização automática e tela robusta (2026-11-26)
+
+### Pedidos do usuário
+1. Os dados devem ir sempre até o **dia anterior ao acesso**, não ficar parados em 25-11-2026.
+2. A tela **nunca** pode quebrar ou ficar branca: carregamentos, suspenses e avisos visuais.
+
+### O que foi feito
+- **Backend (D44):** `garantir_dados_atualizados()` antes de cada pedido; "ontem" no fuso de
+  Fortaleza; baixa 90 dias + contexto, grava (de forma atômica) e limpa o cache; se o Open-Meteo
+  falhar, mantém os dados e avisa em `/api/saude`, tentando de novo após 10 min.
+- **Frontend (D45):** limites de erro (seção, faixa, página), esqueletos com contador de segundos,
+  `lazy` + `Suspense` nos gráficos, faixa de aviso no topo com "Tentar de novo", mensagens claras
+  para backend desligado e recarga automática quando o dia vira.
+- **Testes:** 5 novos testes da atualização (sem internet, sem tocar nos CSVs reais) — backend com
+  62 testes; os testes da API agora "congelam o hoje".
+
+### Resultados (verificados no navegador)
+- **Atualização real:** último dia removido do CSV → ao reiniciar, a API baixou do Open-Meteo e o
+  CSV voltou idêntico (`atualizado_em: 2026-11-26T11:56:19`).
+- **Backend desligado:** faixa vermelha "Sem conexão com a API" + aviso em cada seção, nenhuma
+  tela branca; ligando o backend, **um clique** em "Tentar de novo" recuperou tudo.
+- **Carregamento:** esqueleto "Treinando o modelo SARIMA… 4 s" no lugar de cada gráfico.
+- **Pacote JavaScript:** principal de 716 kB → 270 kB (gráficos baixados sob demanda).
+
+### O que aprendi
+- **Dado "vivo" pede cuidados que dado fixo não pede:** fuso horário, falha da fonte externa,
+  arquivo gravado pela metade, testes que não podem depender do dia em que rodam.
+- **Os testes antigos tinham uma bomba-relógio:** a partir de amanhã, a atualização automática faria
+  os testes da API baixarem dados reais e sobrescreverem o CSV. Congelar o "hoje" no teste resolveu.
+- **Limite de erro em camadas:** testando de verdade, uma resposta antiga da API quebrou a faixa de
+  aviso. O limite geral evitou a tela branca, mas levou a página junto; um limite só para a faixa
+  isola o problema. Quanto mais perto do componente, menor o estrago.
+- **`Suspense` resolveu dois problemas de uma vez:** carregamento visível e pacote menor.
