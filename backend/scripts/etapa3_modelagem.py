@@ -1,4 +1,4 @@
-"""Etapa 3 — Modelagem: treina os 4 modelos nos 90 dias e prevê os próximos 7.
+"""Etapa 3 — Modelagem: treina os 5 modelos nos 90 dias e prevê os próximos 7.
 
 Como rodar (a partir da pasta backend/):
     .venv\\Scripts\\python -m scripts.etapa3_modelagem

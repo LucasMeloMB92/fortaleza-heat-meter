@@ -115,6 +115,9 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 - `docs/relatorio-final.md`: resumo para o cliente (gráficos, modelo vencedor, erro em °C, limites).
   Deve ter uma seção explicando o que foi decidido e configurado em **cada modelo**, com todos os
   termos técnicos explicados **no próprio arquivo** (sem depender do glossário) — pedido do usuário.
+- `docs/relatorio-tecnico.md`: guia passo a passo para reproduzir a POC ou aplicar o método em outra
+  série (objetivo → o que fazer → código-chave → como conferir → como adaptar; checklist final).
+  Atualizar quando mudar função, comando ou decisão citada.
 
 ### API (etapa 6)
 - `backend/app.py` (rotas, erros, CORS) + `backend/previsao/servico.py` (respostas + cache).

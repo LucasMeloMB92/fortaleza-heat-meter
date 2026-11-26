@@ -719,3 +719,17 @@ Os números batem com os da etapa 2.
   a responder em 0,7 s com a fila ocupada.
 - **Só 2 anos anteriores:** o contexto de "3 anos" termina ontem, então só cobre 2 períodos
   completos antes de 2026 — o relatório agora diz isso explicitamente.
+
+## Relatório técnico (2026-11-26)
+
+### O que foi feito
+- `docs/relatorio-tecnico.md`: guia para **reproduzir** a POC ou aplicar o método em outra série.
+  Passos 0–9 (preparação → coleta → exploração → modelos → validação → caso de estudo → API →
+  atualização automática → tela → documentação), cada um com objetivo, o que fazer (funções e
+  comandos reais), código-chave, como conferir e como adaptar; checklist final de 11 itens.
+  Antes dos passos, a seção "Tecnologias usadas e por quê": APIs do Open-Meteo, bibliotecas do
+  backend, os 5 modelos explicados em palavras simples, frontend e a API própria, com o que foi
+  descartado.
+  Depois, "Os arquivos Python": cada módulo de `previsao/`, o `app.py`, os scripts de etapa e os
+  testes, com o que cada função recebe e devolve.
+- Ligado no README e no CLAUDE.md. Nenhuma decisão nova (a próxima continua sendo D51).
