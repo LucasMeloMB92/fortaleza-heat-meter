@@ -387,3 +387,45 @@ temperatura — linha de base 0,29, ETS 0,30, SARIMA 0,45, Prophet 0,17; sensaç
 - **Conclusão prática:** o remédio para quebras é **retreinar com frequência** (ex.: todo dia),
   não escolher o modelo "perfeito". Linha de base, ETS e SARIMA usam os dias recentes e se ajustam
   rápido quando retreinados.
+
+---
+
+## Etapa 6 — API Flask (2026-11-26)
+
+### O que foi feito
+- `backend/previsao/servico.py`: uma função por endpoint (monta o JSON), validação dos
+  parâmetros e cache em memória dos cálculos pesados (D37).
+- `backend/app.py`: 7 rotas GET, erros em JSON e em português (D40), CORS só para o frontend
+  (D39). Padrão *application factory* (`create_app`).
+- `backend/tests/test_api.py`: 19 testes com o cliente de teste do Flask (rotas, parâmetros,
+  erros 400/404/405, ausência de NaN, CORS). Nos testes, só os 2 modelos rápidos são usados.
+- `docs/api.md`: documentação completa de cada endpoint, com exemplos reais.
+
+### Resultados
+- Servidor real testado com `curl`: todas as rotas responderam 200; parâmetros inválidos → 400
+  com a lista de valores aceitos; rota inexistente → 404; CORS liberado para
+  `http://localhost:5173`.
+
+| Pedido | 1ª chamada | Seguintes (cache) |
+|---|---|---|
+| `/api/previsao` (SARIMA) | 6,3 s | 3 ms |
+| `/api/metricas` | 11,0 s | 24 ms |
+| `/api/teste` (após `/metricas`) | 3 ms | 3 ms |
+| `/api/caso-estudo` | 29,1 s | 5 ms |
+
+- `pytest`: 56 testes passaram. `ruff`: sem erros.
+
+### O que aprendi
+- **Separar "web" de "lógica" compensa:** o `app.py` ficou só com rotas e erros; a lógica está
+  no `servico.py`, que reaproveita as funções das etapas 1–5. Nada de modelo foi reescrito.
+- **Cache muda a experiência:** de segundos para milissegundos. Mas o primeiro pedido continua
+  lento — o frontend precisa mostrar "carregando", e `/api/teste` aproveita o cálculo de
+  `/api/metricas` (os dois usam a mesma validação).
+- **O plano mudou com bons motivos:** "treinar tudo ao iniciar" parecia simples, mas deixaria o
+  servidor lento para subir e reiniciar a cada edição. Registrado em D37.
+- **NaN não é JSON:** o Python aceita `NaN`, mas o navegador não consegue ler. Um teste garante
+  que nenhuma resposta tem `NaN`.
+- **CORS é configuração de segurança, não detalhe:** liberar `*` funcionaria, mas abriria a API
+  para qualquer página. Um teste confirma que uma origem estranha não é liberada.
+- **Testes rápidos com `monkeypatch`:** trocar a lista de modelos por só os rápidos deixou os
+  19 testes da API em ~2 s, sem mudar o código de produção.
