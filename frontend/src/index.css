@@ -1,0 +1,20 @@
+/* Tailwind v4: uma linha importa tudo (classes utilitárias como "p-4", "text-sm"...). */
+@import "tailwindcss";
+
+/* Cores do projeto (decisão D25) — as mesmas dos gráficos em Python. */
+@theme {
+  --color-temperatura: #2a78d6;
+  --color-sensacao: #eb6834;
+  --color-tinta: #0b0b0b;
+  --color-tinta-2: #52514e;
+  --color-tinta-3: #898781;
+  --color-superficie: #fcfcfb;
+  --color-plano: #f4f3ef;
+  --color-borda: #e6e5e0;
+}
+
+body {
+  background: var(--color-plano);
+  color: var(--color-tinta);
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+}

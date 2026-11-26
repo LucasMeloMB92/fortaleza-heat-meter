@@ -429,3 +429,43 @@ temperatura — linha de base 0,29, ETS 0,30, SARIMA 0,45, Prophet 0,17; sensaç
   para qualquer página. Um teste confirma que uma origem estranha não é liberada.
 - **Testes rápidos com `monkeypatch`:** trocar a lista de modelos por só os rápidos deixou os
   19 testes da API em ~2 s, sem mudar o código de produção.
+
+---
+
+## Etapa 7 — Frontend (2026-11-26)
+
+### O que foi feito
+- **Datas em DD-MM-AAAA** (pedido do usuário): conversão só na exibição, numa função única com
+  testes; a API continua em AAAA-MM-DD (D41). Números com vírgula (`29,10 °C`).
+- Projeto `frontend/` com Vite + React 19 + TypeScript 7, Recharts 3, TanStack Query 5,
+  Tailwind 4 e Vitest (D42).
+- `src/api.ts` (tipos das respostas + pedidos), `src/consultas.ts` (hooks), `src/formatacao.ts`
+  (+ 8 testes), `src/componentes/` (seletores, gráfico principal, tabela de métricas, previsão x
+  real, caso de estudo, eixos e tooltip compartilhados) — D43.
+- `.claude/launch.json` para subir backend e frontend no navegador embutido.
+- **Ajuste no backend:** fila única de cálculos na API (atualização da D37) + teste de que pedidos
+  iguais simultâneos calculam uma vez só.
+
+### Resultados
+- `tsc`, `oxlint`, Vitest (8 testes) e `build` sem erros; backend com 57 testes passando.
+- Tela verificada no navegador: 4 seções funcionando; troca de variável, modelo e horizonte;
+  comparação com a outra variável; tooltip com data em DD-MM-AAAA; nenhum erro no console.
+
+| Primeiro carregamento (servidor recém-iniciado) | Antes da fila | Com a fila |
+|---|---|---|
+| Gráfico principal pronto | 42 s | **10 s** |
+| Tabela de métricas pronta | 64 s | **27 s** |
+| Tudo pronto (caso de estudo) | 95 s | 81 s |
+| Recarregar com cache | — | instantâneo |
+
+### O que aprendi
+- **Testar a tela de verdade encontra o que os testes automáticos não pegam:** (1) o "°C" quebrava
+  em duas linhas no eixo; (2) 4 pedidos simultâneos deixavam tudo lento; (3) o gráfico antigo
+  aparecia sob o título novo enquanto o modelo treinava. Os três foram corrigidos.
+- **Paralelo nem sempre é mais rápido:** por causa do GIL, uma fila fez a primeira resposta chegar
+  4x mais rápido, com o mesmo trabalho total. O que importa para quem usa é ver *algo* cedo.
+- **Formato de máquina x formato de pessoa:** a API usa AAAA-MM-DD (ordena e converte sem
+  ambiguidade); a tela mostra DD-MM-AAAA. Converter o texto em vez de usar `new Date()` evita o
+  bug clássico de fuso horário.
+- **Uma regra visual, um lugar:** eixos, cores e formatação ficam em arquivos únicos
+  (`eixos.ts`, `cores.ts`, `formatacao.ts`); corrigir o "°C" foi uma mudança só.

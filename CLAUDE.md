@@ -56,7 +56,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 4. Validação ✅
 5. Caso de estudo ✅
 6. API Flask ✅
-7. Frontend
+7. Frontend ✅
 8. Relatório final
 
 Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
@@ -85,7 +85,18 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 - `backend/app.py` (rotas, erros, CORS) + `backend/previsao/servico.py` (respostas + cache).
 - 7 rotas GET em `/api`: saude, opcoes, serie, previsao, metricas, teste, caso-estudo. Parâmetros
   `variavel` (temperatura|sensacao), `modelo`, `horizonte` (1–14). Detalhes em `docs/api.md`.
-- Cache em memória, calcula no 1º pedido (D37). CORS só `http://localhost:5173` (D39).
+- Cache em memória, calcula no 1º pedido, em fila única com RLock (D37 + atualização). CORS só
+  `http://localhost:5173` (D39).
+
+### Frontend (etapa 7)
+- `frontend/`: Vite + React 19 + TS 7, Recharts 3, TanStack Query 5, Tailwind 4, Vitest, oxlint.
+- **Datas exibidas SEMPRE em DD-MM-AAAA** via `formatarData` (`src/formatacao.ts`) — pedido do
+  usuário (D41). API continua em AAAA-MM-DD. Números com vírgula (`29,10 °C`). Não usar `new Date()`
+  para formatar (bug de fuso).
+- Proxy do Vite `/api` → Flask :5000 (D42). Eixos/cores/formatação centralizados
+  (`componentes/eixos.ts`, `cores.ts`, `formatacao.ts`).
+- Comandos (em `frontend/`): `npm install`, `npm run dev`, `npm test`, `npm run lint`,
+  `npm run build`. Navegador embutido: `.claude/launch.json` (configs `backend` e `frontend`).
 
 ## Comandos úteis (a partir de `backend/`)
 - API: `.venv\Scripts\python -m flask --app app run --port 5000`

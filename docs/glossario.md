@@ -272,3 +272,30 @@ nem usar a rede. É o que os testes da API usam.
 **Origem (origin)** — a combinação protocolo + endereço + porta de um site. Ex.:
 `http://localhost:5173`. Duas portas diferentes = duas origens diferentes (por isso o frontend
 precisa de CORS para chamar a API na porta 5000).
+
+## Frontend
+
+**Componente (React)** — um pedaço reutilizável da tela, escrito como uma função que devolve o
+que deve aparecer. Ex.: `TabelaMetricas`, `GraficoTeste`.
+
+**Hook (React)** — função que começa com `use` e dá "poderes" ao componente: guardar estado
+(`useState`) ou buscar dados (`useQuery`).
+
+**TanStack Query** — biblioteca que faz os pedidos à API e guarda as respostas em cache no
+navegador, controlando os estados "carregando", "erro" e "pronto".
+
+**Proxy (do Vite)** — o servidor do frontend recebe os pedidos `/api/...` e os repassa ao Flask.
+Para o navegador, tudo vem do mesmo endereço.
+
+**Build** — transformar o código TypeScript/React em arquivos JavaScript otimizados que o
+navegador entende (`npm run build`, saída em `frontend/dist`).
+
+**ISO 8601** — padrão internacional de datas `AAAA-MM-DD` (ex.: `2026-11-25`). Usado na API.
+Na tela, mostramos `DD-MM-AAAA` (D41).
+
+**GIL (Global Interpreter Lock)** — trava interna do Python: dentro de um processo, só uma thread
+executa código Python por vez. Por isso, rodar vários cálculos pesados "em paralelo" em threads
+não acelera — só deixa todos lentos. Na API, usamos uma fila (D37).
+
+**Trava (lock) / fila** — mecanismo que faz tarefas esperarem a vez. **Reentrante (RLock)** = a
+mesma tarefa pode "entrar de novo" sem travar a si mesma.

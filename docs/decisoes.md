@@ -416,3 +416,59 @@ durante o projeto e aprovadas.
 - **Por quê:** o frontend consegue ler e mostrar a mensagem; a lista de valores aceitos ajuda
   quem chama a API a corrigir o pedido. Esconder detalhes do erro 500 evita expor caminhos e
   código do servidor.
+
+> **Atualização da D37 (etapa 7):** ao abrir a tela, o navegador faz 4 pedidos pesados ao mesmo
+> tempo. Com o cálculo em paralelo, todos ficavam lentos (95 s para carregar tudo; o gráfico
+> principal só em 42 s) e `/metricas` e `/teste` calculavam a mesma validação duas vezes. Motivo:
+> o **GIL** do Python — threads não executam código Python de verdade em paralelo. Solução: uma
+> **fila única** (`threading.RLock`) — cálculos novos rodam um de cada vez; os já feitos respondem
+> sem esperar. Medido: gráfico principal em 10 s (era 42 s), métricas em 27 s (era 64 s); cada
+> cálculo roda uma vez só (há teste para isso). A trava é reentrante porque um cálculo pode chamar
+> outro (ex.: caso de estudo → leitura dos dados).
+
+## D41 — Datas exibidas em DD-MM-AAAA (e números no padrão brasileiro) _(usuário)_
+- **Decisão:** formato das datas que aparecem na ferramenta.
+- **Opções consideradas:** (a) a API passar a devolver `DD-MM-AAAA`; (b) a API continua em
+  `AAAA-MM-DD` (ISO 8601) e o frontend converte só na exibição.
+- **Escolha:** (b). Toda data exibida (eixos, tooltips, tabelas, textos) passa por uma única
+  função, `formatarData` (`frontend/src/formatacao.ts`), coberta por testes. Números com vírgula
+  decimal e "°C" (`29,10 °C`), via `Intl.NumberFormat('pt-BR')`.
+- **Por quê:** `AAAA-MM-DD` é o formato para máquinas — ordena certo como texto e qualquer
+  linguagem entende; `DD-MM-AAAA` é para pessoas. Mudar a API quebraria o contrato do `api.md` e
+  complicaria a ordenação. A conversão é feita no texto, **sem** `new Date()`: no fuso de
+  Fortaleza (UTC−3), `new Date("2027-01-01")` vira 31/12/2026 às 21h — o dia errado (há teste).
+- Os gráficos PNG da documentação (etapas 2–5, gerados em Python) continuam com `DD/MM` nos eixos.
+
+## D42 — Frontend: organização e comportamento
+- **Decisão:** como montar a tela com a stack definida (React + Vite + TS, Recharts, TanStack
+  Query, Tailwind).
+- **Opções consideradas:** URL da API fixa no código x proxy do Vite; manter o gráfico anterior
+  enquanto o novo carrega (`placeholderData`) x mostrar "Treinando…"; com ou sem testes no
+  frontend.
+- **Escolha:**
+  - **Proxy do Vite** (`/api` → `http://127.0.0.1:5000`): o código chama `/api/...` sem URL fixa.
+  - **TanStack Query** com `staleTime: Infinity` (os dados só mudam ao reiniciar o servidor) —
+    voltar a uma combinação já vista é instantâneo.
+  - **Sem `placeholderData`**: no teste da tela, manter o gráfico antigo sob o título novo
+    ("Prophet", mas mostrando SARIMA) confundia; agora a seção mostra "Treinando o modelo…".
+  - **Tailwind v4** com o plugin oficial do Vite; cores do projeto (D25) como variáveis de tema.
+  - **Vitest** para testar a formatação (datas e números). Lint com **oxlint** e TypeScript 7,
+    que já vêm no template atual do Vite.
+  - Configuração dos eixos num lugar só (`componentes/eixos.ts`), usada pelos 3 gráficos.
+- **Por quê:** menos configuração, código sem endereços fixos, estados de carregamento honestos
+  e a regra de data pedida protegida por teste.
+- **Limitação conhecida:** o pacote JavaScript tem ~716 kB (Recharts é grande); o Vite avisa
+  acima de 500 kB. Para uma POC local, aceitável.
+
+## D43 — Funcionalidades da tela
+- **Decisão:** o que a tela mostra e como o usuário interage.
+- **Escolha:** seletores no topo (variável, modelo, horizonte de 1 a 14 dias, vindos de
+  `/api/opcoes`) e 4 seções: (1) **previsão** — histórico + previsão tracejada + faixa de 95%,
+  janela de 30 ou 90 dias, opção de comparar com o histórico da outra variável e tabela com os
+  valores previstos; (2) **comparação dos modelos** — MAE, RMSE, cobertura, viés e % vs linha de
+  base, destaque "menor erro" e clique para selecionar o modelo; (3) **previsão x real no teste**
+  — ● dentro da faixa, ✕ fora; (4) **caso de estudo** — só antes x tudo x só depois, linha da
+  mudança, faixa do teste, tabela por cenário e um texto "como ler".
+- **Por quê:** cobre as 4 funcionalidades pedidas e reaproveita as convenções dos gráficos das
+  etapas 2–5 (cores, ●/✕, tracejado), para o cliente reconhecer o que viu nos relatórios. A tabela
+  de valores previstos garante leitura precisa sem depender só do gráfico.

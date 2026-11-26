@@ -4,13 +4,16 @@ O app.py (Flask) só lê os parâmetros da requisição, chama estas funções e
 Separar assim permite testar a lógica sem servidor (decisão D15).
 
 Cache (decisão D37): treinar modelos é lento (SARIMA ~10 s, caso de estudo ~30 s). Cada
-resultado é calculado no PRIMEIRO pedido e guardado na memória (functools.lru_cache); os
-pedidos seguintes são instantâneos. Os dados vêm do CSV da etapa 1 — para atualizar, rode a
-coleta de novo e reinicie o servidor.
+resultado é calculado no PRIMEIRO pedido e guardado na memória (um dicionário); os
+pedidos seguintes são instantâneos. Os cálculos novos rodam em fila, um de cada vez, e cada
+um roda uma única vez (ver _calculo_unico).
+
+Os dados vêm do CSV da etapa 1 — para atualizar, rode a coleta de novo e reinicie o servidor.
 """
 
 import math
-from functools import lru_cache
+import threading
+from functools import wraps
 
 import pandas as pd
 
@@ -120,7 +123,36 @@ def _periodo(serie: pd.Series) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@lru_cache(maxsize=1)
+# Fila única de cálculos (ajuste da decisão D37). RLock = trava "reentrante": a mesma thread
+# pode entrar de novo (um cálculo que chama outro cálculo, ex.: _caso_estudo -> _tabela).
+_FILA_DE_CALCULOS = threading.RLock()
+
+
+def _calculo_unico(funcao):
+    """Cache + fila única: cálculos novos rodam um de cada vez; os já feitos respondem na hora.
+
+    Por que fila e não paralelo: no Python, threads não executam código Python de verdade ao
+    mesmo tempo (o "GIL"). Ao abrir a tela, o navegador pede previsão, métricas, teste e caso de
+    estudo juntos; rodando em paralelo, TODOS ficavam lentos (medido: 95 s para carregar tudo, e
+    /metricas e /teste calculavam a mesma validação duas vezes). Em fila, a previsão (pedida
+    primeiro) fica pronta em segundos e cada cálculo roda uma única vez.
+    """
+    resultados: dict[tuple, object] = {}
+
+    @wraps(funcao)
+    def envolvida(*args):
+        if args in resultados:  # já calculado: responde sem entrar na fila
+            return resultados[args]
+        with _FILA_DE_CALCULOS:
+            if args not in resultados:  # alguém pode ter calculado enquanto esperávamos
+                resultados[args] = funcao(*args)
+            return resultados[args]
+
+    envolvida.cache_clear = resultados.clear
+    return envolvida
+
+
+@_calculo_unico
 def _tabela() -> pd.DataFrame:
     return coleta.carregar_csv().set_index("data")
 
@@ -129,23 +161,23 @@ def _serie(variavel: str) -> pd.Series:
     return _tabela()[VARIAVEIS_API[variavel]]
 
 
-@lru_cache(maxsize=64)
+@_calculo_unico
 def _prever(variavel: str, modelo: str, horizonte: int) -> modelos.Previsao:
     return modelos.prever(modelo, _serie(variavel), horizonte)
 
 
-@lru_cache(maxsize=4)
+@_calculo_unico
 def _validacao(variavel: str):
     return avaliacao.comparar_modelos(_serie(variavel))
 
 
-@lru_cache(maxsize=1)
+@_calculo_unico
 def _datas_de_mudanca() -> dict:
     contexto = pd.read_csv(exploracao.CAMINHO_CONTEXTO, parse_dates=["data"])
     return caso_estudo.datas_de_mudanca(_tabela().reset_index(), contexto)
 
 
-@lru_cache(maxsize=4)
+@_calculo_unico
 def _caso_estudo(variavel: str):
     data = _datas_de_mudanca()[VARIAVEIS_API[variavel]]
     metricas, resultados = caso_estudo.avaliar_cenarios(_serie(variavel), data)
