@@ -76,7 +76,31 @@ ponderada do passado em que os dias mais recentes pesam mais. ETS = *Error, Tren
 
 **ARIMA** — modelo que prevê o próximo valor a partir dos valores anteriores (**AR**,
 autorregressivo), de diferenças entre valores para remover tendência (**I**, integrado) e dos erros
-anteriores (**MA**, média móvel). Configurado pelos números (p, d, q).
+anteriores (**MA**, média móvel). Configurado pelos números (p, d, q) — três "botões":
+
+| Letra | Nome | Pergunta que responde |
+|---|---|---|
+| **p** | AR (autorregressivo) | Quantos **dias anteriores** uso para prever? |
+| **d** | I (integrado) | Quantas vezes **transformo a série em diferenças** antes de modelar? |
+| **q** | MA (média móvel) | Quantos **erros anteriores** uso para corrigir a previsão? |
+
+Ex.: ARIMA(1, 1, 1) = usa 1 dia anterior, diferencia 1 vez, corrige pelo erro de 1 dia atrás.
+
+**O "d" (ordem de diferenciação), com exemplo** — temperaturas de 5 dias: 28,8 → 29,1 → 29,2 →
+29,3 → 29,1.
+- **d = 0**: o modelo trabalha com os **valores** (28,8; 29,1; ...).
+- **d = 1**: trabalha com as **variações diárias**: +0,3; +0,1; +0,1; −0,2. Para prever amanhã,
+  prevê a variação e soma ao valor de hoje.
+
+Diferenciamos quando a série "anda" sem rumo (o ARIMA precisa de algo que oscile em torno de um
+valor estável). Se a série oscila em torno de uma **reta**, basta modelar a reta (d = 0 +
+tendência) — diferenciar seria demais (ver "Sobrediferenciação").
+
+**O "MA" (termo de média móvel), com exemplo** — corrige a previsão de hoje pelo erro de ontem.
+Com coeficiente MA = 0,5: ontem o modelo previu 28,9 e o real foi 29,1 (erro +0,2) → a previsão
+de hoje recebe um ajuste de 0,5 × 0,2 = **+0,1**. O coeficiente diz quanto do erro de ontem é
+levado em conta: perto de 0 = ignora; positivo = "errei para baixo, subo um pouco"; negativo =
+corrige no sentido oposto. (Não confundir com a "média móvel" usada para suavizar gráficos.)
 
 **SARIMA** — ARIMA com uma parte **S**azonal extra, que olha para o mesmo ponto do ciclo anterior
 (ex.: 7 dias atrás). Configurado por (p, d, q)(P, D, Q, s).
@@ -161,6 +185,18 @@ por cada parâmetro. Menor = melhor. Evita escolher sempre o modelo mais complex
 ruído). **AICc** é a versão corrigida para poucos dados. Só compara modelos ajustados sobre os
 mesmos dados.
 
+AICc = erro no treino + multa por parâmetro + correção para poucos dados. Como ler a
+**diferença** entre dois modelos (exemplos do nosso ranking da etapa 3):
+
+| Diferença de AICc | Leitura | Exemplo |
+|---|---|---|
+| menos de 2 | praticamente empate | sensação: 99,60 x 100,19 |
+| ~4 a 7 | vitória clara | temperatura: 43,59 x 47,79 |
+| mais de 10 | o segundo é bem pior | — |
+
+Por que não compara modelos com d diferente: com d = 1 o ajuste é medido sobre as variações; com
+d = 0, sobre os valores — são "provas" diferentes. Por isso o d é escolhido por teste (D33).
+
 **Parâmetro α (alfa, `smoothing_level`) do ETS** — de 0 a 1, o peso do dia mais recente. α
 perto de 0: média longa, previsão estável. α perto de 1: quase "amanhã = hoje", e a incerteza
 cresce rápido com a distância.
@@ -171,7 +207,23 @@ cresce rápido com a distância.
 a série sempre volta para perto da reta.
 
 **Sobrediferenciação** — diferenciar uma série que não precisava. Sintoma típico: o termo MA
-estimado fica perto de −1 (o modelo tenta desfazer a diferença).
+estimado fica perto de −1 (o modelo tenta desfazer a diferença). Analogia: converter reais em
+dólares e logo em seguida converter de volta — um MA de −1 faz a conta contrária da
+diferenciação e a anula. Aconteceu na etapa 3 com d = 1 fixo (D33).
 
 **Teste de contrato** — teste que verifica se várias peças (aqui, os 4 modelos) respeitam o mesmo
 "acordo" de entrada e saída. Se uma quebrar o acordo, quem a usa (API, métricas) quebra junto.
+
+## Validação
+
+**Vazamento de dados (data leakage)** — quando informação do período de teste "vaza" para o
+treino (ex.: escolher a configuração olhando o teste). O resultado fica bom demais e não se repete
+no futuro. Nosso teste anti-vazamento muda os valores do teste e confere que a previsão não muda.
+
+**MAE relativo à linha de base** — (MAE do modelo ÷ MAE da linha de base − 1) × 100. −20% = o
+modelo erra 20% menos que a regra simples; +13% = erra 13% mais (pior que a regra simples).
+
+**Erro com sinal / viés na validação** — erro = previsão − real. Positivo = previu alto demais;
+negativo = baixo demais. A média dos erros (viés) mostra se o modelo erra sempre para o mesmo lado.
+Ex.: na temperatura, todos os modelos tiveram viés negativo — a alta continuou e eles previram
+abaixo.

@@ -330,3 +330,16 @@ durante o projeto e aprovadas.
   (p = 0,002). A temperatura ficou inconclusiva (p = 0,17) e manteve d = 1 (o MA continua perto
   de −1: com 90 pontos o teste tem pouca força). (b) não funciona: AICc de modelos com d diferente
   não é comparável (medem o ajuste sobre dados diferentes).
+
+## D34 — Métricas extras e forma de ler a validação
+- **Decisão:** além de MAE, RMSE e cobertura (D08), o que mostrar para interpretar o teste.
+- **Opções consideradas:** só as 3 métricas; métricas extras; teste estatístico de diferença
+  entre modelos (ex.: Diebold-Mariano).
+- **Escolha:** extras **auxiliares**: MAE nos dias 1–7 (horizonte do produto), viés (erro médio
+  com sinal) e MAE relativo à linha de base (%); tabela de erro dia a dia; no gráfico, real dentro
+  da faixa = ●, fora = ✕. Sem teste estatístico formal.
+- **Por quê:** o teste tem 10 dias, mas o produto prevê 7; o MAE relativo responde direto "vale a
+  pena trocar a regra simples?" (dúvida da D23); o erro dia a dia mostra se um único dia decide o
+  ranking. Com 10 dias, um teste formal teria pouco poder — mostrar os erros é mais honesto.
+- **Teste anti-vazamento:** um teste automático altera os valores do período de teste e confere
+  que a previsão não muda (o modelo nunca vê a prova).
