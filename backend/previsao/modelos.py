@@ -320,6 +320,11 @@ def prever_prophet(serie: pd.Series, horizonte: int = 7, nivel: float = NIVEL) -
 
 CHRONOS_REPOSITORIO = "amazon/chronos-2"  # modelo público no Hugging Face (Apache 2.0)
 
+# Versão EXATA do modelo (o "commit" no Hugging Face) — decisão D51. Sem fixar, uma versão
+# nova publicada pela Amazon entraria sozinha e mudaria os números sem mudar o nosso código.
+# Para atualizar de propósito: trocar este valor, rodar os testes e refazer as comparações.
+CHRONOS_VERSAO = "29ec3766d36d6f73f0696f85560a422f50e8498c"
+
 # O modelo só sabe devolver quantis entre 1% e 99% (os que ele aprendeu no treino).
 CHRONOS_QUANTIL_MINIMO = 0.01
 
@@ -328,11 +333,30 @@ CHRONOS_QUANTIL_MINIMO = 0.01
 _pipeline_chronos = None
 
 
+def _pasta_do_chronos() -> str:
+    """Pasta local com os arquivos do modelo, na versão fixada (D51).
+
+    1º tenta o cache SEM usar a rede (`local_files_only=True`). Antes desta decisão, o Hugging
+    Face perguntava à internet a cada carga se havia versão nova; sem internet, tentava 5 vezes
+    e só então usava o cache (~30 s perdidos — medido em 26-11-2026).
+    Se o modelo ainda não está no computador (1ª vez), baixa essa versão (~456 MB).
+    """
+    from huggingface_hub import snapshot_download
+    from huggingface_hub.errors import LocalEntryNotFoundError
+
+    try:
+        return snapshot_download(
+            CHRONOS_REPOSITORIO, revision=CHRONOS_VERSAO, local_files_only=True
+        )
+    except LocalEntryNotFoundError:
+        return snapshot_download(CHRONOS_REPOSITORIO, revision=CHRONOS_VERSAO)
+
+
 def _carregar_chronos():
     """Carrega o Chronos-2 na CPU (uma vez só) e devolve o mesmo objeto nas próximas vezes.
 
-    Na 1ª vez em um computador, baixa ~456 MB do Hugging Face para
-    ~/.cache/huggingface; depois, funciona sem internet.
+    Carrega a partir da PASTA local (e não do nome no Hugging Face): assim nada consulta a
+    internet. Funciona sem internet depois do 1º download, sem espera (D51).
     """
     global _pipeline_chronos
     if _pipeline_chronos is None:
@@ -341,7 +365,7 @@ def _carregar_chronos():
         os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
         from chronos import Chronos2Pipeline  # importado aqui: PyTorch é pesado
 
-        _pipeline_chronos = Chronos2Pipeline.from_pretrained(CHRONOS_REPOSITORIO, device_map="cpu")
+        _pipeline_chronos = Chronos2Pipeline.from_pretrained(_pasta_do_chronos(), device_map="cpu")
     return _pipeline_chronos
 
 
@@ -381,6 +405,7 @@ def prever_chronos(serie: pd.Series, horizonte: int = 7, nivel: float = NIVEL) -
     detalhes = {
         "configuracao": f"pré-treinado, sem treino próprio ({len(serie)} dias de contexto)",
         "repositorio": CHRONOS_REPOSITORIO,
+        "versao": CHRONOS_VERSAO[:7],  # D51: versão fixa do modelo
         "faixa": f"quantis de {cauda:.1%} e {1 - cauda:.1%} (interpolados pela biblioteca)",
     }
     return Previsao("chronos", tabela, detalhes)

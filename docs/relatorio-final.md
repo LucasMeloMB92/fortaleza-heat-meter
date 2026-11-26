@@ -317,7 +317,10 @@ Esta seção explica cada modelo do zero. Antes, quatro ideias que valem para to
 - **Configuração (D47):** versão **Chronos-2** (a mais nova; as menores, "Bolt", só dão faixas de
   até 80%, então não seriam comparáveis), rodando no processador comum (CPU), sem placa de vídeo.
   O modelo (456 MB) é baixado uma vez do Hugging Face (um repositório público de modelos); depois
-  funciona sem internet. Os dados **não saem do computador**. Licença Apache 2.0: gratuito, com
+  funciona **sem internet e sem espera**: a ferramenta carrega o modelo direto da cópia guardada
+  no computador. A **versão do modelo é fixa** (um código de versão no nosso programa), para que
+  uma atualização publicada pela Amazon não mude os números sem aviso (D51). Os dados **não saem
+  do computador**. Licença Apache 2.0: gratuito, com
   uso comercial permitido.
 - **Características:** é rápido (0,06 s por previsão, contra ~17 s do SARIMA, que testa 72
   combinações) e dá sempre o mesmo resultado para a mesma série. Sua faixa é **assimétrica**

@@ -46,7 +46,8 @@ O ambiente virtual (`.venv`) isola as bibliotecas deste projeto das do resto do 
 O `requirements.txt` instala o PyTorch só para CPU (~200 MB) a partir do repositório oficial do
 PyTorch. Na primeira previsão do **Chronos-2** (inclusive nos testes), o modelo (~456 MB) é
 baixado do Hugging Face para `%USERPROFILE%\.cache\huggingface`; depois disso, tudo funciona sem
-internet (D47).
+internet (D47). A versão do modelo é fixa (`CHRONOS_VERSAO` em `backend/previsao/modelos.py`) e,
+com o modelo já baixado, a ferramenta não consulta a internet para carregá-lo (D51).
 
 ## Rodando o backend
 

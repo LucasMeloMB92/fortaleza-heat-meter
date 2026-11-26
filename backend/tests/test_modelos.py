@@ -131,3 +131,21 @@ def test_chronos_horizonte_longo_tem_faixa_finita(serie):
     assert len(tabela) == 42
     assert np.isfinite(tabela.to_numpy()).all()
     assert (tabela["superior"] > tabela["inferior"]).all()
+
+
+def test_chronos_carrega_do_cache_sem_tentar_a_rede(monkeypatch):
+    # D51: com o modelo já baixado, a pasta vem do cache (local_files_only=True) — nenhuma
+    # tentativa de download, então funciona sem internet e sem esperar.
+    import huggingface_hub
+
+    pedidos = []
+    original = huggingface_hub.snapshot_download
+
+    def espiao(*args, **kwargs):
+        pedidos.append(kwargs.get("local_files_only", False))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", espiao)
+    pasta = modelos._pasta_do_chronos()
+    assert pedidos == [True]  # só a busca no cache; nenhum download
+    assert modelos.CHRONOS_VERSAO in pasta  # a versão fixada, não "a mais nova"

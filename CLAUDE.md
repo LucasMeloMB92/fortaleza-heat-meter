@@ -50,7 +50,9 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
   Resultado: temp. 0,31 (empata com Prophet), sens. 0,33 (empata com a base); faixa ~2x mais
   larga que os outros. Caso de estudo "só antes": erra como o SARIMA, mas cobre 10/10 (faixa
   larga). Conclusão: empata, não ganha — SARIMA segue recomendado. Testes usam o modelo real
-  (baixado 1x para `~/.cache/huggingface`).
+  (baixado 1x para `~/.cache/huggingface`). **D51:** versão fixa `CHRONOS_VERSAO` (commit do Hub) e
+  carga pela pasta local (`_pasta_do_chronos`: cache com `local_files_only=True`, senão baixa) —
+  sem internet carrega em ~12 s (antes ~56 s: 5 tentativas de rede).
 
 ### Tecnologias
 - Backend: Python 3.12 (venv em `backend/.venv`), pandas, statsmodels, prophet, chronos-forecasting
@@ -71,11 +73,11 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
   `ranking.ts`), Caso de estudo (`casoGeral.ts`), Anos anteriores (D50, `/api/contexto`;
   relatório seção 3 "Comparação com os anos anteriores"). Compara com 2 anos anteriores (2024,
   2025): o CSV de contexto começa em 26-11-2023.
-- **Última decisão registrada: D50** — a próxima é D51 (`docs/decisoes.md`).
+- **Última decisão registrada: D51** — a próxima é D52 (`docs/decisoes.md`).
 - **Para retomar:** leia o fim de `docs/diario.md` (inclui as dúvidas discutidas). Para ver a tela:
   suba `backend` e `frontend` pelo `.claude/launch.json`. Os números da documentação são um retrato
   de 26-11-2026; a ferramenta atualiza os dados sozinha todo dia (D44).
-- **Qualidade atual:** backend 69 testes (pytest) + ruff limpo; frontend 42 testes (Vitest) +
+- **Qualidade atual:** backend 70 testes (pytest) + ruff limpo; frontend 42 testes (Vitest) +
   tsc + oxlint + build limpos.
 
 ## Etapas (ordem fixa)

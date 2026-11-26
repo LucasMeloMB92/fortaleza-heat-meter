@@ -664,3 +664,31 @@ durante o projeto e aprovadas.
 - **Limite:** são **2 anos anteriores**, não 3: o arquivo de contexto começa em 26-11-2023, antes
   do período de 2023. Incluir 2023 exige baixar mais 3 meses (e mudaria um pouco o "normal" e as
   datas do degrau).
+
+## D51 — Chronos-2 sem internet de verdade e com versão fixa _(usuário)_
+- **Decisão:** como carregar o Chronos-2 para que funcione sem internet sem espera e não mude de
+  versão sozinho.
+- **Contexto (teste de 26-11-2026, mesma previsão nos três casos):**
+
+  | Cenário | Tempo de carga (com a importação do PyTorch) |
+  |---|---|
+  | Com internet | 24,5 s |
+  | Sem internet | **56,1 s** — o Hugging Face tentou a rede 5 vezes (1+2+4+8+8 s) e só então usou o cache |
+  | Sem internet, com `HF_HUB_OFFLINE=1` | 13,6 s |
+
+  A cada carga, o Hugging Face perguntava à internet se havia versão nova do modelo — e, se
+  houvesse, passaria a usá-la sem aviso.
+- **Opções consideradas:** (a) `HF_HUB_OFFLINE=1` no ambiente (vale para o processo inteiro e
+  exige lembrar de configurar); (b) `local_files_only=True` no `from_pretrained` (não basta: o
+  Chronos procura um arquivo de "adaptador" antes e não repassa essa opção); (c) pedir a **pasta
+  local** do modelo, numa **versão fixa**, e carregar a partir dela.
+- **Escolha:** (c). `CHRONOS_VERSAO` = commit `29ec3766…` do `amazon/chronos-2`.
+  `_pasta_do_chronos()` tenta o cache sem rede (`snapshot_download(..., local_files_only=True)`);
+  se não houver, baixa essa versão. O Chronos é carregado pela pasta (só leitura de disco).
+  A versão aparece nos detalhes da previsão (`"versao": "29ec376"`).
+- **Resultado:** sem internet, a previsão do projeto carregou em **11,6 s**, sem nenhuma tentativa
+  de rede. Teste novo garante que, com o modelo no cache, não há tentativa de download.
+- **Por quê:** funciona offline de verdade, sobe mais rápido e os números só mudam quando alguém
+  troca a versão de propósito (e refaz as comparações).
+- **Custo:** atualizar o modelo vira uma ação manual: trocar `CHRONOS_VERSAO`, rodar os testes e
+  refazer a validação e o caso de estudo.

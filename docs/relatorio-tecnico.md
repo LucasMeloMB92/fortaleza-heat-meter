@@ -365,7 +365,7 @@ semanal provavelmente **existirá** — e aí os modelos devem incluí-la.
 | 2 | **ETS** (`prever_ets`) | `ETSModel(error="add")`; testa sem tendência / tendência / amortecida e fica com o menor **AICc** (D28, D30). |
 | 3 | **SARIMA** (`prever_sarima`) | `d` por teste ADF com tendência (`escolher_d`); depois 72 candidatos (p, q 0–2; P, Q 0–1 com período 7; com/sem tendência) e o menor AICc vence (D31, D33). |
 | 4 | **Prophet** (`prever_prophet`) | Sazonalidades desligadas (série curta, sem ciclo semanal), `interval_width=0.95`, semente fixa (D32). |
-| 5 | **Chronos-2** (`prever_chronos`) | Modelo pré-treinado `amazon/chronos-2` na CPU, sem treino; previsão = mediana, faixa = quantis 2,5%/97,5%; carregado 1x por processo (D47). |
+| 5 | **Chronos-2** (`prever_chronos`) | Modelo pré-treinado `amazon/chronos-2` na CPU, sem treino; previsão = mediana, faixa = quantis 2,5%/97,5%; carregado 1x por processo (D47); versão fixa (`CHRONOS_VERSAO`) e carga pela pasta local do cache, sem consultar a internet (D51). |
 
 Escolha automática pelo menor AICc (padrão para ETS e SARIMA):
 

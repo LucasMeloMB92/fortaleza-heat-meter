@@ -733,3 +733,25 @@ Os números batem com os da etapa 2.
   Depois, "Os arquivos Python": cada módulo de `previsao/`, o `app.py`, os scripts de etapa e os
   testes, com o que cada função recebe e devolve.
 - Ligado no README e no CLAUDE.md. Nenhuma decisão nova (a próxima continua sendo D51).
+
+## Chronos-2 sem internet (D51) — 2026-11-26
+
+### Dúvida
+O relatório dizia que o Chronos-2 "funciona sem internet" depois do download, mas o log da API
+mostrava consultas ao Hugging Face a cada carga.
+
+### Teste (internet simulada como fora do ar com um proxy inválido)
+- Com internet: 24,5 s. Sem internet: **56,1 s** (5 tentativas de rede antes de usar o cache).
+  Sem internet com `HF_HUB_OFFLINE=1`: 13,6 s. A previsão foi a mesma nos três.
+
+### O que foi feito
+- `CHRONOS_VERSAO` (versão fixa) e `_pasta_do_chronos()` (cache sem rede; senão, baixa) em
+  `modelos.py`; o modelo é carregado pela pasta. Teste novo (backend: 70 testes).
+- Sem internet, a previsão do projeto passou a carregar em **11,6 s**, sem tentativas de rede.
+
+### O que aprendi
+- **"Funciona offline" precisa ser testado sem rede.** Funcionava, mas com ~30 s de espera — e
+  ainda podia trocar de versão do modelo sozinho.
+- **Opção que não é repassada não adianta:** `local_files_only=True` sozinho não bastava, porque
+  o Chronos faz uma consulta antes (procura um "adaptador") sem repassá-la. Carregar pela pasta
+  local resolve na raiz.
