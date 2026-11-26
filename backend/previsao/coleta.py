@@ -134,7 +134,8 @@ def verificar_tabela(tabela: pd.DataFrame, inicio: date, fim: date) -> list[str]
         problemas.append(f"Datas duplicadas: {[d.date().isoformat() for d in duplicadas]}")
 
     esperadas = pd.date_range(inicio, fim, freq="D")
-    faltando = esperadas.difference(tabela["data"])
+    # DatetimeIndex: tipo que o difference() espera (evita aviso do verificador de tipos).
+    faltando = esperadas.difference(pd.DatetimeIndex(tabela["data"]))
     if not faltando.empty:
         problemas.append(f"Dias faltando: {[d.date().isoformat() for d in faltando]}")
 

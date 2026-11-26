@@ -92,3 +92,94 @@ Registro de cada etapa: o que foi feito, os resultados e o que aprendi.
 - **Os últimos dias estão no topo da série** (29,1–29,3 °C, perto do máximo de 29,3): primeiro
   indício da mudança recente, a ser analisada na etapa 2.
 - **Hoje não entra na série** (D20): a média de um dia incompleto é parte previsão.
+
+### Dúvidas discutidas antes da etapa 2
+- **ERA5, `best_match` e `past_days`:** são duas APIs (histórica e de previsão). `models` escolhe
+  o modelo meteorológico (`era5` ou `best_match`); `past_days` pede dias passados à API de
+  previsão. Explicação completa no glossário.
+- **A pouca variação atrapalha?** O que importa é ter padrão, não variar muito — e a série tem
+  memória (autocorrelação 0,75/0,87). Mantivemos os 90 dias (D23).
+- **6 meses ou 1 ano ajudariam?** Baixamos 3 anos só para olhar: Fortaleza tem um ciclo anual de
+  ~2 °C. Mais meses misturariam estações; só com 2+ anos dá para modelar o ciclo. Decidimos usar
+  os 3 anos apenas como **contexto** (D24).
+
+---
+
+## Etapa 2 — Exploração (2026-11-26)
+
+### O que foi feito
+- `backend/previsao/exploracao.py`: média móvel, teste ADF, força da sazonalidade semanal,
+  detecção de ponto de mudança, contexto de 3 anos (mesmo período por ano, climatologia, anomalia).
+- `backend/scripts/etapa2_exploracao.py`: números no terminal e 4 gráficos em `docs/img/`.
+- `backend/tests/test_exploracao.py`: 5 testes com séries sintéticas de comportamento conhecido.
+- `backend/data/fortaleza_contexto_3anos.csv`: 1.096 dias (26/11/2023 a 25/11/2026).
+
+### Resultados
+
+**Série de 90 dias**
+
+![Séries](img/etapa2_series.png)
+
+| | Temperatura | Sensação |
+|---|---|---|
+| Autocorrelação 1 / 2 / 3 / 7 dias | 0,75 / 0,63 / 0,60 / 0,54 | 0,87 / 0,75 / 0,68 / 0,72 |
+| ADF na série (p-valor) | 0,86 → **não estacionária** | 0,92 → **não estacionária** |
+| ADF nas diferenças diárias (p-valor) | 0,00 → estacionária | 0,00 → estacionária |
+| Força da sazonalidade semanal | 0,10 (fraca) | 0,12 (fraca) |
+
+![Autocorrelação](img/etapa2_autocorrelacao.png)
+
+- **ACF** cai devagar (típico de série com tendência). **PACF** tem um pico forte só na
+  defasagem 1 (0,74 e 0,86) e o resto fica dentro da faixa de significância (temperatura tem
+  pequenos picos em 3–4 dias, no limite).
+
+**Contexto de 3 anos**
+
+![Contexto](img/etapa2_contexto.png)
+
+| Mesmo período (28/08–25/11) | Temp. média | Sensação média |
+|---|---|---|
+| 2024 | 27,34 | 28,96 |
+| 2025 | 27,63 | 29,63 |
+| **2026** | **28,15** | **30,87** |
+
+| Subida dentro do período (últimos 15 dias − primeiros 15) | Temp. | Sensação |
+|---|---|---|
+| 2024 | +0,95 | +2,67 |
+| 2025 | +0,55 | +0,75 |
+| 2026 | +0,94 | +1,58 |
+
+**Anomalia de 2026 e ponto de mudança**
+
+![Anomalia](img/etapa2_anomalia.png)
+
+| | Temperatura | Sensação |
+|---|---|---|
+| Anomalia média no período | +0,66 °C | +1,58 °C |
+| Anomalia nos últimos 10 dias | +0,79 °C | +1,54 °C |
+| Mudança detectada (na anomalia) | **15/10**: +0,49 → +0,86 | **23/10**: +1,35 → +1,96 |
+| Mudança detectada (na série bruta) | 23/10: 27,85 → 28,65 | 25/10: 30,33 → 31,86 |
+
+- `pytest`: 15 testes passaram. `ruff`: sem erros.
+
+### O que aprendi
+- **A subida recente é metade estação, metade anomalia.** Todo ano a temperatura sobe ~0,5–1 °C
+  de agosto a novembro — isso é estação. O que é diferente em 2026 é o **nível**: o ano inteiro
+  está acima do normal (+0,5 °C já em setembro), e a partir de meados de outubro sobe mais um
+  degrau (+0,86 °C). Na sensação o efeito é maior (+1,96 °C após 23/10).
+- **Onde se procura a mudança muda a resposta:** na série bruta o detector aponta 23–25/10, porque
+  mistura estação e anomalia; na anomalia aponta 15/10 (temperatura). Para o caso de estudo, a
+  data candidata é **meados/fim de outubro** — a escolha exata fica para a etapa 5.
+- **Pistas para a modelagem (etapa 3):**
+  - Série **não estacionária**, diferenças estacionárias → o SARIMA deve usar **d = 1**.
+  - PACF com um pico só na defasagem 1 → um termo autorregressivo (p = 1) deve bastar; com d = 1,
+    candidatos simples como ARIMA(1,1,0) ou (0,1,1).
+  - **Sem padrão semanal** (força ~0,1) → nem SARIMA nem ETS precisam de sazonalidade de 7 dias;
+    o "S" do SARIMA provavelmente ficará desligado. Prophet com sazonalidade semanal só
+    acrescentaria ruído.
+  - Há **tendência de alta** no fim da série — mas parte é estação, que vai se estabilizar em
+    dezembro (pico do ciclo). Um modelo que prolongue a tendência pode exagerar.
+- **Um dia atípico no início do teste:** 16/11 teve 27,5 °C (−0,4 °C abaixo do normal, provável
+  dia de chuva), seguido de volta rápida a 28,6–29,3. Ele vai pesar nas métricas da etapa 4.
+- **Testes estatísticos erram.** O teste do ADF falhou com uma semente aleatória "azarada" (p =
+  0,013 num passeio aleatório): é o erro de ~5% que o próprio teste admite.

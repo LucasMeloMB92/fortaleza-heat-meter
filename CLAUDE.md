@@ -19,6 +19,10 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
   NÃO usar `era5` puro: é ~0,6 °C mais frio e criaria salto artificial (D21).
 - Período: 90 dias terminando ONTEM (D20). CSV: `backend/data/fortaleza_diario.csv`.
 - Sensação é prevista sozinha (não é apoio da temperatura); sem umidade/vento (D02, D19).
+- Contexto de 3 anos (`backend/data/fortaleza_contexto_3anos.csv`) só para entender, nunca para
+  treinar (D24). Achados da etapa 2: série não estacionária (d=1), PACF só na defasagem 1, sem
+  sazonalidade semanal; anomalia de 2026 com mudança em 15/10 (temp.) e 23/10 (sensação) (D26).
+- Cores fixas: temperatura `#2a78d6` (azul), sensação `#eb6834` (laranja); um eixo por painel (D25).
 
 ### Modelagem
 - Horizonte: 7 dias. Validação: últimos 10 dias como teste.
@@ -37,7 +41,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 ## Etapas (ordem fixa)
 0. Preparação ✅
 1. Coleta de dados ✅
-2. Exploração
+2. Exploração ✅
 3. Modelagem
 4. Validação
 5. Caso de estudo
