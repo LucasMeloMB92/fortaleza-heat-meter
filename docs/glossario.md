@@ -17,6 +17,10 @@ tratamos temperatura e sensação como **duas séries univariadas** separadas.
 temperatura do ar com umidade, vento e radiação solar. Em lugares úmidos como Fortaleza, costuma
 ficar acima da temperatura real.
 
+**Variável exógena (externa)** — informação de fora da série usada para ajudar a prever.
+Ex.: usar umidade e vento para prever a sensação. O problema: para prever o futuro, é preciso
+saber também o valor futuro da variável externa. (Não usamos neste projeto — decisão D19.)
+
 **Tendência** — direção de longo prazo da série (subindo, descendo ou estável).
 
 **Sazonalidade** — padrão que se repete num período fixo. Ex.: mais calor de dia que à noite
@@ -31,6 +35,9 @@ treinado com dados antigos pode errar.
 
 **Treino e teste (holdout)** — separamos os dados: o modelo aprende com o treino e é avaliado no
 teste, que ele nunca viu. Em séries temporais o teste é sempre o **final** da série (o "futuro").
+
+**Overfitting (sobreajuste)** — quando o modelo "decora" os dados de treino, inclusive o ruído,
+e erra em dados novos. O risco cresce com muitos parâmetros e poucos dados (como nossos 90 dias).
 
 **Horizonte de previsão** — quantos passos à frente prevemos (aqui, 7 dias).
 
