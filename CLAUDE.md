@@ -38,7 +38,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 - ETS/SARIMA escolhem configuração pelo menor AICc, refeito a cada treino (D28). SARIMA: d pelo
   ADF com tendência ("ct"), não fixo (D33). Prophet sem sazonalidades (D32).
 - Métricas: MAE, RMSE, cobertura do intervalo de 95% (+ auxiliares: MAE dias 1–7, viés, MAE vs
-  linha de base — D34). `avaliacao.comparar_modelos(serie)`.
+  linha de base — D34; largura média da faixa `largura_faixa` — D48). `avaliacao.comparar_modelos(serie)`.
 - Resultado da etapa 4 (teste 16/11–25/11): temperatura — Prophet 0,31 °C (−33% vs base), SARIMA
   0,38; sensação — SARIMA 0,29 (−15%), Prophet 0,38 (+13%, pior). SARIMA = mais consistente.
 - Caso de estudo: quebra estrutural — modelo treinado só antes da mudança recente x treinado com tudo
@@ -65,12 +65,15 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 - NÃO propor roteiro de ML/DL próprio (LightGBM, redes treinadas do zero) — decisão do usuário.
   Melhorias ainda registradas no relatório: textos por IA (Gemma/Gemini), outras métricas
   (cliente ainda sem métrica real — exemplo genérico: vendas diárias), publicação online,
-  largura da faixa como métrica oficial, repetir a comparação em várias semanas.
-- **Última decisão registrada: D47** — a próxima é D48 (`docs/decisoes.md`).
+  repetir a comparação em várias semanas.
+- **Em andamento: 3 cards gerais na tela** (todos os modelos, sem depender da variável): (1) ranking
+  geral ✅ (D48, `ranking.ts` + `RankingGeral.tsx`); (2) caso de estudo com todos os modelos;
+  (3) comparação com anos anteriores (rota nova `/api/contexto` + seção no relatório). Um por vez.
+- **Última decisão registrada: D48** — a próxima é D49 (`docs/decisoes.md`).
 - **Para retomar:** leia o fim de `docs/diario.md` (inclui as dúvidas discutidas). Para ver a tela:
   suba `backend` e `frontend` pelo `.claude/launch.json`. Os números da documentação são um retrato
   de 26-11-2026; a ferramenta atualiza os dados sozinha todo dia (D44).
-- **Qualidade atual:** backend 67 testes (pytest) + ruff limpo; frontend 31 testes (Vitest) +
+- **Qualidade atual:** backend 68 testes (pytest) + ruff limpo; frontend 38 testes (Vitest) +
   tsc + oxlint + build limpos.
 
 ## Etapas (ordem fixa)

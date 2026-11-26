@@ -157,6 +157,8 @@ Histórico de 90 dias de uma variável.
 }
 ```
 
+- O card "Ranking geral" da tela (D48) usa esta rota para as duas variáveis e monta o ranking
+  no próprio frontend (`frontend/src/ranking.ts`).
 - **Erros:** 400 (`variavel` inválida).
 
 ---
@@ -214,14 +216,14 @@ Tabela comparativa dos 5 modelos no período de teste (treino nos 80 primeiros d
       "nome_modelo": "Linha de base (média 7 dias)",
       "configuracao": "média dos últimos 7 dias",
       "mae": 0.46, "rmse": 0.55, "cobertura": 70.0,
-      "mae_dias_1_7": 0.4, "vies": -0.24, "mae_vs_linha_base": 0.0
+      "mae_dias_1_7": 0.4, "vies": -0.24, "largura_faixa": 1.19, "mae_vs_linha_base": 0.0
     },
     {
       "modelo": "sarima",
       "nome_modelo": "SARIMA",
       "configuracao": "SARIMA(1, 0, 0) (sem parte sazonal) + tendência linear",
       "mae": 0.38, "rmse": 0.5, "cobertura": 90.0,
-      "mae_dias_1_7": 0.35, "vies": -0.1, "mae_vs_linha_base": -18.06
+      "mae_dias_1_7": 0.35, "vies": -0.1, "largura_faixa": 1.14, "mae_vs_linha_base": -18.06
     }
   ]
 }
@@ -234,6 +236,7 @@ Tabela comparativa dos 5 modelos no período de teste (treino nos 80 primeiros d
 | `cobertura` | % dos dias reais dentro da faixa de 95% |
 | `mae_dias_1_7` | MAE só nos 7 primeiros dias (horizonte do produto) |
 | `vies` | erro médio com sinal: negativo = previu baixo demais |
+| `largura_faixa` | largura média da faixa de 95% em °C (D48): faixa estreita que acerta = previsão útil |
 | `mae_vs_linha_base` | % a menos (−) ou a mais (+) de erro que a linha de base |
 
 - **Erros:** 400 (`variavel` inválida).
@@ -256,7 +259,7 @@ previsão x real**.
   "nome_modelo": "SARIMA",
   "configuracao": "SARIMA(1, 0, 0) (sem parte sazonal) + tendência linear",
   "teste": { "inicio": "2026-11-16", "fim": "2026-11-25", "dias": 10 },
-  "metricas": { "mae": 0.38, "rmse": 0.5, "cobertura": 90.0, "mae_dias_1_7": 0.35, "vies": -0.1 },
+  "metricas": { "mae": 0.38, "rmse": 0.5, "cobertura": 90.0, "mae_dias_1_7": 0.35, "vies": -0.1, "largura_faixa": 1.14 },
   "treino_final": [
     { "data": "2026-10-27", "valor": 28.7 },
     { "data": "2026-10-28", "valor": 28.6 }
@@ -313,7 +316,7 @@ antes x depois**.
       "modelo": "sarima",
       "nome_modelo": "SARIMA",
       "horizonte": 34,
-      "metricas": { "mae": 1.79, "rmse": 1.84, "cobertura": 0.0, "mae_dias_1_7": 1.67, "vies": -1.79 },
+      "metricas": { "mae": 1.79, "rmse": 1.84, "cobertura": 0.0, "mae_dias_1_7": 1.67, "vies": -1.79, "largura_faixa": 1.77 },
       "previsao": [
         { "data": "2026-10-23", "previsao": 30.48, "inferior": 29.76, "superior": 31.2 },
         { "data": "2026-10-24", "previsao": 30.4, "inferior": 29.57, "superior": 31.24 }
@@ -324,7 +327,7 @@ antes x depois**.
       "modelo": "sarima",
       "nome_modelo": "SARIMA",
       "horizonte": 10,
-      "metricas": { "mae": 0.29, "rmse": 0.44, "cobertura": 100.0, "mae_dias_1_7": 0.22, "vies": -0.16 },
+      "metricas": { "mae": 0.29, "rmse": 0.44, "cobertura": 100.0, "mae_dias_1_7": 0.22, "vies": -0.16, "largura_faixa": 2.02 },
       "previsao": [
         { "data": "2026-11-16", "previsao": 32.0, "inferior": 31.21, "superior": 32.79 }
       ]

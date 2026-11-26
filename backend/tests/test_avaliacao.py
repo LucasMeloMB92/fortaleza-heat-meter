@@ -30,6 +30,11 @@ def test_cobertura_conta_os_limites_como_dentro():
     assert avaliacao.cobertura(real, inferior, superior) == pytest.approx(75.0)
 
 
+def test_largura_faixa_e_a_media_de_superior_menos_inferior():
+    # Larguras 2, 1 e 3 °C -> média 2 °C (D48).
+    assert avaliacao.largura_faixa([27, 29, 30], [29, 30, 33]) == pytest.approx(2.0)
+
+
 # --- Separação e avaliação ---
 
 
@@ -64,4 +69,11 @@ def test_avaliar_devolve_comparacao_dia_a_dia(serie):
     assert comparacao.index.equals(serie.index[-10:])
     assert np.allclose(comparacao["real"], serie.iloc[-10:])
     assert np.allclose(comparacao["erro"], comparacao["previsao"] - comparacao["real"])
-    assert set(resultado["metricas"]) == {"mae", "rmse", "cobertura", "mae_dias_1_7", "vies"}
+    assert set(resultado["metricas"]) == {
+        "mae",
+        "rmse",
+        "cobertura",
+        "mae_dias_1_7",
+        "vies",
+        "largura_faixa",
+    }

@@ -10,6 +10,7 @@ import type {
   RespostaTeste,
 } from './api'
 import { formatarComSinal, formatarData, formatarDiaMes, formatarGraus, formatarNumero } from './formatacao'
+import { type LinhaRanking, vitoriasSobreARegra } from './ranking'
 
 // Temperaturas com 1 casa ("29,1 °C"); erros e variações com 2 casas, iguais às tabelas ("0,38 °C").
 const graus = (valor: number | null | undefined) => formatarGraus(valor, 1)
@@ -47,6 +48,11 @@ export const AJUDA = {
   vies: 'Viés: o erro médio com sinal. Negativo = em média previu abaixo do real; positivo = acima.',
   teste:
     'Período de teste: os últimos dias foram escondidos do modelo; ele previu esses dias e comparamos com o que aconteceu.',
+  posicaoMedia:
+    'Média das posições do modelo na temperatura e na sensação (1 = menor erro). Quanto menor, mais regular: o 1º geral é o que foi bem nas duas.',
+  erroMedioGeral: 'Média simples do erro médio na temperatura e na sensação. Mostra quem erra menos no total.',
+  larguraFaixa:
+    'Largura da faixa: distância média entre o mínimo e o máximo previstos (temperatura / sensação). Faixa estreita que acerta = previsão útil; faixa larga "acerta" fácil, mas diz pouco.',
 }
 
 // ---------------------------------------------------------------------------
@@ -145,6 +151,53 @@ export function rotuloVsRegraSimples(linha: LinhaMetricas): string {
   const pct = linha.mae_vs_linha_base ?? 0
   if (Math.abs(pct) < 3) return 'empate'
   return `${formatarNumero(Math.abs(pct), 0)}% ${pct < 0 ? 'melhor' : 'pior'}`
+}
+
+/**
+ * Texto do card "Ranking geral" (as duas variáveis juntas). Regras:
+ * - o 1º do ranking = o mais regular (menor posição média);
+ * - se outro modelo tem o menor erro somando as duas, o texto diz isso e por que ele não é o
+ *   1º: venceu a regra simples em menos variáveis e/ou faixa pelo menos 1,5x mais larga;
+ * - o modelo que mais oscilou (3 ou mais posições de diferença entre as variáveis) é citado.
+ */
+export function textoRanking(linhas: LinhaRanking[]): string {
+  if (linhas.length === 0) return ''
+  const primeiro = linhas[0]
+  const posicoesTexto = (l: LinhaRanking) =>
+    `${l.temperatura.posicao}º na temperatura e ${l.sensacao.posicao}º na sensação térmica`
+
+  let texto = `No geral, o ${primeiro.nome} foi o mais regular: ${posicoesTexto(primeiro)}.`
+  if (vitoriasSobreARegra(primeiro) === 2) texto += ' Foi melhor que a regra simples nas duas.'
+
+  // Menor erro somando as duas (no empate, vale a ordem do ranking).
+  const menorErro = linhas.reduce((a, b) => (b.erroMedio < a.erroMedio ? b : a))
+  if (menorErro.modelo !== primeiro.modelo) {
+    const motivos: string[] = []
+    const vitorias = vitoriasSobreARegra(menorErro)
+    if (vitorias < vitoriasSobreARegra(primeiro)) {
+      motivos.push(
+        vitorias === 0
+          ? 'não superou a regra simples em nenhuma das duas'
+          : 'superou a regra simples em só uma das duas',
+      )
+    }
+    if (menorErro.larguraMedia != null && primeiro.larguraMedia != null) {
+      const vezes = menorErro.larguraMedia / primeiro.larguraMedia
+      if (vezes >= 1.5) motivos.push(`sua faixa é ${formatarNumero(vezes, 1)} vezes mais larga`)
+    }
+    texto +=
+      ` O ${menorErro.nome} teve o menor erro somando as duas (${erro(menorErro.erroMedio)} contra ` +
+      `${erro(primeiro.erroMedio)})` +
+      (motivos.length ? `, mas ${motivos.join(' e ')}.` : ', mas ficou atrás nas posições.')
+  }
+
+  // Quem mais oscilou entre as variáveis (ex.: 1º numa, 5º na outra).
+  const oscilacao = (l: LinhaRanking) => Math.abs(l.temperatura.posicao - l.sensacao.posicao)
+  const oscilante = linhas.reduce((a, b) => (oscilacao(b) > oscilacao(a) ? b : a))
+  if (oscilacao(oscilante) >= 3) {
+    texto += ` O ${oscilante.nome} foi o que mais oscilou: ${posicoesTexto(oscilante)}.`
+  }
+  return texto
 }
 
 export function textoComparacao(resposta: RespostaMetricas): string {

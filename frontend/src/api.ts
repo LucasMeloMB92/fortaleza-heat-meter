@@ -30,6 +30,8 @@ export interface Metricas {
   cobertura: number | null
   mae_dias_1_7: number | null
   vies: number | null
+  // Largura média da faixa, em °C (D48). Opcional: versões antigas da API não mandam.
+  largura_faixa?: number | null
 }
 
 export interface Opcoes {

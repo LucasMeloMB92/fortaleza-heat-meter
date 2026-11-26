@@ -641,3 +641,32 @@ temperatura — linha de base 0,29, ETS 0,30, SARIMA 0,45, Prophet 0,17; sensaç
   recebe, ele não a vê. Atualizar os dados todo dia (D44) vale para ele também.
 - **Um modelo novo muda os textos:** empates e "treinado" só apareceram como problema com o 5º
   modelo — de novo, o texto gerado precisou ser visto na tela, não só nos testes.
+
+---
+
+## Cards gerais — card 1: Ranking geral dos modelos (2026-11-26)
+
+### Pedido
+Comparações ainda "avulsas", uma variável e um modelo por vez. O usuário pediu três cards gerais,
+com todos os modelos e sem depender da variável escolhida: (1) ranking geral, (2) caso de estudo
+com todos, (3) comparação com anos anteriores. Uma etapa por card.
+
+### O que foi feito (D48)
+- **Largura da faixa** (`largura_faixa`) virou métrica oficial em `avaliacao.py` → aparece em
+  `/api/metricas`, `/api/teste` e `/api/caso-estudo`. Backend: 68 testes.
+- `frontend/src/ranking.ts`: posição em cada variável (MAE; empate → "vs regra simples"),
+  ranking geral pela posição média (empate → erro médio). `textoRanking` em `textos.ts`.
+- `RankingGeral.tsx`: card no topo da tela, antes dos seletores. Clicar num modelo o seleciona.
+- Frontend: 38 testes (eram 31), tsc + oxlint limpos; conferido no navegador.
+
+### Resultado (tela, 26-11-2026)
+"No geral, o SARIMA foi o mais regular: 3º na temperatura e 1º na sensação térmica. Foi melhor que
+a regra simples nas duas. O Chronos-2 teve o menor erro somando as duas (0,32 °C contra 0,34 °C),
+mas superou a regra simples em só uma das duas e sua faixa é 2,0 vezes mais larga. O Prophet foi o
+que mais oscilou: 1º na temperatura e 5º na sensação térmica."
+
+### O que aprendi
+- **0,335 não é 0,335 para o computador:** a média de 0,38 e 0,29 virou "0,33" na tela e "0,34"
+  no relatório. Arredondar "como à mão" (com `Number.EPSILON`) mantém tela e relatório iguais.
+- **O SARIMA "só antes" tinha faixa estreita (1,77 °C) e errou 1,79 °C:** com a largura oficial,
+  dá para ver em números a "falsa confiança" que o caso de estudo descrevia em palavras.

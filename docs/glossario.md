@@ -122,6 +122,13 @@ caso. O Chronos-2 prevê a temperatura de Fortaleza "zero-shot".
 **Contexto** — os dados que se entregam a um modelo fundacional na hora de prever (aqui, os 80 ou
 90 dias). Ele só usa o contexto: o que não está ali ele não sabe.
 
+**Largura da faixa** — distância média, em °C, entre o limite de cima e o de baixo da faixa de 95%
+(D48). Faixa estreita que acerta = previsão útil; uma faixa larga "acerta" com facilidade, mas diz
+pouco. Por isso a cobertura deve ser lida junto com a largura.
+
+**Posição média** — no ranking geral, a média das posições de um modelo na temperatura e na
+sensação (1 = menor erro). Mede **regularidade**: 3º e 1º (média 2,0) é melhor que 1º e 5º (3,0).
+
 **Quantil** — valor de corte de uma previsão: o quantil de 2,5% é o valor com só 2,5% de chance de
 o real ficar abaixo dele. O de 50% é a **mediana** (o valor do meio). O Chronos-2 dá a faixa de 95%
 com os quantis de 2,5% e 97,5%.

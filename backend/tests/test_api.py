@@ -74,7 +74,7 @@ def test_metricas_tem_uma_linha_por_modelo(cliente):
     por_modelo = {m["modelo"]: m for m in corpo["metricas"]}
     assert set(por_modelo) == {"linha_base", "ets"}
     assert por_modelo["linha_base"]["mae_vs_linha_base"] == 0
-    assert {"mae", "rmse", "cobertura", "vies"} <= set(por_modelo["ets"])
+    assert {"mae", "rmse", "cobertura", "vies", "largura_faixa"} <= set(por_modelo["ets"])
 
 
 def test_teste_traz_10_dias_com_real_e_previsao(cliente):

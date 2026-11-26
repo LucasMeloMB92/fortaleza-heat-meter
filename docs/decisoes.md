@@ -592,3 +592,28 @@ durante o projeto e aprovadas.
   são citados juntos ("Prophet e Chronos-2 empataram..."); para o Chronos-2 as frases dizem "viu"
   em vez de "treinado"; e, quando um modelo erra o nível mas a faixa acerta mais da metade dos
   dias, o texto avisa que foi "só porque era larga".
+
+## D48 — Card "Ranking geral" e largura da faixa como métrica oficial _(usuário)_
+- **Decisão:** como mostrar na tela a comparação de **todos** os modelos nas **duas** variáveis
+  juntas (antes, a tela só comparava os modelos numa variável por vez).
+- **Opções consideradas:** (a) um card no topo, independente dos seletores, com o ranking
+  calculado no frontend a partir de `/api/metricas` das duas variáveis; (b) uma rota nova na API
+  que já devolvesse o ranking pronto; (c) só o ranking no relatório, sem mudar a tela.
+- **Escolha:** (a).
+  - **Critério do ranking** (o mesmo da seção 7.2 do relatório): posição em cada variável pelo
+    erro médio (MAE; empate nas 2 casas → desempata o "vs regra simples", que vem do MAE sem
+    arredondar); ranking geral pela **posição média**; empate → menor **erro médio** das duas.
+  - **Largura da faixa (`largura_faixa`) virou métrica oficial** em `avaliacao.py`: a distância
+    média entre o limite de cima e o de baixo, em °C. Aparece em `/api/metricas`, `/api/teste` e
+    `/api/caso-estudo`.
+  - Contas em `frontend/src/ranking.ts` (funções puras, testadas); frase em `textos.ts` (D46):
+    quem é o mais regular, quem teve o menor erro somado e por que não é o 1º (venceu a regra
+    simples em menos variáveis; faixa ≥ 1,5x mais larga), e quem mais oscilou (≥ 3 posições).
+  - Médias de dois números de 2 casas arredondadas "como à mão" (0,335 → 0,34), para a tela
+    mostrar o mesmo número que o relatório.
+- **Por quê:** (a) reaproveita o que a API já calcula e guarda em cache (o card e a tabela por
+  variável usam a mesma consulta); (b) duplicaria regra de apresentação no backend. A largura
+  precisava ser oficial porque o ranking a usa para explicar por que o modelo de menor erro somado
+  não é o 1º — e porque cobertura sem largura engana (achado da evolução 11.2).
+- **Achado:** o JavaScript guarda 0,335 como 0,33499999…, e a tela mostrava "0,33" onde o
+  relatório dizia "0,34". Corrigido com o arredondamento "como à mão".

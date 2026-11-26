@@ -390,7 +390,7 @@ fica entre os três primeiros nas duas.
 | **1º** | **SARIMA** | **2,0** (3º e 1º) | 0,34 °C | **Sim, com folga** (−18% e −15%) | **1,14 / 2,02 °C** | 1,11 / 1,79 °C |
 | 2º | Chronos-2 | 2,5 (2º e 3º) | **0,32 °C** | Só na temperatura (na sensação, empate: −1%) | 2,14 / 4,05 °C | 1,04 / 1,49 °C |
 | 3º | Prophet | 3,0 (1º e 5º) | 0,35 °C | Não (+13% na sensação) | 1,01 / 1,66 °C | **0,31 / 0,35 °C** |
-| 4º | ETS | 3,0 (4º e 2º) | 0,38 °C | Por pouco (−6% e −2%) | 1,30 / 3,42 °C | 0,95 / 1,36 °C |
+| 4º | ETS | 3,0 (4º e 2º) | 0,38 °C | Só na temperatura (na sensação, empate: −2%) | 1,30 / 3,42 °C | 0,95 / 1,36 °C |
 | 5º | Linha de base | 4,5 (5º e 4º) | 0,40 °C | — (é a régua) | 1,19 / 2,21 °C | 0,94 / 1,29 °C |
 
 Como ler as colunas:
@@ -402,6 +402,9 @@ Como ler as colunas:
   estreita que acerta = previsão útil; faixa larga "acerta" com facilidade, mas diz pouco.
 - **Caso de estudo "só antes":** o erro do modelo que só conhecia os dias anteriores à mudança de
   outubro (seção 8). Mede como ele se sai quando o clima muda e ele não viu.
+
+Na ferramenta web, este ranking aparece no topo da tela, no card **"Ranking geral dos modelos"**,
+calculado com os números do dia e sem depender da variável escolhida.
 
 ### 7.3 Por que o SARIMA, e não os outros
 
@@ -575,8 +578,8 @@ sozinho na validação, no caso de estudo, na API e na tela. Como funciona: seç
   que não estejam no contexto (seção 8).
 - **Custo:** gratuito (Apache 2.0, uso comercial permitido — confirmar antes de usar em produto).
   O custo é técnico: PyTorch (~200 MB), o modelo (456 MB) e mais memória.
-- **Próximos testes possíveis com ele:** repetir a comparação em várias semanas (o teste de 10
-  dias é curto) e medir a largura da faixa como métrica oficial.
+- **Próximo teste possível com ele:** repetir a comparação em várias semanas (o teste de 10
+  dias é curto). A largura da faixa já virou métrica oficial da ferramenta (D48).
 
 ### 11.3 Explicações em texto por IA
 Hoje os textos da tela são gerados por **regras** (D46): sempre corretos, mas fixos. Uma melhoria é
