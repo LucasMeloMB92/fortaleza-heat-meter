@@ -19,8 +19,10 @@ Endereço base: `http://127.0.0.1:5000/api`. Para recarregar ao editar o código
 - **Método:** todas as rotas são `GET` (só consultam; nada é alterado no servidor).
 - **Formato:** JSON em UTF-8. Datas em `AAAA-MM-DD`; números com 2 casas decimais; valor ausente
   = `null`. Temperaturas em °C.
-- **Dados:** os 90 dias de `backend/data/fortaleza_diario.csv`. Para atualizar, rode a coleta
-  (`scripts.etapa1_coleta`) e reinicie o servidor.
+- **Dados (atualização automática — D44):** os 90 dias de `backend/data/fortaleza_diario.csv`,
+  sempre até **ontem** (fuso de Fortaleza). Antes de cada pedido, a API confere; se faltar dia,
+  baixa tudo do Open-Meteo, grava e limpa o cache. Se o Open-Meteo falhar, a API continua com os
+  dados que tem, informa em `/api/saude` e tenta de novo após 10 minutos.
 - **Tempo de resposta (cache — D37):** cada resultado é calculado no **primeiro** pedido e guardado
   na memória. Cálculos novos rodam em **fila**, um de cada vez (pedidos simultâneos esperam a vez;
   o que já está em cache responde na hora). Medido em 26/11/2026, com um pedido por vez:
@@ -61,7 +63,7 @@ Todos os erros vêm em JSON:
 
 ## GET `/api/saude`
 
-O servidor está no ar? Até quando vão os dados?
+O servidor está no ar? Até quando vão os dados? A atualização automática funcionou?
 
 - **Parâmetros:** nenhum.
 - **Requisição:** `GET /api/saude`
@@ -70,7 +72,31 @@ O servidor está no ar? Até quando vão os dados?
 ```json
 {
   "status": "ok",
-  "dados": { "inicio": "2026-08-28", "fim": "2026-11-25", "dias": 90 }
+  "dados": { "inicio": "2026-08-28", "fim": "2026-11-25", "dias": 90 },
+  "atualizacao": {
+    "em_dia": true,
+    "ultimo_dia_esperado": "2026-11-25",
+    "atualizado_em": "2026-11-26T11:56:19-03:00",
+    "erro": null
+  }
+}
+```
+
+| Campo de `atualizacao` | Significado |
+|---|---|
+| `em_dia` | `true` se os dados vão até ontem (fuso de Fortaleza) |
+| `ultimo_dia_esperado` | ontem — até onde os dados deveriam ir |
+| `atualizado_em` | quando a API baixou dados novos pela última vez (`null` = ainda não baixou desde que iniciou) |
+| `erro` | se `em_dia` é `false`: por que a atualização falhou (ex.: Open-Meteo fora do ar) |
+
+Exemplo com falha na atualização (a API continua respondendo com os dados que tem):
+
+```json
+"atualizacao": {
+  "em_dia": false,
+  "ultimo_dia_esperado": "2026-11-29",
+  "atualizado_em": null,
+  "erro": "Open-Meteo fora do ar"
 }
 ```
 

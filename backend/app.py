@@ -38,6 +38,12 @@ def create_app() -> Flask:
     CORS(app, resources={r"/api/*": {"origins": ORIGENS_PERMITIDAS}})
     logging.getLogger("cmdstanpy").setLevel(logging.WARNING)  # menos mensagens do Prophet
 
+    # --- Antes de cada pedido: dados em dia? (atualização automática — D44) --
+
+    @app.before_request
+    def atualizar_dados_se_preciso():
+        servico.garantir_dados_atualizados()
+
     # --- Rotas -------------------------------------------------------------
     # request.args = parâmetros da URL (o que vem depois do "?").
 

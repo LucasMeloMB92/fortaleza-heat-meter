@@ -43,6 +43,14 @@ export interface Opcoes {
 export interface Saude {
   status: string
   dados: Periodo
+  // Atualização automática (D44): os dados vão até ontem? Se não, o motivo.
+  // Opcional: versões antigas da API não mandam este campo.
+  atualizacao?: {
+    em_dia: boolean
+    ultimo_dia_esperado: string
+    atualizado_em: string | null
+    erro: string | null
+  }
 }
 
 export interface Serie {
@@ -126,16 +134,23 @@ async function buscar<T>(rota: string, parametros: Record<string, string | numbe
   )
   const url = `/api/${rota}${consulta.size ? `?${consulta}` : ''}`
 
+  const semConexao = 'Não foi possível conectar à API. O backend está rodando na porta 5000?'
   let resposta: Response
   try {
     resposta = await fetch(url)
   } catch {
-    throw new ErroApi('Não foi possível conectar à API. O backend está rodando na porta 5000?', 0)
+    throw new ErroApi(semConexao, 0)
   }
   if (!resposta.ok) {
-    // A API sempre devolve {"erro": "..."}; se não vier JSON (ex.: proxy sem backend), mensagem genérica.
+    // A API sempre devolve {"erro": "..."} em JSON. Se não vier JSON, quem respondeu foi o
+    // proxy do Vite: 502/503/504 = ele não alcançou o backend (servidor desligado).
     const corpo = await resposta.json().catch(() => null)
-    throw new ErroApi(corpo?.erro ?? `A API respondeu com erro ${resposta.status}.`, resposta.status)
+    if (corpo?.erro) throw new ErroApi(corpo.erro, resposta.status)
+    const proxySemBackend = [502, 503, 504].includes(resposta.status)
+    throw new ErroApi(
+      proxySemBackend ? semConexao : `A API respondeu com erro ${resposta.status}.`,
+      resposta.status,
+    )
   }
   return resposta.json() as Promise<T>
 }

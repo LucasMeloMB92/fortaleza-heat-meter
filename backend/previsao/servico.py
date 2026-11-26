@@ -8,12 +8,18 @@ resultado é calculado no PRIMEIRO pedido e guardado na memória (um dicionário
 pedidos seguintes são instantâneos. Os cálculos novos rodam em fila, um de cada vez, e cada
 um roda uma única vez (ver _calculo_unico).
 
-Os dados vêm do CSV da etapa 1 — para atualizar, rode a coleta de novo e reinicie o servidor.
+Atualização automática (decisão D44): antes de cada pedido, garantir_dados_atualizados()
+confere se os dados vão até ONTEM (no fuso de Fortaleza). Se não, baixa tudo de novo do
+Open-Meteo, grava os CSVs e limpa o cache. Se a coleta falhar, segue com os dados antigos e
+informa em /api/saude.
 """
 
+import logging
 import math
 import threading
+from datetime import date, datetime, timedelta
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -154,7 +160,8 @@ def _calculo_unico(funcao):
 
 @_calculo_unico
 def _tabela() -> pd.DataFrame:
-    return coleta.carregar_csv().set_index("data")
+    # Caminho lido na hora (não no "def"): os testes podem apontar para um arquivo temporário.
+    return coleta.carregar_csv(coleta.CAMINHO_CSV).set_index("data")
 
 
 def _serie(variavel: str) -> pd.Series:
@@ -184,6 +191,76 @@ def _caso_estudo(variavel: str):
     return data, metricas, resultados
 
 
+# ---------------------------------------------------------------------------
+# Atualização automática dos dados (decisão D44)
+# ---------------------------------------------------------------------------
+
+FUSO = ZoneInfo(coleta.FUSO)  # America/Fortaleza
+ESPERA_APOS_FALHA = timedelta(minutes=10)  # não tentar de novo a cada pedido se o Open-Meteo caiu
+_log = logging.getLogger(__name__)
+
+# Situação da última verificação — aparece em /api/saude para o frontend avisar o usuário.
+_estado = {"ultima_falha_em": None, "erro": None, "atualizado_em": None}
+
+
+def hoje_em_fortaleza() -> date:
+    """A data de hoje no fuso de Fortaleza (não no fuso do computador que roda o servidor)."""
+    return datetime.now(FUSO).date()
+
+
+def ultimo_dia_esperado() -> date:
+    """Os dados devem ir até ONTEM: a média de hoje ainda está incompleta (decisão D20)."""
+    return hoje_em_fortaleza() - timedelta(days=1)
+
+
+def _ultimo_dia_dos_dados() -> date:
+    try:
+        return _tabela().index.max().date()
+    except FileNotFoundError:
+        return date.min  # sem CSV (instalação nova): conta como desatualizado -> coleta
+
+
+def garantir_dados_atualizados() -> None:
+    """Se os dados não vão até ontem, baixa de novo e limpa o cache. Nunca levanta erro.
+
+    Roda dentro da fila de cálculos: se dois pedidos chegarem juntos, só um baixa os dados.
+    """
+    if _ultimo_dia_dos_dados() >= ultimo_dia_esperado():
+        return  # caminho comum: dados em dia, custo quase zero
+    with _FILA_DE_CALCULOS:
+        if _ultimo_dia_dos_dados() >= ultimo_dia_esperado():
+            return  # outro pedido atualizou enquanto esperávamos
+        falha = _estado["ultima_falha_em"]
+        if falha and datetime.now(FUSO) - falha < ESPERA_APOS_FALHA:
+            return  # falhou há pouco: não atrasa todos os pedidos tentando de novo
+        try:
+            hoje = hoje_em_fortaleza()
+            # Baixa os DOIS antes de gravar qualquer um: ou atualiza tudo, ou nada.
+            tabela, _ = coleta.coletar(hoje)
+            contexto = exploracao.baixar_contexto(tabela["data"].max().date())
+            coleta.salvar_csv(tabela, coleta.CAMINHO_CSV)
+            coleta.salvar_csv(contexto, exploracao.CAMINHO_CONTEXTO)
+        except Exception as erro:  # rede fora, API mudou, dados incompletos...
+            _log.warning("Não foi possível atualizar os dados: %s", erro)
+            _estado.update(ultima_falha_em=datetime.now(FUSO), erro=str(erro))
+            return
+        limpar_cache()  # os modelos serão treinados de novo com os dados novos
+        _estado.update(ultima_falha_em=None, erro=None, atualizado_em=datetime.now(FUSO))
+        _log.info("Dados atualizados até %s.", _ultimo_dia_dos_dados())
+
+
+def situacao_atualizacao() -> dict:
+    """Resumo para /api/saude: os dados estão em dia? Se não, por quê?"""
+    em_dia = _ultimo_dia_dos_dados() >= ultimo_dia_esperado()
+    atualizado_em = _estado["atualizado_em"]
+    return {
+        "em_dia": em_dia,
+        "ultimo_dia_esperado": _data(ultimo_dia_esperado()),
+        "atualizado_em": atualizado_em.isoformat(timespec="seconds") if atualizado_em else None,
+        "erro": None if em_dia else _estado["erro"],
+    }
+
+
 def limpar_cache() -> None:
     """Esquece todos os resultados guardados (usado nos testes)."""
     for funcao in (_tabela, _prever, _validacao, _datas_de_mudanca, _caso_estudo):
@@ -197,7 +274,7 @@ def limpar_cache() -> None:
 
 def saude() -> dict:
     serie = _serie(VARIAVEL_PADRAO)
-    return {"status": "ok", "dados": _periodo(serie)}
+    return {"status": "ok", "dados": _periodo(serie), "atualizacao": situacao_atualizacao()}
 
 
 def opcoes() -> dict:

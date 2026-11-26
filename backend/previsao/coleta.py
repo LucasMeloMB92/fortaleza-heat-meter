@@ -12,6 +12,7 @@ Fluxo:
 As funções são pequenas e separadas para poderem ser testadas sem internet.
 """
 
+import os
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -185,9 +186,15 @@ def coletar(hoje: date | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def salvar_csv(tabela: pd.DataFrame, caminho: Path = CAMINHO_CSV) -> Path:
-    """Salva a tabela em CSV (datas no formato AAAA-MM-DD)."""
+    """Salva a tabela em CSV (datas no formato AAAA-MM-DD) de forma ATÔMICA (decisão D44).
+
+    Escreve primeiro num arquivo temporário e só então troca pelo definitivo (os.replace).
+    Se algo falhar no meio da escrita, o CSV antigo continua inteiro — nunca fica pela metade.
+    """
     caminho.parent.mkdir(parents=True, exist_ok=True)
-    tabela.to_csv(caminho, index=False, date_format="%Y-%m-%d")
+    temporario = caminho.with_name(caminho.name + ".tmp")
+    tabela.to_csv(temporario, index=False, date_format="%Y-%m-%d")
+    os.replace(temporario, caminho)
     return caminho
 
 

@@ -472,3 +472,57 @@ durante o projeto e aprovadas.
 - **Por quê:** cobre as 4 funcionalidades pedidas e reaproveita as convenções dos gráficos das
   etapas 2–5 (cores, ●/✕, tracejado), para o cliente reconhecer o que viu nos relatórios. A tabela
   de valores previstos garante leitura precisa sem depender só do gráfico.
+
+## D44 — Atualização automática dos dados (sempre até ontem) _(usuário)_
+- **Decisão:** os dados deixam de ser fixos (coletados em 26-11-2026) e passam a ir sempre até o
+  dia anterior ao acesso — ex.: acessando no dia 30, os dados vão até o dia 29.
+- **Opções consideradas:** (a) atualizar automaticamente no primeiro pedido do dia; (b) botão
+  "Atualizar dados" na tela; (c) tarefa agendada do Windows rodando a coleta todo dia.
+- **Escolha:** (a). Antes de cada pedido (`before_request` no `app.py`), a API compara o último dia
+  dos dados com **ontem no fuso de Fortaleza** (`zoneinfo`, não o fuso do computador). Se faltar
+  dia: baixa os 90 dias e os 3 anos de contexto, grava os dois CSVs e limpa o cache.
+- **Cuidados:**
+  - **Tudo ou nada:** baixa os dois conjuntos antes de gravar qualquer um — os 90 dias nunca
+    ficam à frente do contexto.
+  - **Gravação atômica:** `salvar_csv` escreve num `.tmp` e troca com `os.replace`; se algo falhar
+    no meio, o CSV antigo continua inteiro.
+  - **Falha no Open-Meteo:** segue com os dados antigos, informa em `/api/saude` (campo
+    `atualizacao`) e só tenta de novo após 10 minutos (para não atrasar todos os pedidos).
+  - **Dentro da fila de cálculos (D37):** dois pedidos simultâneos não baixam os dados duas vezes.
+  - **Testes sem internet e sem tocar nos CSVs reais** (cópias em pasta temporária e coleta
+    simulada); os testes da API "congelam o hoje" para nunca dispararem a atualização.
+- **Por quê:** ninguém precisa lembrar de nada e o projeto não ganha infraestrutura nova. (b)
+  depende de alguém clicar; (c) exige configurar algo fora do projeto.
+- **Efeitos aceitos:** o primeiro acesso de cada dia retreina tudo (~10 s até o gráfico
+  principal, ~1,5 min até o caso de estudo). O **caso de estudo muda com o tempo**: a data da
+  mudança é recalculada todo dia; quando a mudança de outubro sair da janela de 90 dias (meados de
+  janeiro/2027), o detector ainda apontará *alguma* data, mesmo sem mudança forte. Os números da
+  documentação (diário, relatório) são um retrato de 26-11-2026.
+- **Verificado de verdade:** removendo o último dia do CSV e reiniciando a API, ela baixou do
+  Open-Meteo sozinha e o CSV voltou idêntico ao original.
+
+## D45 — Frontend robusto: nunca tela branca _(usuário)_
+- **Decisão:** como a tela se comporta enquanto carrega, quando a API está fora ou quando algo
+  quebra.
+- **Opções consideradas:** só textos "Carregando…" (como estava); esqueletos + limites de erro +
+  carregamento sob demanda; bibliotecas prontas (ex.: `react-error-boundary`).
+- **Escolha:**
+  - **Limites de erro (error boundaries)** em três níveis: cada seção, a faixa de aviso e a página
+    inteira. Se uma parte quebrar, só ela mostra um aviso com "Tentar de novo".
+  - **Esqueletos (skeletons)** no formato do gráfico/tabela, com **contador de segundos** e uma
+    dica de quanto costuma demorar.
+  - **`React.lazy` + `Suspense`:** o código dos gráficos (Recharts) é baixado separado; enquanto
+    chega, o `Suspense` mostra o esqueleto. Efeito colateral bom: o pacote principal caiu de
+    716 kB para 270 kB (o aviso do Vite sumiu).
+  - **Faixa de aviso no topo:** "conectando e conferindo se os dados estão em dia", "sem conexão
+    com a API" (vermelho) ou "dados desatualizados" (amarelo), com "Tentar de novo".
+  - **Mensagens claras:** um 502/503/504 do proxy do Vite vira "Não foi possível conectar à API.
+    O backend está rodando na porta 5000?".
+  - **Virada do dia:** `/api/saude` é reconsultada a cada 15 min e ao voltar para a aba; se o
+    último dia mudou, todas as seções são recarregadas.
+  - Limite de erro escrito à mão (uma classe pequena), sem biblioteca extra.
+- **Por quê:** pedido do usuário. Testado no navegador: backend desligado (avisos em todas as
+  seções, sem tela branca), recuperação com um clique e carregamento com contador.
+- **Achado no teste:** uma resposta guardada da API antiga (sem o campo `atualizacao`) quebrou a
+  faixa de aviso. O limite de erro geral segurou a página (sem tela branca), mas derrubou tudo.
+  Correção: a faixa ficou defensiva e ganhou um limite de erro próprio.

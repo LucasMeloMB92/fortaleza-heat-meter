@@ -17,3 +17,6 @@ Thumbs.db
 
 # --- Configurações locais do Claude Code (pessoais) ---
 .claude/settings.local.json
+
+# --- Arquivos temporários da gravação atômica (D44) ---
+*.tmp
