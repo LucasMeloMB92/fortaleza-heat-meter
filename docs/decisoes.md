@@ -207,3 +207,53 @@ durante o projeto e aprovadas.
 - **Por quê:** testes que dependem da internet falham por motivos alheios ao código (rede fora,
   API lenta) e mudam de resultado com o tempo. Com dados falsos, testamos exatamente os casos
   difíceis (null, buraco, duplicata, prioridade entre fontes) sempre do mesmo jeito.
+
+## D23 — Manter 90 dias diários de Fortaleza, apesar da pouca variação
+- **Decisão:** a pouca variação da série (desvio-padrão de 0,5 °C) atrapalha a POC? Trocar algo?
+- **Opções consideradas:** (a) manter 90 dias diários de Fortaleza; (b) dados horários (2.160
+  pontos, ciclo de 24 h); (c) outra cidade com mais variação (ex.: Porto Alegre); (d) histórico
+  maior (6 meses, 1 ano, 2–3 anos).
+- **Escolha:** (a).
+- **Por quê:**
+  - O que torna uma série previsível não é variar muito, e sim ter **padrão**: a autocorrelação
+    de 1 dia é 0,75 (temperatura) e 0,87 (sensação) — a série tem memória.
+  - (b) muda o problema (prever 168 horas, não 7 médias diárias) e o ciclo dia/noite é tão fácil
+    que infla a "precisão"; (c) foge do pedido do cliente e frentes frias são eventos, não padrões.
+  - (d) Fortaleza tem ciclo anual de ~2 °C. Com 6 meses, o modelo misturaria estações sem saber;
+    com 1 ano, há só um ciclo (é preciso ver o padrão repetir ao menos 2 vezes). Com 2–3 anos o
+    projeto mudaria (climatologia como linha de base, Prophet com sazonalidade anual, validação em
+    várias janelas) — fica como próximo passo no relatório final.
+  - Consequência aceita: os erros serão pequenos em °C e a linha de base (~0,4 °C de MAE) será
+    difícil de bater; diferenças pequenas entre modelos em 10 dias de teste podem ser sorte.
+
+## D24 — Contexto de 3 anos: só para entender, nunca para treinar
+- **Decisão:** como usar dados mais antigos sem mudar o escopo de 90 dias.
+- **Opções consideradas:** não usar; (1) série contínua de 3 anos; (2) o mesmo período do
+  calendário (28/08 a 25/11) em cada ano, sobreposto; treinar com eles.
+- **Escolha:** gráficos (1) e (2), em `docs/img/etapa2_contexto.png`, a partir de
+  `backend/data/fortaleza_contexto_3anos.csv` (1.096 dias, mesma fonte `best_match`). Os modelos
+  continuam treinando só com os 90 dias. **Climatologia** ("normal") = média de 2024 e 2025 no mesmo
+  dia, suavizada com média móvel centrada de 7 dias (com só 2 anos a média é ruidosa).
+  **Anomalia** = 2026 − climatologia.
+- **Por quê:** (1) mostra onde nossos 90 dias estão no ciclo anual; (2) separa o que é **estação**
+  (todos os anos sobem de agosto a novembro) do que é **anomalia** (2026 acima dos outros anos). A
+  sugestão do gráfico (2) veio do usuário.
+
+## D25 — Padrões dos gráficos
+- **Decisão:** cores e formato dos gráficos do projeto.
+- **Opções consideradas:** cores padrão do matplotlib; paleta fixa por variável.
+- **Escolha:** temperatura sempre **azul** (`#2a78d6`), sensação sempre **laranja** (`#eb6834`)
+  — paleta categórica validada para daltonismo. Um painel por variável (nunca dois eixos verticais
+  no mesmo gráfico). Na comparação entre anos, anos anteriores em cinza e só o ano atual colorido.
+- **Por quê:** a mesma cor para a mesma coisa em todos os gráficos (inclusive no frontend) evita
+  confusão. Dois eixos verticais com escalas diferentes enganam a leitura.
+
+## D26 — Detecção do ponto de mudança
+- **Decisão:** como achar a data da "mudança forte" para o caso de estudo.
+- **Opções consideradas:** só olhar o gráfico; biblioteca `ruptures`; método próprio simples.
+- **Escolha:** método próprio (`exploracao.detectar_mudanca`): testa cada data de corte e escolhe
+  a que melhor divide a série em dois trechos com médias diferentes (menor soma dos quadrados dos
+  desvios), com no mínimo 10 dias de cada lado. Aplicado à **anomalia**, não à série bruta.
+- **Por quê:** ~10 linhas que dá para entender inteiras, sem dependência nova. Na série bruta o
+  método confunde a subida da estação com mudança; na anomalia, a estação já foi descontada.
+  Resultado: **15/10** (temperatura, +0,49 → +0,86 °C) e **23/10** (sensação, +1,35 → +1,96 °C).

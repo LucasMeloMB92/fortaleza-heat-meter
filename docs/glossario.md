@@ -100,3 +100,56 @@ origem (domínio/porta) sem permissão. O Flask-CORS faz a API dizer ao navegado
 
 **Linter (ruff)** — ferramenta que lê o código e aponta erros, más práticas e problemas de estilo
 sem executá-lo.
+
+## Open-Meteo (parâmetros usados)
+
+**Parâmetro `models`** — escolhe qual modelo meteorológico fornece os números. Valores que usamos:
+- **`era5`**: a reanálise ERA5 (ver "Reanálise"). Consistente, mas com ~6 dias de atraso e grade
+  de ~25 km; em Fortaleza sai ~0,6 °C mais fria.
+- **`best_match`** (padrão): o Open-Meteo escolhe o modelo mais adequado ao local, em geral de
+  maior resolução. Vai até ontem e é igual à API de previsão.
+
+**Parâmetro `past_days`** — só na API de previsão: "devolva também os N dias que já passaram",
+calculados pelo modelo de previsão. Serve para tapar o atraso de uma fonte histórica.
+
+**Resposta da API** — JSON com uma lista de datas (`time`) e, para cada variável, uma lista de
+valores na mesma ordem. Dia sem dado vem como `null`.
+
+## Exploração
+
+**Média móvel** — média dos últimos N dias, recalculada a cada dia. Suaviza o sobe-e-desce e
+revela a tendência. **Centrada** = usa dias antes e depois (só serve para olhar o passado).
+
+**Defasagem (lag)** — distância no tempo. "Defasagem 1" = comparar cada dia com o dia anterior.
+
+**Autocorrelação (ACF)** — o quanto a série se parece com ela mesma deslocada no tempo. ACF de
+0,75 na defasagem 1 = hoje "lembra" bastante ontem. Vai de −1 a 1.
+
+**Autocorrelação parcial (PACF)** — a autocorrelação "direta" numa defasagem, descontando o que já
+é explicado pelas defasagens menores. Ex.: anteontem parece com hoje só porque passa por ontem?
+Então a PACF de 2 dias é ~0. Ajuda a escolher a ordem AR (p) do ARIMA.
+
+**Estacionariedade** — uma série é estacionária quando oscila em torno de um nível fixo, com
+variação estável. Com tendência, não é. Muitos modelos (ARIMA) pedem série estacionária.
+
+**Diferenciação** — trabalhar com a variação de um dia para o outro (hoje − ontem) em vez do
+valor. Remove a tendência. É o "I" (integrado) do ARIMA, com ordem d.
+
+**Teste ADF (Dickey-Fuller aumentado)** — teste estatístico de estacionariedade. Ponto de partida
+("hipótese nula"): a série não é estacionária. p-valor < 0,05 → rejeitamos → estacionária.
+
+**p-valor** — a chance de ver um resultado tão extremo quanto o observado se o ponto de partida do
+teste fosse verdadeiro. Pequeno (< 0,05) = evidência contra o ponto de partida. Testes erram: com
+o limite de 0,05, ~5% das vezes acusam algo que não existe.
+
+**Força da sazonalidade** — número de 0 a 1 que mede quanto um padrão repetitivo (ex.: de 7 dias)
+explica a variação. Perto de 0 = não há padrão.
+
+**Climatologia ("normal")** — o valor típico para aquela época do ano, calculado com anos
+anteriores. Aqui: média de 2024 e 2025 no mesmo dia.
+
+**Anomalia** — diferença entre o valor observado e a climatologia. +0,8 °C = 0,8 °C mais quente
+que o normal para a data. Remove o efeito da estação.
+
+**Ponto de mudança** — data em que a série passa a se comportar de outro jeito (ex.: nível médio
+mais alto). Detectá-lo é o primeiro passo para estudar uma quebra estrutural.

@@ -54,6 +54,13 @@ cd backend
 .venv\Scripts\python -m scripts.etapa1_coleta
 ```
 
+**Explorar os dados** (estatísticas no terminal e gráficos em `docs/img/`; baixa também 3 anos de
+contexto):
+
+```powershell
+.venv\Scripts\python -m scripts.etapa2_exploracao
+```
+
 **Testes e qualidade do código:**
 
 ```powershell
