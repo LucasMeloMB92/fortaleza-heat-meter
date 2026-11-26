@@ -143,3 +143,31 @@ def test_cors_libera_so_o_frontend(cliente):
 def test_mensagens_de_erro_http_em_portugues(cliente):
     assert "Rota não encontrada" in cliente.get("/api/nao-existe").get_json()["erro"]
     assert "só aceita GET" in cliente.post("/api/serie").get_json()["erro"]
+
+
+def test_pedidos_iguais_simultaneos_calculam_uma_vez_so(monkeypatch):
+    """Dois pedidos iguais ao mesmo tempo: o segundo espera e reaproveita (trava da D37)."""
+    import threading
+    import time
+
+    chamadas = []
+
+    def validacao_lenta(serie):
+        chamadas.append(1)
+        time.sleep(0.3)  # simula um cálculo demorado
+        return original(serie)
+
+    original = servico.avaliacao.comparar_modelos
+    rapidos = {nome: modelos.MODELOS[nome] for nome in ("linha_base", "ets")}
+    monkeypatch.setattr(modelos, "MODELOS", rapidos)
+    monkeypatch.setattr(servico.avaliacao, "comparar_modelos", validacao_lenta)
+    servico.limpar_cache()
+
+    threads = [threading.Thread(target=servico.metricas, args=("temperatura",)) for _ in range(3)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert len(chamadas) == 1
+    servico.limpar_cache()

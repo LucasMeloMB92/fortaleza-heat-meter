@@ -18,7 +18,9 @@ backend/    Python: coleta, modelos e API Flask
   scripts/    um script por etapa (gera números e gráficos)
   data/       dados em CSV
   tests/      testes (pytest)
-frontend/   React + Vite + TypeScript (a ser criado na etapa 7)
+frontend/   React + Vite + TypeScript: a tela da POC
+  src/componentes/  gráficos, tabelas e seletores
+  src/formatacao.ts datas (DD-MM-AAAA) e números para exibição
 docs/       documentação: decisões, diário, glossário, API, relatório final
 ```
 
@@ -99,11 +101,41 @@ as seguintes são instantâneas.
 .venv\Scripts\python -m ruff check .
 ```
 
-_Comandos para rodar os modelos e subir a API serão adicionados nas próximas etapas._
-
 ## Frontend
 
-_Será criado na etapa 7._
+Tela web em React + Vite + TypeScript (Recharts para gráficos, TanStack Query para consumir a
+API, Tailwind CSS para estilo). Datas exibidas em **DD-MM-AAAA**.
+
+**Instalação** (uma vez), a partir da raiz do projeto:
+
+```powershell
+cd frontend
+npm install
+```
+
+**Rodar** — com a API já rodando em outro terminal (porta 5000), na pasta `frontend/`:
+
+```powershell
+npm run dev
+```
+
+Abra `http://localhost:5173`. O Vite repassa os pedidos `/api/...` para o Flask. No primeiro
+acesso os modelos são treinados: o gráfico principal aparece em ~10 s e o caso de estudo em
+~1 min e meio; depois, tudo fica instantâneo até o servidor reiniciar.
+
+**Testes e qualidade** (na pasta `frontend/`):
+
+```powershell
+npm test
+```
+
+```powershell
+npm run lint
+```
+
+```powershell
+npm run build
+```
 
 ## Documentação
 

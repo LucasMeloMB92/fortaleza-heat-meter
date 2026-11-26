@@ -22,7 +22,8 @@ Endereço base: `http://127.0.0.1:5000/api`. Para recarregar ao editar o código
 - **Dados:** os 90 dias de `backend/data/fortaleza_diario.csv`. Para atualizar, rode a coleta
   (`scripts.etapa1_coleta`) e reinicie o servidor.
 - **Tempo de resposta (cache — D37):** cada resultado é calculado no **primeiro** pedido e guardado
-  na memória. Medido em 26/11/2026:
+  na memória. Cálculos novos rodam em **fila**, um de cada vez (pedidos simultâneos esperam a vez;
+  o que já está em cache responde na hora). Medido em 26/11/2026, com um pedido por vez:
 
   | Pedido | 1ª chamada | Seguintes |
   |---|---|---|
