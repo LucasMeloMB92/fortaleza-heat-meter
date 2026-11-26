@@ -1,0 +1,212 @@
+// Textos em linguagem simples, gerados por REGRAS a partir dos números da API (decisão D46).
+// Cada frase só afirma o que os números mostram — nada é inventado. Datas em DD-MM-AAAA e
+// números com vírgula (formatacao.ts). Funções puras: testadas em textos.test.ts.
+import type {
+  LinhaMetricas,
+  Modelo,
+  RespostaCasoEstudo,
+  RespostaMetricas,
+  RespostaPrevisao,
+  RespostaTeste,
+} from './api'
+import { formatarComSinal, formatarData, formatarDiaMes, formatarGraus, formatarNumero } from './formatacao'
+
+// Temperaturas com 1 casa ("29,1 °C"); erros e variações com 2 casas, iguais às tabelas ("0,38 °C").
+const graus = (valor: number | null | undefined) => formatarGraus(valor, 1)
+const erro = (valor: number | null | undefined) => formatarGraus(valor, 2)
+const plural = (n: number, singular: string, pluralTexto: string) => (n === 1 ? singular : pluralTexto)
+
+// ---------------------------------------------------------------------------
+// Explicações curtas (ícones "i" e descrição dos modelos)
+// ---------------------------------------------------------------------------
+
+export const DESCRICAO_MODELO: Record<Modelo, string> = {
+  linha_base:
+    'Regra simples: repete a média dos últimos 7 dias. Serve de régua — um modelo só vale a pena se errar menos que ela.',
+  ets: 'Suavização exponencial: faz uma média dos dias anteriores, dando mais peso aos mais recentes.',
+  sarima: 'Usa os dias anteriores e a tendência recente para projetar os próximos dias.',
+  prophet:
+    'Desenha uma linha de tendência sobre o histórico (criado pela Meta). Pensado para séries longas; aqui serve de comparação.',
+}
+
+export const AJUDA = {
+  faixa:
+    'Faixa de 95%: o intervalo onde o valor real deve cair em 95 de cada 100 dias. Faixa larga = mais incerteza.',
+  erroMedio:
+    'Erro médio (MAE): nos dias de teste, quanto a previsão errou, em média, para cima ou para baixo.',
+  acertouFaixa:
+    'Em quantos dias de teste o valor real caiu dentro da faixa prevista. O ideal é perto de 95% dos dias.',
+  regraSimples:
+    'Comparação com a regra simples (média dos últimos 7 dias). "18% melhor" = errou 18% menos que ela.',
+  rmse: 'RMSE: parecido com o erro médio, mas pesa mais os erros grandes. Sempre maior ou igual ao erro médio.',
+  vies: 'Viés: o erro médio com sinal. Negativo = em média previu abaixo do real; positivo = acima.',
+  teste:
+    'Período de teste: os últimos dias foram escondidos do modelo; ele previu esses dias e comparamos com o que aconteceu.',
+}
+
+// ---------------------------------------------------------------------------
+// Resumo da previsão (cartões + parágrafo)
+// ---------------------------------------------------------------------------
+
+export interface Tendencia {
+  rotulo: string // para o cartão: "Estável", "Leve alta"...
+  frase: string // para o texto: "estável", "com leve alta"...
+}
+
+/** Classifica a variação prevista (°C) — limites em D46: < 0,2 estável; < 0,5 leve; senão forte. */
+export function classificarTendencia(variacao: number): Tendencia {
+  const tamanho = Math.abs(variacao)
+  if (tamanho < 0.2) return { rotulo: 'Estável', frase: 'estável' }
+  const sobe = variacao > 0
+  if (tamanho < 0.5) {
+    return sobe
+      ? { rotulo: 'Leve alta', frase: 'com leve alta' }
+      : { rotulo: 'Leve queda', frase: 'com leve queda' }
+  }
+  return sobe ? { rotulo: 'Alta', frase: 'em alta' } : { rotulo: 'Queda', frase: 'em queda' }
+}
+
+export interface Cartao {
+  titulo: string
+  valor: string
+  detalhe: string
+}
+
+export function resumoPrevisao(
+  resposta: RespostaPrevisao,
+  nomeVariavel: string,
+): { cartoes: Cartao[]; texto: string } {
+  const prev = resposta.previsao
+  const primeiro = prev[0]
+  const ultimo = prev[prev.length - 1]
+  const ultimoReal = resposta.historico[resposta.historico.length - 1]
+  const variacao = (ultimo.previsao ?? 0) - (ultimoReal.valor ?? 0)
+  const tendencia = classificarTendencia(variacao)
+  const minimo = Math.min(...prev.map((p) => p.inferior ?? Infinity))
+  const maximo = Math.max(...prev.map((p) => p.superior ?? -Infinity))
+  const nome = nomeVariavel.toLowerCase()
+
+  const cartoes: Cartao[] = [
+    {
+      titulo: `Amanhã (${formatarDiaMes(primeiro.data)})`,
+      valor: graus(primeiro.previsao),
+      detalhe: `entre ${graus(primeiro.inferior)} e ${graus(primeiro.superior)}`,
+    },
+    {
+      titulo: `Tendência em ${prev.length} ${plural(prev.length, 'dia', 'dias')}`,
+      valor: tendencia.rotulo,
+      detalhe: `${formatarComSinal(variacao, ' °C', 2)} em relação ao último dado (${formatarData(ultimoReal.data)})`,
+    },
+  ]
+  if (prev.length > 1) {
+    cartoes.splice(1, 0, {
+      titulo: `Em ${formatarData(ultimo.data)}`,
+      valor: graus(ultimo.previsao),
+      detalhe: `entre ${graus(ultimo.inferior)} e ${graus(ultimo.superior)}`,
+    })
+  }
+
+  const texto =
+    prev.length === 1
+      ? `Amanhã (${formatarData(primeiro.data)}), a ${nome} deve ficar em ${graus(primeiro.previsao)}, ` +
+        `provavelmente entre ${graus(primeiro.inferior)} e ${graus(primeiro.superior)}.`
+      : `Nos próximos ${prev.length} dias, a ${nome} deve ficar ${tendencia.frase}: ` +
+        `de ${graus(primeiro.previsao)} em ${formatarData(primeiro.data)} para ${graus(ultimo.previsao)} ` +
+        `em ${formatarData(ultimo.data)}. O mais provável é que fique entre ${graus(minimo)} e ${graus(maximo)}.`
+  return { cartoes, texto }
+}
+
+/** "Dá para confiar?" — o desempenho do modelo nos dias de teste, em linguagem simples. */
+export function textoConfianca(linha: LinhaMetricas, diasTeste: number): string {
+  const acertos = Math.round(((linha.cobertura ?? 0) / 100) * diasTeste)
+  let texto =
+    `Testamos este modelo em ${diasTeste} dias que ele não conhecia: ele errou em média ` +
+    `${erro(linha.mae)} e acertou a faixa em ${acertos} de ${diasTeste} dias.`
+  const pct = linha.mae_vs_linha_base ?? 0
+  if (linha.modelo === 'linha_base') texto += ' Esta é a regra simples, usada como régua para os outros modelos.'
+  else if (Math.abs(pct) < 3) texto += ' Ficou praticamente empatado com a regra simples.'
+  else if (pct < 0) texto += ` É ${formatarNumero(-pct, 0)}% mais preciso que a regra simples.`
+  else texto += ` Errou ${formatarNumero(pct, 0)}% mais que a regra simples — use com cautela.`
+  return texto
+}
+
+// ---------------------------------------------------------------------------
+// Comparação dos modelos, teste e caso de estudo
+// ---------------------------------------------------------------------------
+
+/** Célula "vs regra simples": "18% melhor", "13% pior", "empate" (< 3%) ou "é a régua". */
+export function rotuloVsRegraSimples(linha: LinhaMetricas): string {
+  if (linha.modelo === 'linha_base') return 'é a régua'
+  const pct = linha.mae_vs_linha_base ?? 0
+  if (Math.abs(pct) < 3) return 'empate'
+  return `${formatarNumero(Math.abs(pct), 0)}% ${pct < 0 ? 'melhor' : 'pior'}`
+}
+
+export function textoComparacao(resposta: RespostaMetricas): string {
+  const linhas = [...resposta.metricas].sort((a, b) => (a.mae ?? Infinity) - (b.mae ?? Infinity))
+  const melhor = linhas[0]
+  const base = resposta.metricas.find((l) => l.modelo === 'linha_base')
+  let texto = `O modelo com menor erro foi o ${melhor.nome_modelo}: errou em média ${erro(melhor.mae)}.`
+  if (base && melhor.modelo !== 'linha_base' && melhor.mae_vs_linha_base != null) {
+    texto += ` Isso é ${formatarNumero(-melhor.mae_vs_linha_base, 0)}% menos erro que a regra simples.`
+  }
+  if (base && (base.mae ?? 0) - (melhor.mae ?? 0) < 0.05) {
+    texto += ' As diferenças entre os modelos são pequenas (menos de 0,05 °C): com poucos dias de teste, podem ser sorte.'
+  }
+  return texto
+}
+
+export function textoTeste(resposta: RespostaTeste): string {
+  const dias = resposta.dias
+  const maior = dias.reduce((a, b) => (Math.abs(b.erro ?? 0) > Math.abs(a.erro ?? 0) ? b : a))
+  const fora = dias.filter((d) => !d.dentro_da_faixa).length
+  let texto =
+    `Nos ${dias.length} dias de teste (${formatarData(resposta.teste.inicio)} a ${formatarData(resposta.teste.fim)}), ` +
+    `o ${resposta.nome_modelo} errou em média ${erro(resposta.metricas.mae)}. ` +
+    `O maior erro foi em ${formatarData(maior.data)}: previu ${graus(maior.previsao)}, mas o real foi ${graus(maior.real)}.`
+  texto +=
+    fora === 0
+      ? ' Todos os dias reais ficaram dentro da faixa prevista.'
+      : ` ${fora} ${plural(fora, 'dia ficou', 'dias ficaram')} fora da faixa prevista (marcados com ✕).`
+  const vies = resposta.metricas.vies ?? 0
+  if (vies <= -0.1) texto += ' No geral, o modelo previu um pouco abaixo do real.'
+  else if (vies >= 0.1) texto += ' No geral, o modelo previu um pouco acima do real.'
+  return texto
+}
+
+export function textoCasoEstudo(resposta: RespostaCasoEstudo, nomeVariavel: string): string {
+  const resultado = (id: string) => resposta.resultados.find((r) => r.cenario === id)
+  const cenario = (id: string) => resposta.cenarios.find((c) => c.id === id)
+  const antes = resultado('so_antes')
+  const tudo = resultado('tudo')
+  if (!antes || !tudo) return ''
+
+  const subiu = (cenario('so_depois')?.media_treino ?? 0) >= (cenario('so_antes')?.media_treino ?? 0)
+  const nome = nomeVariavel.toLowerCase()
+  const maeAntes = antes.metricas.mae ?? 0
+  const maeTudo = tudo.metricas.mae ?? 0
+  const diasTeste = resposta.teste.dias
+
+  let texto = `A partir de ${formatarData(resposta.data_mudanca)}, a ${nome} passou a ficar mais ${subiu ? 'alta' : 'baixa'} que antes. `
+  if (maeTudo > 0 && maeAntes > maeTudo * 1.3) {
+    const vies = antes.metricas.vies ?? 0
+    texto +=
+      `O modelo treinado só com os dias anteriores errou em média ${erro(maeAntes)} — ` +
+      `${formatarNumero(maeAntes / maeTudo, 1)} vezes o erro do modelo treinado com todos os dias (${erro(maeTudo)}). ` +
+      `Ele continuou preso ao nível antigo e previu ${vies < 0 ? 'abaixo' : 'acima'} do real (em média ${erro(Math.abs(vies))}).`
+    const acertos = Math.round(((antes.metricas.cobertura ?? 0) / 100) * diasTeste)
+    if (acertos <= diasTeste / 2) {
+      const quanto =
+        acertos === 0 ? `não acertou nenhum dos ${diasTeste} dias` : `acertou só ${acertos} de ${diasTeste} dias`
+      texto += ` E a faixa de confiança dele ${quanto}: estava confiante, mas no nível errado.`
+    }
+  } else {
+    texto +=
+      `Neste modelo, treinar só com os dias anteriores quase não atrapalhou (${erro(maeAntes)} contra ${erro(maeTudo)}): ` +
+      'ele prolonga a tendência que já vinha antes da mudança.'
+  }
+  return (
+    texto +
+    ' Lição: quando o comportamento muda, o modelo precisa ser treinado de novo com os dados recentes — por isso esta ferramenta atualiza e retreina todo dia.'
+  )
+}

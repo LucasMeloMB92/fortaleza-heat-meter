@@ -15,7 +15,9 @@ import {
 } from 'recharts'
 import type { Cenario, RespostaCasoEstudo } from '../api'
 import { COR_GRADE, COR_REAL, COR_TEXTO_2, corCenario } from '../cores'
-import { formatarComSinal, formatarData, formatarGraus, formatarPorcentagem } from '../formatacao'
+import { formatarComSinal, formatarData, formatarGraus } from '../formatacao'
+import { AJUDA, textoCasoEstudo } from '../textos'
+import { Ajuda } from './Ajuda'
 import { DicaGrafico } from './DicaGrafico'
 import { PROPS_EIXO_X, PROPS_EIXO_Y } from './eixos'
 
@@ -38,7 +40,7 @@ function montarLinhas(resposta: RespostaCasoEstudo): Linha[] {
   return [...porData.values()].sort((a, b) => a.data.localeCompare(b.data))
 }
 
-export function CasoEstudo(props: { resposta: RespostaCasoEstudo }) {
+export function CasoEstudo(props: { resposta: RespostaCasoEstudo; nomeVariavel: string }) {
   const { resposta } = props
   const variavel = resposta.variavel
   const metricasPorCenario = new Map(resposta.resultados.map((r) => [r.cenario, r.metricas]))
@@ -50,6 +52,10 @@ export function CasoEstudo(props: { resposta: RespostaCasoEstudo }) {
 
   return (
     <div>
+      {/* "O que isso significa", com os números reais (D46) — antes do gráfico, para ler primeiro. */}
+      <p className="mb-4 rounded-md bg-plano p-3 text-sm leading-relaxed">
+        <strong>O que isso significa:</strong> {textoCasoEstudo(resposta, props.nomeVariavel)}
+      </p>
       <div className="h-80" role="img" aria-label="Previsões treinadas antes, com tudo e depois da mudança">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={montarLinhas(resposta)} margin={{ top: 20, right: 16, bottom: 8, left: 0 }}>
@@ -116,16 +122,27 @@ export function CasoEstudo(props: { resposta: RespostaCasoEstudo }) {
         <thead>
           <tr className="border-b border-borda text-left text-xs uppercase text-tinta-2">
             <th className="py-1 font-medium">Cenário de treino</th>
-            <th className="py-1 font-medium">Período</th>
-            <th className="py-1 text-right font-medium">Média do treino</th>
-            <th className="py-1 text-right font-medium">MAE</th>
-            <th className="py-1 text-right font-medium">Viés</th>
-            <th className="py-1 text-right font-medium">Cobertura</th>
+            <th className="py-1 font-medium">Treinou com</th>
+            <th className="py-1 text-right font-medium">Nível médio no treino</th>
+            <th className="py-1 text-right font-medium">
+              Erro médio
+              <Ajuda rotulo="erro médio" texto={AJUDA.erroMedio} />
+            </th>
+            <th className="py-1 text-right font-medium">
+              Errou para
+              <Ajuda rotulo="viés" texto={AJUDA.vies} />
+            </th>
+            <th className="py-1 text-right font-medium">
+              Acertou a faixa
+              <Ajuda rotulo="acertou a faixa" texto={AJUDA.acertouFaixa} />
+            </th>
           </tr>
         </thead>
         <tbody>
           {resposta.cenarios.map((c) => {
             const m = metricasPorCenario.get(c.id)
+            const vies = m?.vies ?? 0
+            const acertos = Math.round(((m?.cobertura ?? 0) / 100) * resposta.teste.dias)
             return (
               <tr key={c.id} className="border-b border-borda/60 tabular-nums">
                 <td className="py-1">
@@ -140,20 +157,17 @@ export function CasoEstudo(props: { resposta: RespostaCasoEstudo }) {
                 </td>
                 <td className="py-1 text-right">{formatarGraus(c.media_treino)}</td>
                 <td className="py-1 text-right font-medium">{formatarGraus(m?.mae)}</td>
-                <td className="py-1 text-right">{formatarComSinal(m?.vies)}</td>
-                <td className="py-1 text-right">{formatarPorcentagem(m?.cobertura)}</td>
+                <td className="py-1 text-right">
+                  {Math.abs(vies) < 0.1 ? 'quase nada' : `${vies < 0 ? 'baixo' : 'cima'} (${formatarComSinal(vies, ' °C', 1)})`}
+                </td>
+                <td className="py-1 text-right">
+                  {acertos} de {resposta.teste.dias} dias
+                </td>
               </tr>
             )
           })}
         </tbody>
       </table>
-
-      <p className="mt-4 rounded-md bg-plano p-3 text-sm text-tinta-2">
-        <strong className="text-tinta">Como ler:</strong> o modelo treinado <em>só antes</em> da mudança
-        de {formatarData(resposta.data_mudanca)} não conhece o novo nível — costuma prever abaixo do real
-        (viés negativo) e, mesmo assim, com uma faixa confiante. O remédio para mudanças assim é{' '}
-        <strong className="text-tinta">retreinar com frequência</strong> com os dados mais recentes.
-      </p>
     </div>
   )
 }

@@ -97,6 +97,9 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 - **Datas exibidas SEMPRE em DD-MM-AAAA** via `formatarData` (`src/formatacao.ts`) — pedido do
   usuário (D41). API continua em AAAA-MM-DD. Números com vírgula (`29,10 °C`). Não usar `new Date()`
   para formatar (bug de fuso).
+- Linguagem simples (D46): toda frase da tela vem de `src/textos.ts` (regras + testes), só afirma
+  o que os números mostram. Temperaturas com 1 casa, erros/variações com 2 (iguais às tabelas).
+  Textos por IA (Gemma/Gemini) = melhoria futura no relatório.
 - Nunca tela branca (D45): limites de erro (seção, faixa, página), esqueletos com contador,
   `lazy` + `Suspense` nos gráficos, faixa de aviso no topo (`AvisoTopo`), "Tentar de novo".
 - Proxy do Vite `/api` → Flask :5000 (D42). Eixos/cores/formatação centralizados

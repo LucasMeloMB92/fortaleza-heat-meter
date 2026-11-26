@@ -2,6 +2,7 @@
 // tela não repete a lista de modelos (decisão D38).
 import type { Modelo, Opcoes, Variavel } from '../api'
 import { COR_VARIAVEL } from '../cores'
+import { DESCRICAO_MODELO } from '../textos'
 
 export function Seletores(props: {
   opcoes: Opcoes
@@ -56,6 +57,10 @@ export function Seletores(props: {
             </option>
           ))}
         </select>
+        {/* O que o modelo escolhido faz, em uma frase (D46). */}
+        <span className="mt-1 max-w-xs text-xs leading-snug text-tinta-2">
+          {DESCRICAO_MODELO[props.modelo]}
+        </span>
       </label>
 
       <label className="flex flex-col">
