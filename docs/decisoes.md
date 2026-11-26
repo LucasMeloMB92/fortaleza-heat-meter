@@ -557,3 +557,38 @@ durante o projeto e aprovadas.
   "errou 0,4 °C" e a tabela "0,38 °C"; (3) o ícone **i** abria e fechava no mesmo clique; (4) o
   aviso do **i** era cortado pela tabela — passou a ser posicionado em relação à janela;
   (5) "acertou só 0 de 10 dias" virou "não acertou nenhum dos 10 dias".
+
+## D47 — Chronos-2 como 5º modelo (evolução 11.2) _(usuário)_
+- **Decisão:** qual versão do Chronos usar, como montar a faixa de 95% e como encaixá-lo no
+  projeto.
+- **Opções consideradas:**
+  - **Chronos-2** (`amazon/chronos-2`, 119,5 milhões de parâmetros, ~456 MB): o mais novo;
+    devolve 21 quantis (1%, 5%, 10%, ..., 90%, 95%, 99%) e não sorteia nada.
+  - **Chronos-Bolt** (tiny/mini/small/base): menor e rápido, mas foi treinado só com quantis de
+    10% a 90% — não daria uma faixa de 95% comparável à dos outros modelos (D10).
+  - **Chronos-T5** (o original): faz sorteios (o resultado muda a cada rodada) e é mais lento.
+- **Escolha:**
+  - **Chronos-2, na CPU**, com PyTorch "+cpu" (~200 MB em vez de ~2 GB da versão com placa de
+    vídeo). Bibliotecas: `torch==2.15.0+cpu` e `chronos-forecasting==2.3.2`, no
+    `requirements.txt` com o repositório oficial do PyTorch (`--extra-index-url`).
+  - **Previsão = mediana (quantil 50%); faixa = quantis de 2,5% e 97,5%.** Esses dois não estão
+    entre os treinados; a própria biblioteca os calcula entre os vizinhos (1% e 5%; 95% e 99%).
+    Níveis acima de 98% dão erro claro (pediriam quantis abaixo de 1%).
+  - **Modelo carregado uma vez por processo** e guardado na memória: carregar leva ~1 s (~25 s
+    na 1ª vez, com o download); prever 7 dias leva ~0,06 s.
+  - **Entra pela interface comum (D27):** `prever("chronos", serie, horizonte, nivel)`; aparece
+    sozinho na validação, no caso de estudo e na API.
+  - **Testes com o modelo real** (sem simulação): o contrato comum + repetibilidade, faixa de 80%
+    mais estreita que a de 95%, nível largo demais e horizonte longo (42 dias). O modelo é baixado
+    uma vez para `~/.cache/huggingface`; depois os testes rodam sem internet.
+- **Por quê:** é a versão mais precisa e a única das três que entrega a faixa de 95% sem sorteio,
+  então dá para comparar com os outros 4 modelos nas mesmas métricas. Licença Apache 2.0
+  (gratuita, permite uso comercial). Os dados não saem do computador: o modelo só recebe os
+  números da série.
+- **Achados do teste rápido (série real, 26-11-2026):** resultados idênticos em duas rodadas; a
+  faixa é **assimétrica** (mais espaço abaixo da mediana do que acima), diferente das faixas
+  simétricas do ETS e do SARIMA.
+- **Na tela (regras de texto da D46, ajustadas):** empates no menor erro (mesmo valor com 2 casas)
+  são citados juntos ("Prophet e Chronos-2 empataram..."); para o Chronos-2 as frases dizem "viu"
+  em vez de "treinado"; e, quando um modelo erra o nível mas a faixa acerta mais da metade dos
+  dias, o texto avisa que foi "só porque era larga".

@@ -1,4 +1,6 @@
-"""Etapa 3 — Os 4 modelos de previsão, todos com a mesma interface.
+"""Etapa 3 — Os modelos de previsão, todos com a mesma interface.
+
+(Eram 4; o 5º, Chronos-2, entrou na evolução 11.2 — decisão D47.)
 
 Uso:
     resultado = prever("sarima", serie, horizonte=7)
@@ -15,6 +17,7 @@ dados de treino que ele receber.
 
 import itertools
 import logging
+import os
 import warnings
 from dataclasses import dataclass, field
 
@@ -35,6 +38,7 @@ NOMES_MODELOS = {
     "ets": "ETS",
     "sarima": "SARIMA",
     "prophet": "Prophet",
+    "chronos": "Chronos-2",
 }
 
 
@@ -311,6 +315,78 @@ def prever_prophet(serie: pd.Series, horizonte: int = 7, nivel: float = NIVEL) -
 
 
 # ---------------------------------------------------------------------------
+# 5. Chronos-2 (modelo fundacional — decisão D47)
+# ---------------------------------------------------------------------------
+
+CHRONOS_REPOSITORIO = "amazon/chronos-2"  # modelo público no Hugging Face (Apache 2.0)
+
+# O modelo só sabe devolver quantis entre 1% e 99% (os que ele aprendeu no treino).
+CHRONOS_QUANTIL_MINIMO = 0.01
+
+# Guardado aqui depois do 1º uso: carregar o modelo leva ~1 s (ou ~25 s com o download
+# da 1ª vez); prever leva ~0,06 s. Assim, só pagamos a carga uma vez por processo.
+_pipeline_chronos = None
+
+
+def _carregar_chronos():
+    """Carrega o Chronos-2 na CPU (uma vez só) e devolve o mesmo objeto nas próximas vezes.
+
+    Na 1ª vez em um computador, baixa ~456 MB do Hugging Face para
+    ~/.cache/huggingface; depois, funciona sem internet.
+    """
+    global _pipeline_chronos
+    if _pipeline_chronos is None:
+        # No Windows, o Hugging Face avisa que não consegue criar atalhos (symlinks) no cache.
+        # Só gasta um pouco mais de disco; desligamos o aviso para não poluir a saída.
+        os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+        from chronos import Chronos2Pipeline  # importado aqui: PyTorch é pesado
+
+        _pipeline_chronos = Chronos2Pipeline.from_pretrained(CHRONOS_REPOSITORIO, device_map="cpu")
+    return _pipeline_chronos
+
+
+def prever_chronos(serie: pd.Series, horizonte: int = 7, nivel: float = NIVEL) -> Previsao:
+    """Chronos-2: uma rede neural já treinada pela Amazon com milhões de séries.
+
+    Diferente dos outros modelos, ele NÃO aprende nada com a nossa série: recebe os dias
+    como "contexto" (só os números — nem sabe que é temperatura) e devolve quantis da
+    previsão. Quantil = valor de corte: "há 2,5% de chance de ficar abaixo disto".
+
+    - previsão = quantil de 50% (mediana);
+    - faixa de 95% = quantis de 2,5% e 97,5%. O modelo foi treinado com 1%, 5%, ..., 95%, 99%;
+      os de 2,5% e 97,5% a própria biblioteca calcula entre os vizinhos (interpolação).
+
+    Não há sorteio: a mesma série dá sempre a mesma previsão.
+    """
+    import torch
+
+    cauda = (1 - nivel) / 2  # 0,025 para 95%
+    if cauda < CHRONOS_QUANTIL_MINIMO:
+        raise ValueError(
+            f"Nível {nivel:.0%} largo demais para o Chronos-2: ele só calcula quantis entre "
+            f"{CHRONOS_QUANTIL_MINIMO:.0%} e {1 - CHRONOS_QUANTIL_MINIMO:.0%}."
+        )
+
+    serie = _preparar(serie)
+    pipeline = _carregar_chronos()
+    contexto = torch.tensor(serie.to_numpy(), dtype=torch.float32)
+
+    quantis, _media = pipeline.predict_quantiles(
+        [contexto], prediction_length=horizonte, quantile_levels=[cauda, 0.5, 1 - cauda]
+    )
+    # quantis[0] tem formato (1 série, horizonte, 3 quantis).
+    valores = quantis[0][0].numpy()
+
+    tabela = _montar(_datas_futuras(serie, horizonte), valores[:, 1], valores[:, 0], valores[:, 2])
+    detalhes = {
+        "configuracao": f"pré-treinado, sem treino próprio ({len(serie)} dias de contexto)",
+        "repositorio": CHRONOS_REPOSITORIO,
+        "faixa": f"quantis de {cauda:.1%} e {1 - cauda:.1%} (interpolados pela biblioteca)",
+    }
+    return Previsao("chronos", tabela, detalhes)
+
+
+# ---------------------------------------------------------------------------
 # Ponto de entrada único
 # ---------------------------------------------------------------------------
 
@@ -319,6 +395,7 @@ MODELOS = {
     "ets": prever_ets,
     "sarima": prever_sarima,
     "prophet": prever_prophet,
+    "chronos": prever_chronos,
 }
 
 

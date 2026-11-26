@@ -100,3 +100,34 @@ def test_linha_base_horizonte_longo_tem_faixa_finita(serie):
 def test_linha_base_serie_curta_demais_da_erro_claro(serie):
     with pytest.raises(ValueError, match="curta demais"):
         modelos.prever("linha_base", serie.iloc[:10])
+
+
+# --- Chronos-2 (D47): usa o modelo real, baixado uma vez para ~/.cache/huggingface ---
+
+
+def test_chronos_repete_o_mesmo_resultado(serie, previsoes):
+    # Sem sorteio: a mesma série precisa dar exatamente a mesma previsão.
+    de_novo = modelos.prever("chronos", serie, horizonte=7).tabela
+    pd.testing.assert_frame_equal(previsoes["chronos"].tabela, de_novo)
+
+
+def test_chronos_intervalo_maior_fica_mais_largo(serie, previsoes):
+    largo = previsoes["chronos"].tabela  # 95%
+    estreito = modelos.prever("chronos", serie, nivel=0.80).tabela
+    largura_95 = largo["superior"] - largo["inferior"]
+    largura_80 = estreito["superior"] - estreito["inferior"]
+    assert (largura_95 > largura_80).all()
+
+
+def test_chronos_nivel_alem_dos_quantis_treinados_da_erro_claro(serie):
+    # 99,5% pediria o quantil de 0,25%, abaixo do menor que o modelo conhece (1%).
+    with pytest.raises(ValueError, match="largo demais"):
+        modelos.prever("chronos", serie, nivel=0.995)
+
+
+def test_chronos_horizonte_longo_tem_faixa_finita(serie):
+    # 48 dias de contexto e 42 de horizonte, como no caso de estudo.
+    tabela = modelos.prever("chronos", serie.iloc[:48], horizonte=42).tabela
+    assert len(tabela) == 42
+    assert np.isfinite(tabela.to_numpy()).all()
+    assert (tabela["superior"] > tabela["inferior"]).all()

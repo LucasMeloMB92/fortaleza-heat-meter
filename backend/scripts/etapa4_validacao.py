@@ -48,7 +48,9 @@ def grafico_teste(series, resultados) -> None:
 
     Real dentro da faixa = círculo preenchido; fora da faixa = "x".
     """
-    figura, eixos = plt.subplots(2, 4, figsize=(15, 6.5), sharey="row")
+    # Uma coluna por modelo (eram 4; o Chronos-2 é o 5º — D47).
+    n = len(modelos.MODELOS)
+    figura, eixos = plt.subplots(2, n, figsize=(3.75 * n, 6.5), sharey="row")
     for linha, variavel in enumerate(coleta.VARIAVEIS):
         treino, _ = avaliacao.separar_treino_teste(series[variavel])
         treino = treino.iloc[-DIAS_TREINO_GRAFICO:]

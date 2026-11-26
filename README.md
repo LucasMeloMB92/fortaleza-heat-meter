@@ -5,8 +5,8 @@ Prova de conceito que demonstra o ciclo completo de previsão de séries tempora
 **dados → modelo → previsão → gráfico**
 
 Usamos 90 dias de **temperatura média** e **sensação térmica média** diárias de Fortaleza-CE
-(fonte: [Open-Meteo](https://open-meteo.com/), gratuita e sem cadastro), comparamos 4 modelos
-(linha de base, ETS, SARIMA e Prophet) e prevemos os próximos 7 dias com faixa de incerteza.
+(fonte: [Open-Meteo](https://open-meteo.com/), gratuita e sem cadastro), comparamos 5 modelos
+(linha de base, ETS, SARIMA, Prophet e Chronos-2, um modelo de IA moderna) e prevemos os próximos 7 dias com faixa de incerteza.
 
 > Status: **POC concluída** (etapas 0 a 8). Resultados e recomendação no
 > [relatório final](docs/relatorio-final.md); andamento detalhado em [docs/diario.md](docs/diario.md).
@@ -43,6 +43,11 @@ py -3.12 -m venv .venv
 
 O ambiente virtual (`.venv`) isola as bibliotecas deste projeto das do resto do computador.
 
+O `requirements.txt` instala o PyTorch só para CPU (~200 MB) a partir do repositório oficial do
+PyTorch. Na primeira previsão do **Chronos-2** (inclusive nos testes), o modelo (~456 MB) é
+baixado do Hugging Face para `%USERPROFILE%\.cache\huggingface`; depois disso, tudo funciona sem
+internet (D47).
+
 ## Rodando o backend
 
 Todos os comandos abaixo são executados a partir da pasta `backend/`:
@@ -64,7 +69,7 @@ contexto):
 .venv\Scripts\python -m scripts.etapa2_exploracao
 ```
 
-**Treinar os 4 modelos e prever os próximos 7 dias** (gráfico em `docs/img/`; leva ~30 s por
+**Rodar os 5 modelos e prever os próximos 7 dias** (gráfico em `docs/img/`; leva ~30 s por
 causa da busca do SARIMA):
 
 ```powershell

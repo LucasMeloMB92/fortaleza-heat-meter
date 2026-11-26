@@ -45,7 +45,9 @@ plt.rcParams.update(
 
 def grafico_previsoes(tabela, resultados) -> None:
     """Uma linha por variável, uma coluna por modelo: histórico + previsão + faixa de 95%."""
-    figura, eixos = plt.subplots(2, 4, figsize=(15, 6.5), sharey="row")
+    # Uma coluna por modelo (eram 4; o Chronos-2 é o 5º — D47).
+    n = len(modelos.MODELOS)
+    figura, eixos = plt.subplots(2, n, figsize=(3.75 * n, 6.5), sharey="row")
     for linha, variavel in enumerate(coleta.VARIAVEIS):
         historico = tabela.set_index("data")[variavel].iloc[-DIAS_HISTORICO_GRAFICO:]
         cor = CORES[variavel]

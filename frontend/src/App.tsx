@@ -131,7 +131,7 @@ export default function App() {
           carregando={previsao.isPending}
           erro={previsao.error}
           aoTentarDeNovo={() => previsao.refetch()}
-          mensagemCarregando={`Treinando o modelo ${nomeModelo}…`}
+          mensagemCarregando={`Calculando a previsão do modelo ${nomeModelo}…`}
           dicaCarregando="Na primeira vez do dia pode levar alguns segundos; depois fica instantâneo."
         >
           {previsao.data && (
@@ -177,7 +177,7 @@ export default function App() {
           erro={metricas.error}
           aoTentarDeNovo={() => metricas.refetch()}
           alturaEsqueleto="h-56"
-          mensagemCarregando="Treinando e testando os 4 modelos…"
+          mensagemCarregando="Testando todos os modelos…"
           dicaCarregando="Na primeira vez do dia leva cerca de 10 a 30 segundos."
         >
           {metricas.data && (

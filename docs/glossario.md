@@ -108,6 +108,30 @@ corrige no sentido oposto. (Não confundir com a "média móvel" usada para suav
 **Prophet** — biblioteca da Meta que decompõe a série em tendência + sazonalidades + feriados.
 Pensada para séries longas (anos) com padrões claros; em 90 dias tem pouca informação para usar.
 
+**Chronos-2** — modelo de IA moderna da Amazon para séries temporais: uma rede neural já treinada
+com milhões de séries. Não é treinado com os nossos dados: recebe o histórico como **contexto** e
+projeta os próximos dias (D47).
+
+**Modelo fundacional** — modelo grande treinado uma vez com uma quantidade enorme de dados variados
+e depois usado em muitos problemas diferentes sem novo treino. Ex.: Chronos-2 (séries), GPT e
+Gemini (texto).
+
+**Zero-shot** — prever (ou responder) algo que o modelo nunca viu, sem nenhum ajuste para aquele
+caso. O Chronos-2 prevê a temperatura de Fortaleza "zero-shot".
+
+**Contexto** — os dados que se entregam a um modelo fundacional na hora de prever (aqui, os 80 ou
+90 dias). Ele só usa o contexto: o que não está ali ele não sabe.
+
+**Quantil** — valor de corte de uma previsão: o quantil de 2,5% é o valor com só 2,5% de chance de
+o real ficar abaixo dele. O de 50% é a **mediana** (o valor do meio). O Chronos-2 dá a faixa de 95%
+com os quantis de 2,5% e 97,5%.
+
+**PyTorch** — biblioteca para criar e rodar redes neurais. O Chronos-2 roda sobre ela; usamos a
+versão só para processador comum (CPU), bem menor que a versão para placa de vídeo.
+
+**Hugging Face** — site público onde empresas e pesquisadores publicam modelos de IA. O Chronos-2
+é baixado de lá uma vez (456 MB) e fica guardado no computador.
+
 ## Ferramentas e web
 
 **Ambiente virtual (venv)** — pasta com um Python e bibliotecas exclusivos do projeto, para não
@@ -211,7 +235,7 @@ estimado fica perto de −1 (o modelo tenta desfazer a diferença). Analogia: co
 dólares e logo em seguida converter de volta — um MA de −1 faz a conta contrária da
 diferenciação e a anula. Aconteceu na etapa 3 com d = 1 fixo (D33).
 
-**Teste de contrato** — teste que verifica se várias peças (aqui, os 4 modelos) respeitam o mesmo
+**Teste de contrato** — teste que verifica se várias peças (aqui, os 5 modelos) respeitam o mesmo
 "acordo" de entrada e saída. Se uma quebrar o acordo, quem a usa (API, métricas) quebra junto.
 
 ## Validação

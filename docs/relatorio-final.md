@@ -4,6 +4,10 @@
 > 25-11-2026. A ferramenta atualiza os dados e retreina os modelos sozinha todo dia (D44), então a
 > tela mostra sempre números atuais, que podem diferir dos daqui.
 >
+> **Atualização (evolução 11.2, 26-11-2026):** o **Chronos-2**, um modelo de IA moderna, entrou
+> como 5º modelo, com os mesmos dados e o mesmo teste (D47). Os resultados dele estão nas seções
+> 4 a 9 e o resumo da evolução está na 11.2.
+>
 > Os códigos entre parênteses (D07, D33...) apontam para as decisões detalhadas em
 > [`decisoes.md`](decisoes.md). Este relatório se explica sozinho: não é preciso abrir outros
 > arquivos para entendê-lo.
@@ -13,7 +17,7 @@
 ## 1. Resumo executivo
 
 - **O que foi feito:** uma ferramenta web que baixa os últimos 90 dias de temperatura média e
-  sensação térmica média de Fortaleza, treina quatro modelos de previsão, prevê os próximos 7
+  sensação térmica média de Fortaleza, roda cinco modelos de previsão, prevê os próximos 7
   dias com uma faixa de incerteza e mostra tudo em gráficos e textos simples.
 - **Quanto erra:** testados em 10 dias que não conheciam, os melhores modelos erraram em média
   **0,3 a 0,4 °C** por dia — de 15% a 33% menos que a regra simples "repetir a média da semana".
@@ -23,8 +27,11 @@
 - **Principal lição:** um modelo só conhece o passado que viu. Quando o clima muda de patamar
   (como em meados de outubro de 2026), um modelo desatualizado erra de 2 a 6 vezes mais — e com
   falsa confiança. A ferramenta já se protege disso retreinando todo dia.
-- **Próximo passo recomendado:** testar o **Chronos**, um modelo de IA moderna gratuito, como 5º
-  modelo (seção 11.2).
+- **IA moderna x estatística clássica (Chronos-2):** o Chronos-2, uma rede neural da Amazon já
+  treinada com milhões de séries, **empatou com o melhor** na temperatura (0,31 °C) e ficou no
+  nível da regra simples na sensação (0,33 °C). Sem nenhum ajuste, ele chega perto dos melhores
+  — mas com uma faixa de incerteza **quase duas vezes mais larga**. Não muda a recomendação
+  (seção 11.2).
 
 ---
 
@@ -86,11 +93,11 @@ treinar os modelos.*
 
 ## 4. Gráficos da previsão
 
-Previsão dos 7 dias seguintes (26-11-2026 a 02-12-2026) pelos quatro modelos, treinados com os 90
+Previsão dos 7 dias seguintes (26-11-2026 a 02-12-2026) pelos cinco modelos, a partir dos 90
 dias. A linha contínua é o histórico real; as tracejadas são as previsões; a área sombreada é a
 **faixa de 95%** (explicada na seção 5.1).
 
-![Previsões dos 4 modelos](img/etapa3_previsoes.png)
+![Previsões dos 5 modelos](img/etapa3_previsoes.png)
 
 | Previsão (°C) | Temp. 26-11 | Temp. 02-12 | Sens. 26-11 | Sens. 02-12 |
 |---|---|---|---|---|
@@ -98,11 +105,12 @@ dias. A linha contínua é o histórico real; as tracejadas são as previsões; 
 | ETS | 29,07 | 29,07 | 32,04 | 32,04 |
 | SARIMA | 29,09 | 29,26 | 32,04 | 32,23 |
 | Prophet | 28,99 | 29,11 | 32,34 | 32,53 |
+| Chronos-2 | 29,16 | 29,26 | 32,15 | 32,30 |
 
 Último valor real (25-11-2026): 29,1 °C (temperatura) e 32,0 °C (sensação).
 
-Os modelos se dividem em dois grupos: **linha de base e ETS** preveem estabilidade; **SARIMA e
-Prophet** prolongam a alta recente (≈ +0,2 °C na semana).
+Os modelos se dividem em dois grupos: **linha de base e ETS** preveem estabilidade; **SARIMA,
+Prophet e Chronos-2** prolongam a alta recente (≈ +0,1 a +0,2 °C na semana).
 
 Na ferramenta web, o mesmo gráfico aparece para o modelo escolhido, com cartões de destaque
 ("Amanhã: 29,1 °C, entre 28,5 e 29,7") e um resumo em texto simples gerado com os números reais.
@@ -228,12 +236,38 @@ Esta seção explica cada modelo do zero. Antes, quatro ideias que valem para to
   real, 29,1) na temperatura, e em 32,34 °C (acima do último real, 32,0) na sensação. Isso o ajuda
   quando a tendência continua e o atrapalha quando ela para.
 
+### 5.6 Chronos-2 — IA moderna (evolução 11.2)
+
+- **O que é:** uma **rede neural** da Amazon (2025). Rede neural é um programa com milhões de
+  números internos ajustados para reconhecer padrões; o Chronos-2 tem cerca de 120 milhões. Ele é
+  um **modelo fundacional**: já vem treinado pela Amazon com **milhões de séries de todo tipo**
+  (vendas, energia, clima, tráfego) e aprendeu como séries costumam se comportar.
+- **Diferença para os outros quatro:** ele **não é treinado com os nossos dados**. Recebe os 90
+  valores como **contexto** (só os números — nem sabe que é temperatura) e projeta os próximos
+  dias com o que já aprendeu. Na prática isso se chama **zero-shot**: prever uma série que o
+  modelo nunca viu, sem nenhum ajuste. Não há configuração para escolher (nada de AICc).
+- **Como sai a faixa de 95%:** o Chronos-2 não devolve uma média e uma faixa, e sim **quantis**.
+  Um quantil é um valor de corte: o quantil de 2,5% é o valor com só 2,5% de chance de o real
+  ficar abaixo dele. A previsão é o quantil de 50% (a **mediana**, o valor do meio), e a faixa vai
+  do quantil de 2,5% ao de 97,5%. O modelo foi treinado para dar quantis de 1%, 5%, 10%... 95% e
+  99%; os de 2,5% e 97,5% a biblioteca calcula entre os vizinhos (D47).
+- **Configuração (D47):** versão **Chronos-2** (a mais nova; as menores, "Bolt", só dão faixas de
+  até 80%, então não seriam comparáveis), rodando no processador comum (CPU), sem placa de vídeo.
+  O modelo (456 MB) é baixado uma vez do Hugging Face (um repositório público de modelos); depois
+  funciona sem internet. Os dados **não saem do computador**. Licença Apache 2.0: gratuito, com
+  uso comercial permitido.
+- **Características:** é rápido (0,06 s por previsão, contra ~17 s do SARIMA, que testa 72
+  combinações) e dá sempre o mesmo resultado para a mesma série. Sua faixa é **assimétrica**
+  (mais espaço abaixo da mediana do que acima) e **larga**: ele aprendeu com séries muito mais
+  agitadas que a de Fortaleza e não estreita a faixa para a nossa série calma.
+
 ---
 
 ## 6. Comparação dos modelos
 
 **Como testamos:** escondemos os últimos 10 dias (16-11-2026 a 25-11-2026), treinamos cada modelo
-com os 80 dias anteriores e comparamos a previsão com o que de fato aconteceu. Os modelos nunca
+com os 80 dias anteriores (o Chronos-2 recebe esses 80 dias como contexto) e comparamos a previsão
+com o que de fato aconteceu. Os modelos nunca
 viram esses 10 dias — inclusive a escolha da configuração (AICc, ADF) usou só os 80 dias de treino.
 Um teste automático garante isso.
 
@@ -257,6 +291,7 @@ Um teste automático garante isso.
 | ETS | 0,43 °C | 0,53 | 9 de 10 dias | −0,20 | −6% |
 | SARIMA | 0,38 °C | 0,50 | 9 de 10 dias | −0,10 | −18% |
 | **Prophet** | **0,31 °C** | **0,46** | 9 de 10 dias | −0,01 | **−33%** |
+| Chronos-2 | **0,31 °C** | 0,49 | 9 de 10 dias | +0,05 | −32% |
 
 **Sensação térmica média**
 
@@ -266,6 +301,15 @@ Um teste automático garante isso.
 | ETS | 0,33 °C | 0,42 | 10 de 10 dias | −0,03 | −2% |
 | **SARIMA** | **0,29 °C** | 0,44 | 10 de 10 dias | −0,16 | **−15%** |
 | Prophet | 0,38 °C | 0,43 | 10 de 10 dias | +0,19 | +13% (pior) |
+| Chronos-2 | 0,33 °C | 0,44 | 10 de 10 dias | −0,05 | −1% (empate) |
+
+**Largura média da faixa de 95% no teste (°C)** — quanto mais estreita, mais útil, desde que
+acerte:
+
+| | Linha de base | ETS | SARIMA | Prophet | Chronos-2 |
+|---|---|---|---|---|---|
+| Temperatura | 1,19 | 1,30 | 1,14 | 1,01 | **2,14** |
+| Sensação | 2,21 | 3,42 | 2,02 | 1,66 | **4,05** |
 
 **Leitura:**
 - **Quase todos os modelos bateram a regra simples** — a exceção foi o Prophet na sensação.
@@ -278,6 +322,10 @@ Um teste automático garante isso.
   esse dia em +1,1 a +1,3 °C. Sem ele, o ranking da temperatura não muda.
 - **Faixas honestas:** cobertura de 90–100% nos modelos, perto dos 95% prometidos. Só a linha de
   base na temperatura ficou abaixo (70%), porque a alta continuou nos últimos dias.
+- **Chronos-2, a IA moderna:** sem nenhum treino, empatou com o Prophet na temperatura (0,31 °C) e
+  ficou no nível da regra simples na sensação (0,33 °C). Acerta a faixa tanto quanto os outros,
+  mas com uma faixa **quase duas vezes mais larga** — acertar uma faixa larga é fácil. Por isso a
+  cobertura deve ser lida junto com a largura.
 
 ---
 
@@ -298,13 +346,19 @@ falhou quando ela parou (sensação). O SARIMA ficou bem colocado nas duas vari�
 que a régua, e reage ao último dia observado. Para uma ferramenta que vai prever séries novas
 todos os dias, **consistência vale mais que o melhor resultado em um teste**.
 
+**E o Chronos-2?** Empatou com o melhor na temperatura, mas na sensação não ganhou da regra
+simples e sua faixa é a mais larga de todas. Nesta série curta e calma, a IA moderna **não supera**
+a estatística clássica — o SARIMA continua sendo a recomendação. O valor do Chronos-2 aparece em
+outro lugar: numa métrica nova, ele dá um bom resultado **no primeiro dia**, sem escolher
+configuração nenhuma (seção 11.2).
+
 **Cuidados com esta conclusão:**
 - É um teste de **10 dias**, numa fase de **subida sazonal** (agosto → novembro). Em dezembro,
   quando a temperatura estabiliza no pico do ciclo anual, modelos que prolongam a tendência podem
   passar do ponto.
 - As diferenças entre modelos são de décimos de grau. Com mais tempo de uso, o ideal é repetir a
   comparação em várias semanas antes de fixar um vencedor.
-- Na ferramenta, o usuário pode escolher qualquer um dos quatro modelos e ver o erro de cada um.
+- Na ferramenta, o usuário pode escolher qualquer um dos cinco modelos e ver o erro de cada um.
 
 ---
 
@@ -334,6 +388,9 @@ mesmos 10 dias de teste (16-11-2026 a 25-11-2026):
 | ETS | 0,95 (5/10) | 0,43 (9/10) | 0,31 (9/10) | 1,36 (10/10) | 0,33 (10/10) | 0,34 (10/10) |
 | SARIMA | **1,11 (1/10)** | 0,38 (9/10) | 0,31 (9/10) | **1,79 (0/10)** | 0,29 (10/10) | 0,45 (8/10) |
 | Prophet | 0,31 (9/10) | 0,31 (9/10) | 0,47 (6/10) | 0,35 (9/10) | 0,38 (10/10) | 0,30 (10/10) |
+| Chronos-2 | 1,04 (10/10) | 0,31 (9/10) | 0,35 (9/10) | 1,49 (10/10) | 0,33 (10/10) | 0,33 (10/10) |
+
+*No Chronos-2, "treinado com" quer dizer "recebeu como contexto": ele não é treinado.*
 
 **O que aprendemos:**
 1. **O modelo desatualizado erra muito e sempre para o mesmo lado.** Linha de base, ETS e SARIMA
@@ -349,6 +406,10 @@ mesmos 10 dias de teste (16-11-2026 a 25-11-2026):
 4. **Descartar o passado ajuda às vezes, mas é arriscado.** "Só depois" melhorou ETS e SARIMA na
    temperatura, mas piorou o SARIMA na sensação (só 24 dias de treino = parâmetros instáveis).
    "Tudo" foi a escolha mais segura.
+5. **A IA moderna também não percebe a mudança.** O Chronos-2 "só antes" errou 3 a 4 vezes mais
+   que com "tudo", para baixo, como o SARIMA: ele só conhece o contexto que recebe. E acertou a
+   faixa em 10 de 10 dias **mesmo errando o nível** — só porque a faixa era larga. Acertar a
+   faixa não quer dizer que a previsão foi boa.
 
 **Conclusão prática:** o remédio contra quebras é **retreinar com frequência**, não procurar o
 modelo "perfeito". **A ferramenta já faz isso:** todo dia os dados são atualizados e os modelos
@@ -371,7 +432,7 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
 | 1. Regras fixas | "média dos últimos 7 dias" | Não | Linha de base |
 | 2. Estatística clássica | ETS, SARIMA, Prophet | Sim — ajusta poucos parâmetros (2 a 6) só com os seus dados | **ETS, SARIMA, Prophet** |
 | 3. Machine learning | gradient boosting, random forest | Sim — padrões mais livres, precisa de muito mais dados | — |
-| 4. Deep learning / IA moderna | redes neurais; **modelos fundacionais** (Chronos, TimesFM) | Sim — treinados com milhões de séries | **Chronos = próximo passo** |
+| 4. Deep learning / IA moderna | redes neurais; **modelos fundacionais** (Chronos, TimesFM) | Sim — treinados com milhões de séries (não com os seus) | **Chronos-2** |
 
 - No sentido amplo, os níveis 2 a 4 são todos "aprendizado a partir de dados". No sentido comum
   do mercado, "IA" quer dizer os níveis 3 e 4.
@@ -379,13 +440,14 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
   neurais próprias não têm dados suficientes e tendem a decorar o ruído. Para séries curtas, a
   estatística clássica costuma ser igual ou melhor, e é bem mais fácil de explicar.
 - **A exceção são os modelos fundacionais:** como já vêm treinados com milhões de séries, eles
-  conseguem prever uma série curta sem treino próprio. Por isso o Chronos é o próximo passo
-  natural (seção 11.2).
+  conseguem prever uma série curta sem treino próprio. Por isso o Chronos-2 entrou como 5º modelo
+  (seção 11.2) — e, nesta série, empatou com a estatística clássica, sem superá-la.
 
 **Como descrever o projeto, de forma honesta:**
 
 > "POC de previsão de séries temporais com modelos estatísticos que aprendem com o histórico
-> (ETS, SARIMA e Prophet), comparados a uma regra simples."
+> (ETS, SARIMA e Prophet) e um modelo de IA moderna já treinado (Chronos-2), comparados a uma
+> regra simples."
 
 ---
 
@@ -409,6 +471,8 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
 - **Números mudam com o tempo.** Este relatório é um retrato de 26-11-2026; a ferramenta mostra
   sempre os números atuais.
 - **Roda localmente.** A ferramenta ainda não está publicada na internet.
+- **O Chronos-2 pesa.** Exige o PyTorch (~200 MB) e o modelo (456 MB, baixado na primeira vez) e
+  mais memória. A faixa dele é larga demais para esta série (seção 6).
 
 ---
 
@@ -418,21 +482,26 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
 O principal remédio contra quebras estruturais (seção 8) já está na ferramenta: a cada dia, os
 dados são atualizados até ontem e os modelos retreinados, sem ação manual (D44).
 
-### 11.2 Próximo ponto de evolução: Chronos (IA moderna)
-O **Chronos** (Amazon) é um **modelo fundacional** de séries temporais: uma rede neural treinada
-pela Amazon com milhões de séries de todo tipo (vendas, energia, clima, tráfego), que aprendeu
-padrões gerais de como séries se comportam.
+### 11.2 Feito: Chronos-2 (IA moderna) como 5º modelo
+O **Chronos-2** (Amazon) entrou como 5º modelo pela interface comum (D27, D47) e aparece
+sozinho na validação, no caso de estudo, na API e na tela. Como funciona: seção 5.6.
 
-- **Como funciona:** você instala a biblioteca, ela baixa o modelo uma vez (do repositório público
-  Hugging Face) e, a partir daí, funciona sem internet. Você entrega os 90 valores como
-  "contexto" e ele devolve a previsão e a faixa de incerteza — sem treino próprio.
-- **Dados:** não busca nem envia nada; recebe só a sequência de números (nem sabe que é
-  temperatura). Os dados não saem do computador.
-- **Custo:** gratuito (licença Apache 2.0, que permite uso comercial — confirmar antes de usar em
-  produto). O custo é técnico: uma biblioteca grande (PyTorch, centenas de MB) e mais memória.
-- **Encaixe na POC:** entra como 5º modelo pela interface comum (D27) e aparece sozinho na
-  validação, no caso de estudo, na API e na tela. Responde com números à pergunta "IA moderna
-  ganha da estatística clássica nesta série?".
+**A pergunta era: "IA moderna ganha da estatística clássica nesta série?" Resposta: não — empata.**
+
+| | Temperatura | Sensação | Largura da faixa |
+|---|---|---|---|
+| Chronos-2 | 0,31 °C (empate com o melhor, Prophet) | 0,33 °C (empate com a regra simples) | a maior: ~2x |
+| Melhor clássico | 0,31 °C (Prophet) | 0,29 °C (SARIMA) | — |
+
+- **Onde ele brilha:** zero-shot (sem treino nem escolha de configuração) e rápido (0,06 s). Numa
+  **métrica nova do cliente**, é um ótimo primeiro resultado no primeiro dia, enquanto não há
+  histórico para comparar modelos.
+- **Onde ele perde:** faixa larga demais para uma série calma; não percebe mudanças de patamar
+  que não estejam no contexto (seção 8).
+- **Custo:** gratuito (Apache 2.0, uso comercial permitido — confirmar antes de usar em produto).
+  O custo é técnico: PyTorch (~200 MB), o modelo (456 MB) e mais memória.
+- **Próximos testes possíveis com ele:** repetir a comparação em várias semanas (o teste de 10
+  dias é curto) e medir a largura da faixa como métrica oficial.
 
 ### 11.3 Explicações em texto por IA
 Hoje os textos da tela são gerados por **regras** (D46): sempre corretos, mas fixos. Uma melhoria é
@@ -450,7 +519,7 @@ para números, a ferramenta certa é o Chronos.
 É onde a previsão por séries temporais mais agrega valor. Exemplo genérico: **vendas diárias de
 uma loja**, para planejar estoque e equipe na próxima semana.
 
-O que já serve para qualquer métrica: os 4 modelos, a validação, o caso de estudo, a API, a tela,
+O que já serve para qualquer métrica: os 5 modelos, a validação, o caso de estudo, a API, a tela,
 a atualização automática e os testes. O que precisaria ser generalizado:
 
 | Ponto | Hoje | Para qualquer métrica |

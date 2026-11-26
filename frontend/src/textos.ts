@@ -15,6 +15,9 @@ import { formatarComSinal, formatarData, formatarDiaMes, formatarGraus, formatar
 const graus = (valor: number | null | undefined) => formatarGraus(valor, 1)
 const erro = (valor: number | null | undefined) => formatarGraus(valor, 2)
 const plural = (n: number, singular: string, pluralTexto: string) => (n === 1 ? singular : pluralTexto)
+// ["A", "B", "C"] -> "A, B e C"
+const juntarNomes = (nomes: string[]) =>
+  nomes.length > 1 ? `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}` : (nomes[0] ?? '')
 
 // ---------------------------------------------------------------------------
 // Explicações curtas (ícones "i" e descrição dos modelos)
@@ -27,6 +30,8 @@ export const DESCRICAO_MODELO: Record<Modelo, string> = {
   sarima: 'Usa os dias anteriores e a tendência recente para projetar os próximos dias.',
   prophet:
     'Desenha uma linha de tendência sobre o histórico (criado pela Meta). Pensado para séries longas; aqui serve de comparação.',
+  chronos:
+    'IA moderna (criada pela Amazon): uma rede neural que já aprendeu com milhões de séries. Não é treinada com estes dados — só lê o histórico e projeta. Costuma dar uma faixa mais larga.',
 }
 
 export const AJUDA = {
@@ -146,9 +151,21 @@ export function textoComparacao(resposta: RespostaMetricas): string {
   const linhas = [...resposta.metricas].sort((a, b) => (a.mae ?? Infinity) - (b.mae ?? Infinity))
   const melhor = linhas[0]
   const base = resposta.metricas.find((l) => l.modelo === 'linha_base')
-  let texto = `O modelo com menor erro foi o ${melhor.nome_modelo}: errou em média ${erro(melhor.mae)}.`
-  if (base && melhor.modelo !== 'linha_base' && melhor.mae_vs_linha_base != null) {
-    texto += ` Isso é ${formatarNumero(-melhor.mae_vs_linha_base, 0)}% menos erro que a regra simples.`
+  // Empate: a API manda o erro com 2 casas; se dois modelos têm o mesmo número, a tabela marca os
+  // dois como "menor erro" — o texto precisa dizer o mesmo (achado com o 5º modelo, Chronos-2).
+  const empatados = linhas.filter((l) => l.mae === melhor.mae)
+  let texto =
+    empatados.length > 1
+      ? `${juntarNomes(empatados.map((l) => l.nome_modelo))} empataram com o menor erro: ${erro(melhor.mae)} em média.`
+      : `O modelo com menor erro foi o ${melhor.nome_modelo}: errou em média ${erro(melhor.mae)}.`
+  const ganhos = empatados
+    .filter((l) => l.modelo !== 'linha_base' && l.mae_vs_linha_base != null)
+    .map((l) => Math.round(-(l.mae_vs_linha_base as number)))
+  if (base && ganhos.length > 0) {
+    const menor = Math.min(...ganhos)
+    const maior = Math.max(...ganhos)
+    const faixa = menor === maior ? `${menor}%` : `${menor}% a ${maior}%`
+    texto += ` Isso é ${faixa} menos erro que a regra simples.`
   }
   if (base && (base.mae ?? 0) - (melhor.mae ?? 0) < 0.05) {
     texto += ' As diferenças entre os modelos são pequenas (menos de 0,05 °C): com poucos dias de teste, podem ser sorte.'
@@ -186,27 +203,37 @@ export function textoCasoEstudo(resposta: RespostaCasoEstudo, nomeVariavel: stri
   const maeAntes = antes.metricas.mae ?? 0
   const maeTudo = tudo.metricas.mae ?? 0
   const diasTeste = resposta.teste.dias
+  // O Chronos-2 não é treinado com os nossos dados: ele só "vê" o histórico (D47). As frases
+  // dizem "viu" em vez de "treinado" para não afirmar algo falso (D46).
+  const semTreino = antes.modelo === 'chronos'
+  const soAntes = semTreino ? 'que só viu os dias anteriores' : 'treinado só com os dias anteriores'
+  const comTudo = semTreino ? 'que viu todos os dias' : 'treinado com todos os dias'
 
   let texto = `A partir de ${formatarData(resposta.data_mudanca)}, a ${nome} passou a ficar mais ${subiu ? 'alta' : 'baixa'} que antes. `
   if (maeTudo > 0 && maeAntes > maeTudo * 1.3) {
     const vies = antes.metricas.vies ?? 0
     texto +=
-      `O modelo treinado só com os dias anteriores errou em média ${erro(maeAntes)} — ` +
-      `${formatarNumero(maeAntes / maeTudo, 1)} vezes o erro do modelo treinado com todos os dias (${erro(maeTudo)}). ` +
+      `O modelo ${soAntes} errou em média ${erro(maeAntes)} — ` +
+      `${formatarNumero(maeAntes / maeTudo, 1)} vezes o erro do modelo ${comTudo} (${erro(maeTudo)}). ` +
       `Ele continuou preso ao nível antigo e previu ${vies < 0 ? 'abaixo' : 'acima'} do real (em média ${erro(Math.abs(vies))}).`
     const acertos = Math.round(((antes.metricas.cobertura ?? 0) / 100) * diasTeste)
     if (acertos <= diasTeste / 2) {
       const quanto =
         acertos === 0 ? `não acertou nenhum dos ${diasTeste} dias` : `acertou só ${acertos} de ${diasTeste} dias`
       texto += ` E a faixa de confiança dele ${quanto}: estava confiante, mas no nível errado.`
+    } else {
+      // Errou o nível, mas a faixa "acertou": só pode ser porque a faixa era larga (ex.: Chronos-2).
+      texto +=
+        ` A faixa dele ainda cobriu ${acertos} de ${diasTeste} dias, mas só porque era larga: ` +
+        'acertar a faixa não quer dizer que a previsão foi boa.'
     }
   } else {
     texto +=
-      `Neste modelo, treinar só com os dias anteriores quase não atrapalhou (${erro(maeAntes)} contra ${erro(maeTudo)}): ` +
+      `Neste modelo, ${semTreino ? 'ver só os dias anteriores' : 'treinar só com os dias anteriores'} quase não atrapalhou (${erro(maeAntes)} contra ${erro(maeTudo)}): ` +
       'ele prolonga a tendência que já vinha antes da mudança.'
   }
-  return (
-    texto +
-    ' Lição: quando o comportamento muda, o modelo precisa ser treinado de novo com os dados recentes — por isso esta ferramenta atualiza e retreina todo dia.'
-  )
+  const licao = semTreino
+    ? ' Lição: quando o comportamento muda, o modelo precisa receber os dados recentes — por isso esta ferramenta atualiza os dados todo dia.'
+    : ' Lição: quando o comportamento muda, o modelo precisa ser treinado de novo com os dados recentes — por isso esta ferramenta atualiza e retreina todo dia.'
+  return texto + licao
 }

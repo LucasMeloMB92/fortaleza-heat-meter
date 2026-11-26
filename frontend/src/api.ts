@@ -3,7 +3,7 @@
 // (formatacao.ts — decisão D41).
 
 export type Variavel = 'temperatura' | 'sensacao'
-export type Modelo = 'linha_base' | 'ets' | 'sarima' | 'prophet'
+export type Modelo = 'linha_base' | 'ets' | 'sarima' | 'prophet' | 'chronos'
 export type Cenario = 'so_antes' | 'tudo' | 'so_depois'
 
 export interface Ponto {

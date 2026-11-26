@@ -31,9 +31,14 @@ Endereço base: `http://127.0.0.1:5000/api`. Para recarregar ao editar o código
   |---|---|---|
   | `/api/saude`, `/api/opcoes`, `/api/serie` | ~2 ms | ~2 ms |
   | `/api/previsao` (SARIMA) | ~6 s | ~3 ms |
-  | `/api/metricas` (treina os 4 modelos) | ~11 s | ~25 ms |
+  | `/api/metricas` (roda os 5 modelos) | ~11 s | ~25 ms |
   | `/api/teste` (depois de `/metricas` da mesma variável) | ~3 ms | ~3 ms |
-  | `/api/caso-estudo` (3 cenários x 4 modelos) | ~30 s | ~5 ms |
+  | `/api/caso-estudo` (3 cenários x 5 modelos) | ~30 s | ~5 ms |
+| `/api/previsao` (Chronos-2) | ~1–2 s (carrega o modelo) | ~3 ms |
+
+  Tempos medidos com 4 modelos; o Chronos-2 (D47) soma ~1–2 s só na 1ª chamada do processo
+  (carregar o modelo na memória) e ~0,06 s por previsão. Na 1ª vez em um computador, ele ainda
+  baixa o modelo (456 MB) do Hugging Face.
 
 - **CORS (D39):** o navegador só deixa chamar a API a partir de `http://localhost:5173` e
   `http://127.0.0.1:5173` (o frontend em desenvolvimento). Outras origens não recebem o cabeçalho
@@ -44,7 +49,7 @@ Endereço base: `http://127.0.0.1:5000/api`. Para recarregar ao editar o código
 | Parâmetro | Valores aceitos | Padrão |
 |---|---|---|
 | `variavel` | `temperatura`, `sensacao` | `temperatura` |
-| `modelo` | `linha_base`, `ets`, `sarima`, `prophet` | `sarima` |
+| `modelo` | `linha_base`, `ets`, `sarima`, `prophet`, `chronos` | `sarima` |
 | `horizonte` | inteiro de 1 a 14 (dias) | `7` |
 
 ### Erros
@@ -120,7 +125,8 @@ Variáveis, modelos e limites aceitos — o frontend usa para montar os seletore
     { "id": "linha_base", "nome": "Linha de base (média 7 dias)" },
     { "id": "ets", "nome": "ETS" },
     { "id": "sarima", "nome": "SARIMA" },
-    { "id": "prophet", "nome": "Prophet" }
+    { "id": "prophet", "nome": "Prophet" },
+    { "id": "chronos", "nome": "Chronos-2" }
   ],
   "padroes": { "variavel": "temperatura", "modelo": "sarima" },
   "horizonte": { "padrao": 7, "minimo": 1, "maximo": 14 },
@@ -191,12 +197,12 @@ modelo é treinado com os 90 dias.
 
 ## GET `/api/metricas`
 
-Tabela comparativa dos 4 modelos no período de teste (treino nos 80 primeiros dias, teste nos
+Tabela comparativa dos 5 modelos no período de teste (treino nos 80 primeiros dias, teste nos
 10 últimos). Alimenta a **tabela de métricas**.
 
 - **Parâmetros:** `variavel`.
 - **Requisição:** `GET /api/metricas?variavel=temperatura`
-- **Resposta 200** (2 dos 4 modelos mostrados):
+- **Resposta 200** (2 dos 5 modelos mostrados):
 
 ```json
 {
@@ -280,7 +286,7 @@ Caso de estudo de quebra estrutural: o mesmo modelo treinado **só antes** da mu
 **tudo** e **só depois**, todos avaliados no mesmo período de teste. Alimenta a **visualização
 antes x depois**.
 
-- **Parâmetros:** `variavel`; `modelo` **opcional** (sem ele, vêm os 4 modelos).
+- **Parâmetros:** `variavel`; `modelo` **opcional** (sem ele, vêm os 5 modelos).
 - **Requisição:** `GET /api/caso-estudo?variavel=sensacao&modelo=sarima`
 - **Resposta 200** (listas encurtadas):
 
