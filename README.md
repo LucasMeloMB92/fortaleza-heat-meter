@@ -74,6 +74,12 @@ causa da busca do SARIMA):
 .venv\Scripts\python -m scripts.etapa4_validacao
 ```
 
+**Caso de estudo** (modelo treinado só antes da mudança de outubro x com tudo x só depois):
+
+```powershell
+.venv\Scripts\python -m scripts.etapa5_caso_estudo
+```
+
 **Testes e qualidade do código:**
 
 ```powershell

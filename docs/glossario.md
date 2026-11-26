@@ -227,3 +227,20 @@ modelo erra 20% menos que a regra simples; +13% = erra 13% mais (pior que a regr
 negativo = baixo demais. A média dos erros (viés) mostra se o modelo erra sempre para o mesmo lado.
 Ex.: na temperatura, todos os modelos tiveram viés negativo — a alta continuou e eles previram
 abaixo.
+
+## Caso de estudo
+
+**Regime** — o "jeito" como a série se comporta num período (nível médio, variação). Uma quebra
+estrutural é uma troca de regime.
+
+**Retreinar** — treinar o modelo de novo incluindo os dados mais recentes. É o principal remédio
+contra quebras: o modelo "fica sabendo" do novo regime.
+
+**Excesso de confiança (faixa estreita demais)** — quando a faixa de 95% deixa de fora muito mais
+que 5% dos dias reais. O intervalo de um modelo só mede a incerteza **dentro do regime que ele
+conhece**; ele não sabe que o mundo pode mudar. Ex.: o SARIMA "só antes" teve cobertura de 0%
+(sensação) e 10% (temperatura).
+
+**Reversão à média** — modelos sem tendência (ex.: SARIMA com d = 0 e sem tendência) puxam a
+previsão de volta para a média do treino. Se o treino é de um regime antigo, puxam para o nível
+errado.

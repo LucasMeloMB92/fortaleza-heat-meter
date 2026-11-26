@@ -322,3 +322,68 @@ Registro de cada etapa: o que foi feito, os resultados e o que aprendi.
   — mais um motivo para não confiar demais em diferenças pequenas.
 - **Diferenças pequenas, dias decisivos:** entre ETS e linha de base a diferença é de 0,01–0,03 °C
   — empate prático. O erro dia a dia mostrou que o ranking da temperatura não depende só de 16/11.
+
+---
+
+## Etapa 5 — Caso de estudo: quebra estrutural (2026-11-26)
+
+### O que foi feito
+- `backend/previsao/caso_estudo.py`: datas de mudança (recalculadas na anomalia), três cenários de
+  treino e avaliação de todos os modelos na mesma janela de teste (D35).
+- `backend/previsao/avaliacao.py`: `comparar_com_real` extraída para ser usada pela validação e
+  pelo caso de estudo (sem código duplicado).
+- **Bug corrigido** na linha de base: com horizonte longo, a faixa virava NaN (D36).
+- `backend/scripts/etapa5_caso_estudo.py` e `docs/img/etapa5_caso_estudo.png`.
+- Testes: 4 do caso de estudo (com um degrau sintético de +2 °C) + 2 da linha de base.
+
+### Resultados
+
+![Caso de estudo](img/etapa5_caso_estudo.png)
+
+| Cenário | Temperatura (mudança 15/10) | Sensação (mudança 23/10) |
+|---|---|---|
+| Só antes | 28/08–14/10, 48 dias, média 27,79 | 28/08–22/10, 56 dias, média 30,30 |
+| Tudo | 28/08–15/11, 80 dias, média 28,06 | 28/08–15/11, 80 dias, média 30,72 |
+| Só depois | 15/10–15/11, 32 dias, média 28,48 | 23/10–15/11, 24 dias, média 31,68 |
+| **Teste (real)** | 16/11–25/11, média **28,84** | 16/11–25/11, média **32,10** |
+
+**MAE no teste (°C) — e cobertura**
+
+| Modelo | Temp. só antes | Temp. tudo | Temp. só depois | Sens. só antes | Sens. tudo | Sens. só depois |
+|---|---|---|---|---|---|---|
+| Linha de base | 0,94 (10%) | 0,46 (70%) | 0,46 (90%) | 1,29 (50%) | 0,34 (100%) | 0,34 (90%) |
+| ETS | 0,95 (50%) | 0,43 (90%) | **0,31** (90%) | 1,36 (100%) | 0,33 (100%) | 0,34 (100%) |
+| SARIMA | **1,11 (10%)** | 0,38 (90%) | **0,31** (90%) | **1,79 (0%)** | **0,29** (100%) | 0,45 (80%) |
+| Prophet | 0,31 (90%) | **0,31** (90%) | 0,47 (60%) | 0,35 (90%) | 0,38 (100%) | **0,30** (100%) |
+
+**"Só antes" nos 10 primeiros dias logo após a mudança** (mesma distância do teste normal):
+temperatura — linha de base 0,29, ETS 0,30, SARIMA 0,45, Prophet 0,17; sensação — 0,74 / 0,81 /
+1,20 / 0,55.
+
+- `pytest`: 37 testes passaram. `ruff`: sem erros.
+
+### O que aprendi
+- **Quem não conhece o novo regime erra muito e para o mesmo lado.** Linha de base, ETS e SARIMA
+  treinados "só antes" erraram 2 a 6 vezes mais que com "tudo", sempre para baixo (viés de −0,8 a
+  −1,8 °C): continuaram prevendo o nível antigo (~28,0 e ~30,8 °C).
+- **O intervalo não protege contra quebras.** O SARIMA "só antes" teve cobertura de 10% e 0%: a
+  faixa era estreita e confiante — no regime errado. Um intervalo só mede a incerteza do mundo que
+  o modelo conhece.
+- **O SARIMA "só antes" foi o pior por reversão à média:** sem tendência (o treino antigo não
+  justificava), ele puxou a previsão para a média do treino (27,8 / 30,3), abaixo até do último
+  valor visto.
+- **A surpresa: o Prophet "só antes" quase não piorou** (0,31 e 0,35). O treino antigo já tinha
+  a subida sazonal de setembro/outubro; o Prophet aprendeu essa inclinação e a prolongou — e a
+  série continuou subindo. Lição: um modelo de **tendência** sobrevive a uma mudança que seja
+  continuação da tendência; um modelo de **nível** não. Mas é sorte de calendário: em dezembro (pico
+  do ciclo) essa reta passaria do ponto.
+- **Quebra x estação na temperatura:** a anomalia subiu só +0,37 °C em 15/10, mas o "só antes"
+  errou 0,84 °C para baixo no teste. A maior parte do erro é a **subida sazonal** que continuou
+  depois do treino, não a quebra em si. Logo após a mudança o erro era só 0,29. Na sensação a
+  quebra é mais forte (+0,61 na anomalia) e o erro já aparece logo depois (0,74).
+- **Descartar o passado ("só depois") ajuda às vezes:** na temperatura, ETS e SARIMA melhoraram
+  (0,31, empatando com o melhor da etapa 4); na sensação, com só 24 dias, o SARIMA piorou (0,45).
+  Menos dados = parâmetros mais instáveis. "Tudo" foi a escolha mais segura.
+- **Conclusão prática:** o remédio para quebras é **retreinar com frequência** (ex.: todo dia),
+  não escolher o modelo "perfeito". Linha de base, ETS e SARIMA usam os dias recentes e se ajustam
+  rápido quando retreinados.
