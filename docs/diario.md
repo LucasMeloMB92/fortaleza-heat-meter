@@ -251,3 +251,74 @@ Registro de cada etapa: o que foi feito, os resultados e o que aprendi.
   estreitas. Se forem estreitas demais, a cobertura na etapa 4 vai ficar abaixo de 95%.
 - **Testes lentos custam:** a busca de 72 combinações do SARIMA tornava a suíte lenta (55 s). Uma
   *fixture* que treina cada modelo uma vez reduziu para 41 s.
+
+### Dúvidas discutidas antes da etapa 4
+- **O que são d, MA e AICc?** d = quantas vezes transformamos a série em variações diárias; MA =
+  correção pelo erro de ontem; AICc = nota de erro + multa por complexidade (menor = melhor;
+  diferença < 2 = empate). Exemplos numéricos acrescentados ao glossário.
+- **Pedido para o relatório final:** uma seção explicando o que foi decidido e configurado em cada
+  modelo, com todos os termos explicados no próprio arquivo (registrado no `CLAUDE.md` e no
+  esqueleto do relatório).
+
+---
+
+## Etapa 4 — Validação (2026-11-26)
+
+### O que foi feito
+- `backend/previsao/avaliacao.py`: MAE, RMSE, cobertura, separação treino/teste, `avaliar` (um
+  modelo) e `comparar_modelos` (os 4, com MAE relativo à linha de base).
+- `backend/scripts/etapa4_validacao.py`: métricas, erro dia a dia e `docs/img/etapa4_teste.png`.
+- `backend/tests/test_avaliacao.py`: métricas com contas de cabeça, separação e **teste
+  anti-vazamento** (6 testes).
+- Treino: 28/08 a 15/11 (80 dias). Teste: 16/11 a 25/11 (10 dias). A busca de configuração (AICc,
+  ADF) rodou só no treino.
+
+### Resultados
+
+![Teste](img/etapa4_teste.png)
+
+**Temperatura média**
+
+| Modelo | MAE | RMSE | Cobertura | MAE dias 1–7 | Viés | vs linha de base |
+|---|---|---|---|---|---|---|
+| Linha de base | 0,46 | 0,55 | 70% | 0,40 | −0,24 | — |
+| ETS | 0,43 | 0,53 | 90% | 0,38 | −0,20 | −6% |
+| SARIMA | 0,38 | 0,50 | 90% | 0,35 | −0,10 | −18% |
+| **Prophet** | **0,31** | **0,46** | 90% | **0,31** | −0,01 | **−33%** |
+
+**Sensação térmica média**
+
+| Modelo | MAE | RMSE | Cobertura | MAE dias 1–7 | Viés | vs linha de base |
+|---|---|---|---|---|---|---|
+| Linha de base | 0,34 | 0,49 | 100% | 0,25 | −0,24 | — |
+| ETS | 0,33 | 0,42 | 100% | 0,31 | −0,03 | −2% |
+| **SARIMA** | **0,29** | 0,44 | 100% | **0,22** | −0,16 | **−15%** |
+| Prophet | 0,38 | 0,43 | 100% | 0,39 | +0,19 | +13% |
+
+- Configurações no treino de 80 dias: ETS sem tendência (as duas variáveis); SARIMA(1,0,0) +
+  tendência linear (as duas — na temperatura, com 90 dias o teste ADF tinha escolhido d = 1).
+- **Dia atípico:** 16/11 (27,5 °C) — todos os modelos erraram +1,1 a +1,3 °C e ficou fora da
+  faixa de todos. Sem ele, o MAE da temperatura fica 0,41 / 0,36 / 0,28 / 0,20 — mesma ordem.
+- Na sensação, os maiores erros foram 22–23/11 (pico de 32,8–32,9 °C), −0,5 a −1,0 °C.
+- `pytest`: 31 testes passaram. `ruff`: sem erros.
+
+### O que aprendi
+- **Todos os modelos bateram (ou empataram com) a regra simples, menos o Prophet na sensação.** A
+  dúvida da D23 tem resposta: há ganho, de 15% a 33% para o melhor modelo de cada variável.
+- **Não existe um vencedor único:** Prophet ganhou na temperatura (−33%) e foi o **pior** na
+  sensação (+13%). O SARIMA foi o mais **consistente**: 2º na temperatura e 1º na sensação, sempre
+  melhor que a linha de base (−18% e −15%). Candidato a "vencedor geral" — decisão final na etapa 8.
+- **Por que modelos com tendência ganharam na temperatura:** a alta continuou durante o teste
+  (viés negativo em todos). Quem prolongou a tendência (Prophet, SARIMA) errou menos. Mas é um
+  teste de 10 dias numa fase de subida sazonal: em dezembro, com o pico do ciclo, a vantagem pode
+  inverter.
+- **Na sensação, o Prophet exagerou a tendência** (viés +0,19): previu subida e a sensação ficou
+  estável. Sem memória de curto prazo, ele não "percebe" que os últimos dias pararam de subir.
+- **Cobertura:** na sensação, 100% em todos — as faixas são largas (às vezes largas demais, como
+  o ETS chegando a 4 °C). Na temperatura, 90% nos modelos e 70% na linha de base (errou 3 dias no
+  fim, quando a alta continuou). Com 10 dias, cada dia vale 10 pontos de cobertura.
+- **A configuração depende dos dados de treino:** a temperatura com 80 dias passou no ADF com
+  tendência (d = 0) e com 90 dias não (d = 1). Com séries curtas, a escolha de modelo é instável
+  — mais um motivo para não confiar demais em diferenças pequenas.
+- **Diferenças pequenas, dias decisivos:** entre ETS e linha de base a diferença é de 0,01–0,03 °C
+  — empate prático. O erro dia a dia mostrou que o ranking da temperatura não depende só de 16/11.

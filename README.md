@@ -68,6 +68,12 @@ causa da busca do SARIMA):
 .venv\Scripts\python -m scripts.etapa3_modelagem
 ```
 
+**Validar os modelos** (treino de 80 dias, teste nos últimos 10; métricas e gráfico):
+
+```powershell
+.venv\Scripts\python -m scripts.etapa4_validacao
+```
+
 **Testes e qualidade do código:**
 
 ```powershell

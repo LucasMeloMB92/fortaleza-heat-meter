@@ -33,7 +33,10 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
   `modelos.prever(nome, serie, horizonte, nivel) -> Previsao(tabela, detalhes)` (D27).
 - ETS/SARIMA escolhem configuração pelo menor AICc, refeito a cada treino (D28). SARIMA: d pelo
   ADF com tendência ("ct"), não fixo (D33). Prophet sem sazonalidades (D32).
-- Métricas: MAE, RMSE, cobertura do intervalo de 95%.
+- Métricas: MAE, RMSE, cobertura do intervalo de 95% (+ auxiliares: MAE dias 1–7, viés, MAE vs
+  linha de base — D34). `avaliacao.comparar_modelos(serie)`.
+- Resultado da etapa 4 (teste 16/11–25/11): temperatura — Prophet 0,31 °C (−33% vs base), SARIMA
+  0,38; sensação — SARIMA 0,29 (−15%), Prophet 0,38 (+13%, pior). SARIMA = mais consistente.
 - Caso de estudo: quebra estrutural — modelo treinado só antes da mudança recente x treinado com tudo.
 
 ### Tecnologias
@@ -47,7 +50,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 1. Coleta de dados ✅
 2. Exploração ✅
 3. Modelagem ✅
-4. Validação
+4. Validação ✅
 5. Caso de estudo
 6. API Flask
 7. Frontend
@@ -72,6 +75,8 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 - `docs/api.md`: cada endpoint (método, rota, parâmetros, exemplos de requisição/resposta, erros).
   Atualizar sempre que um endpoint mudar.
 - `docs/relatorio-final.md`: resumo para o cliente (gráficos, modelo vencedor, erro em °C, limites).
+  Deve ter uma seção explicando o que foi decidido e configurado em **cada modelo**, com todos os
+  termos técnicos explicados **no próprio arquivo** (sem depender do glossário) — pedido do usuário.
 
 ## Comandos úteis (a partir de `backend/`)
 - Scripts de etapa: `.venv\Scripts\python -m scripts.etapaN_nome` (ex.: `scripts.etapa1_coleta`)
