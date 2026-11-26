@@ -49,9 +49,10 @@ previsão e conferimos com o que aconteceu de verdade.
   dias com uma faixa de incerteza e mostra tudo em gráficos e textos simples.
 - **Quanto erra:** testados em 10 dias que não conheciam, os melhores modelos erraram em média
   **0,3 a 0,4 °C** por dia — de 15% a 33% menos que a regra simples "repetir a média da semana".
-- **Modelo recomendado: SARIMA.** Não foi o melhor em tudo, mas foi o **mais consistente**: 2º
+- **Modelo recomendado: SARIMA.** Não foi o melhor em tudo, mas foi o **mais consistente**: 3º
   lugar na temperatura (erro de 0,38 °C) e 1º na sensação térmica (0,29 °C), sempre melhor que a
-  regra simples. O Prophet ganhou na temperatura (0,31 °C), mas foi o pior na sensação.
+  regra simples. O Prophet ganhou na temperatura (0,31 °C), mas foi o pior na sensação. Ranking
+  completo dos cinco modelos na seção 7.
 - **Principal lição:** um modelo só conhece o passado que viu. Quando o clima muda de patamar
   (como em meados de outubro de 2026), um modelo desatualizado erra de 2 a 6 vezes mais — e com
   falsa confiança. A ferramenta já se protege disso retreinando todo dia.
@@ -360,25 +361,71 @@ acerte:
 ## 7. Modelo vencedor
 
 **Recomendação: SARIMA**, com erro médio esperado de **~0,3 a 0,4 °C** por dia na próxima
-semana.
+semana. Abaixo, o ranking completo dos cinco modelos e o porquê da escolha.
 
-| Critério | SARIMA | Prophet |
-|---|---|---|
-| Temperatura | 2º (0,38 °C, −18%) | **1º** (0,31 °C, −33%) |
-| Sensação | **1º** (0,29 °C, −15%) | 4º (0,38 °C, +13%) |
-| Sempre melhor que a regra simples? | **Sim** | Não |
-| Parte do último valor real? | Sim (memória de curto prazo) | Não |
+### 7.1 Ranking em cada variável (erro médio no teste)
 
-**Por quê:** o Prophet tem o melhor número isolado, mas depende de a tendência continuar — e
-falhou quando ela parou (sensação). O SARIMA ficou bem colocado nas duas variáveis, sempre melhor
-que a régua, e reage ao último dia observado. Para uma ferramenta que vai prever séries novas
-todos os dias, **consistência vale mais que o melhor resultado em um teste**.
+Posição pelo **erro médio (MAE)** — quanto a previsão errou, em média, nos 10 dias de teste.
+Menor erro = melhor posição. "vs regra" = quanto o erro ficou menor (−) ou maior (+) que o da
+regra simples.
 
-**E o Chronos-2?** Empatou com o melhor na temperatura, mas na sensação não ganhou da regra
-simples e sua faixa é a mais larga de todas. Nesta série curta e calma, a IA moderna **não supera**
-a estatística clássica — o SARIMA continua sendo a recomendação. O valor do Chronos-2 aparece em
-outro lugar: numa métrica nova, ele dá um bom resultado **no primeiro dia**, sem escolher
-configuração nenhuma (seção 11.2).
+| Posição | Temperatura | Erro | vs regra | Sensação | Erro | vs regra |
+|---|---|---|---|---|---|---|
+| 1º | Prophet | 0,31 °C | −33% | **SARIMA** | 0,29 °C | −15% |
+| 2º | Chronos-2 | 0,31 °C | −32% | ETS | 0,33 °C | −2% |
+| 3º | **SARIMA** | 0,38 °C | −18% | Chronos-2 | 0,33 °C | −1% |
+| 4º | ETS | 0,43 °C | −6% | Linha de base | 0,34 °C | — |
+| 5º | Linha de base | 0,46 °C | — | Prophet | 0,38 °C | +13% |
+
+*Prophet e Chronos-2 empatam em 0,31 °C na temperatura; o Prophet fica na frente por milésimos.
+O mesmo vale para ETS e Chronos-2 na sensação.*
+
+O líder **muda** de uma variável para a outra: o Prophet vai do 1º ao 5º lugar. Só o SARIMA
+fica entre os três primeiros nas duas.
+
+### 7.2 Ranking geral (as duas variáveis juntas)
+
+| Geral | Modelo | Posição média | Erro médio das duas | Bate a regra simples nas duas? | Largura média da faixa (temp. / sens.) | Caso de estudo "só antes" (temp. / sens.) |
+|---|---|---|---|---|---|---|
+| **1º** | **SARIMA** | **2,0** (3º e 1º) | 0,34 °C | **Sim, com folga** (−18% e −15%) | **1,14 / 2,02 °C** | 1,11 / 1,79 °C |
+| 2º | Chronos-2 | 2,5 (2º e 3º) | **0,32 °C** | Só na temperatura (na sensação, empate: −1%) | 2,14 / 4,05 °C | 1,04 / 1,49 °C |
+| 3º | Prophet | 3,0 (1º e 5º) | 0,35 °C | Não (+13% na sensação) | 1,01 / 1,66 °C | **0,31 / 0,35 °C** |
+| 4º | ETS | 3,0 (4º e 2º) | 0,38 °C | Por pouco (−6% e −2%) | 1,30 / 3,42 °C | 0,95 / 1,36 °C |
+| 5º | Linha de base | 4,5 (5º e 4º) | 0,40 °C | — (é a régua) | 1,19 / 2,21 °C | 0,94 / 1,29 °C |
+
+Como ler as colunas:
+- **Posição média:** a média das duas posições da tabela 7.1. Menor = mais regular. É o critério
+  do ranking geral. No empate (Prophet e ETS, 3,0), desempata o erro médio.
+- **Erro médio das duas:** a média simples dos dois erros. Mostra quem erra menos no total, mas
+  não mostra se o modelo é regular.
+- **Largura da faixa:** distância média entre o limite de cima e o de baixo da faixa de 95%. Faixa
+  estreita que acerta = previsão útil; faixa larga "acerta" com facilidade, mas diz pouco.
+- **Caso de estudo "só antes":** o erro do modelo que só conhecia os dias anteriores à mudança de
+  outubro (seção 8). Mede como ele se sai quando o clima muda e ele não viu.
+
+### 7.3 Por que o SARIMA, e não os outros
+
+- **SARIMA (1º):** é o mais **regular** — 3º e 1º lugar, e o único que bate a regra simples com
+  folga nas duas variáveis. Tem a faixa mais estreita entre os modelos que nunca ficaram por
+  último, e parte do último dia observado. O ponto fraco: é o que mais sofre quando o clima muda
+  e ele não viu (1,11 e 1,79 °C) — por isso a ferramenta retreina todo dia.
+- **Chronos-2 (2º):** tem o **menor erro médio somando as duas variáveis** (0,32 °C contra
+  0,34 °C do SARIMA) — a diferença é de 0,02 °C, pequena demais para 10 dias de teste. Perde por
+  dois motivos: na sensação empatou com a regra simples (−1%), e sua faixa é **quase o dobro** da
+  do SARIMA. Uma previsão que diz "entre 30,6 e 34,0 °C" ajuda menos que uma que diz "entre 31,2 e
+  33,3 °C". Para uma métrica nova, porém, é ótimo no primeiro dia: não exige escolher nada
+  (seção 11.2).
+- **Prophet (3º):** o melhor na temperatura, mas o **pior** na sensação, onde perdeu até para a
+  regra simples. Ele segue a tendência sem olhar o último dia: acerta quando a tendência continua
+  e erra quando ela para. É também por isso que foi o melhor no caso de estudo — a subida de
+  outubro continuou. Num mês em que a tendência mude de direção, ele seria o primeiro a errar.
+- **ETS (4º):** sempre um pouco melhor que a regra simples, mas tão pouco (−6% e −2%) que, na
+  prática, é um empate. Tem a segunda faixa mais larga.
+- **Linha de base (5º):** é a régua. Serve para saber se os outros valem a pena — e os outros
+  quatro modelos ficaram, na média, à frente dela.
+
+**Resumo:** para uma ferramenta que vai prever todos os dias, **regularidade e faixa útil valem
+mais que o melhor número em um teste** — e é aí que o SARIMA ganha.
 
 **Cuidados com esta conclusão:**
 - É um teste de **10 dias**, numa fase de **subida sazonal** (agosto → novembro). Em dezembro,
