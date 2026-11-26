@@ -49,8 +49,25 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 ### Tecnologias
 - Backend: Python 3.12 (venv em `backend/.venv`), pandas, statsmodels, prophet, Flask + Flask-CORS.
 - Frontend: React + Vite + TypeScript, Recharts, TanStack Query, Tailwind CSS.
-- Qualidade: Git (commit por etapa), pytest, ruff.
+- Qualidade: Git (commit por etapa), pytest + ruff (backend), Vitest + tsc + oxlint (frontend).
 - Monorepo: `/backend`, `/frontend`, `/docs`.
+
+## Estado atual e como retomar (atualizado em 26-11-2026)
+- **Próximo passo: Etapa 8 — relatório final** (`docs/relatorio-final.md`). O esqueleto já tem a
+  estrutura e os itens "Já identificado"; falta escrever as seções com os resultados das etapas 2–5.
+- **Pendências a confirmar com o usuário na etapa 8:**
+  - Incluir no relatório as seções "Isto é IA?" (mapa: regras → estatística → ML → deep learning;
+    o projeto usa estatística clássica) e "Como evoluir para outras métricas" — propostas, sem
+    resposta explícita ainda.
+  - O cliente tem uma métrica real (vendas, demanda...) para citar como próximo caso de teste?
+- **Já decidido para o relatório:** seção autossuficiente sobre cada modelo (pedido do usuário);
+  melhorias futuras = textos por IA (opção b), Chronos, outras métricas, publicação online.
+- **Última decisão registrada: D46** — a próxima é D47 (`docs/decisoes.md`).
+- **Para retomar:** leia o fim de `docs/diario.md` (inclui as dúvidas discutidas). Para ver a tela:
+  suba `backend` e `frontend` pelo `.claude/launch.json`. Os números da documentação são um retrato
+  de 26-11-2026; a ferramenta atualiza os dados sozinha todo dia (D44).
+- **Qualidade atual:** backend 62 testes (pytest) + ruff limpo; frontend 29 testes (Vitest) +
+  tsc + oxlint + build limpos.
 
 ## Etapas (ordem fixa)
 0. Preparação ✅
@@ -60,8 +77,9 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 4. Validação ✅
 5. Caso de estudo ✅
 6. API Flask ✅
-7. Frontend ✅
-8. Relatório final
+7. Frontend ✅ (+ ajustes pedidos depois: atualização automática D44, tela robusta D45,
+   linguagem simples D46)
+8. Relatório final ← **próxima**
 
 Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 
