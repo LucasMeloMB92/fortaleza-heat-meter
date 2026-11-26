@@ -526,3 +526,34 @@ durante o projeto e aprovadas.
 - **Achado no teste:** uma resposta guardada da API antiga (sem o campo `atualizacao`) quebrou a
   faixa de aviso. O limite de erro geral segurou a página (sem tela branca), mas derrubou tudo.
   Correção: a faixa ficou defensiva e ganhou um limite de erro próprio.
+
+## D46 — Tela em linguagem simples: textos gerados por regras _(usuário)_
+- **Decisão:** como tornar a tela compreensível para quem não é técnico ("números soltos" na
+  tabela confundiam).
+- **Opções consideradas:** (a) textos gerados por **regras** a partir dos números da API (frases
+  prontas preenchidas); (b) textos escritos por um **modelo de linguagem** (Gemma local, Gemini).
+- **Escolha:** (a) agora; (b) registrada como melhoria futura no relatório final.
+- **O que mudou na tela:**
+  - Cartões de destaque: "Amanhã", "Em DD-MM-AAAA" e "Tendência" (estável, leve alta/queda,
+    alta/queda).
+  - Parágrafos "Resumo" e "Dá para confiar?" na previsão; um texto de conclusão na comparação dos
+    modelos e no teste; "O que isso significa" no caso de estudo — todos com os números reais.
+  - Linguagem simples: "erro médio" (MAE), "acertou a faixa em 9 de 10 dias" (cobertura),
+    "18% melhor / 13% pior / empate / é a régua" (vs linha de base), "errou para baixo/cima".
+  - Ícones **i** com explicação curta; RMSE, viés e configuração recolhidos em "detalhes técnicos";
+    uma frase explicando o modelo escolhido no seletor.
+- **Regras das frases** (em `frontend/src/textos.ts`, com testes):
+  - Tendência = último dia previsto − último dado real: menos de 0,2 °C = "estável"; de 0,2 a
+    0,5 °C = "leve alta/queda"; acima = "alta/queda".
+  - Diferença com a regra simples abaixo de 3% = "empate"; diferença entre o melhor modelo e a
+    regra simples abaixo de 0,05 °C = aviso "podem ser sorte".
+  - **Temperaturas com 1 casa ("29,1 °C"); erros e variações com 2 casas ("0,38 °C")**, iguais às
+    tabelas.
+- **Por quê:** (a) é instantânea, gratuita e **sempre correta** — só afirma o que os números
+  mostram. (b) escreve de forma mais natural, mas pode inventar, custa latência e, no caso do
+  Gemini, envia os dados para fora.
+- **Achados no teste da tela (corrigidos):** (1) o cartão dizia "Estável" e "+0,2 °C" ao mesmo
+  tempo (a variação real era +0,16, arredondada) — por isso a regra das 2 casas; (2) o texto dizia
+  "errou 0,4 °C" e a tabela "0,38 °C"; (3) o ícone **i** abria e fechava no mesmo clique; (4) o
+  aviso do **i** era cortado pela tabela — passou a ser posicionado em relação à janela;
+  (5) "acertou só 0 de 10 dias" virou "não acertou nenhum dos 10 dias".

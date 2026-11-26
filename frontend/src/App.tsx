@@ -17,7 +17,9 @@ import {
   useSerie,
   useTeste,
 } from './consultas'
+import { ResumoPrevisao } from './componentes/ResumoPrevisao'
 import { formatarData } from './formatacao'
+import { textoTeste } from './textos'
 
 // Carregamento sob demanda (D45): o código dos gráficos (Recharts, a parte mais pesada) é
 // baixado separado; enquanto chega, o <Suspense> de cada cartão mostra o esqueleto.
@@ -133,14 +135,22 @@ export default function App() {
           dicaCarregando="Na primeira vez do dia pode levar alguns segundos; depois fica instantâneo."
         >
           {previsao.data && (
-            <GraficoPrevisao
-              resposta={previsao.data}
-              outraVariavel={outraVariavel}
-              nomeOutra={nomeOutra}
-              serieOutra={serieOutra.data}
-              comparar={comparar}
-              aoMudarComparar={setComparar}
-            />
+            <>
+              <ResumoPrevisao
+                resposta={previsao.data}
+                nomeVariavel={nomeVariavel}
+                metricasDoModelo={metricas.data?.metricas.find((m) => m.modelo === modelo)}
+                diasTeste={metricas.data?.teste.dias}
+              />
+              <GraficoPrevisao
+                resposta={previsao.data}
+                outraVariavel={outraVariavel}
+                nomeOutra={nomeOutra}
+                serieOutra={serieOutra.data}
+                comparar={comparar}
+                aoMudarComparar={setComparar}
+              />
+            </>
           )}
         </EstadoConsulta>
       </Cartao>
@@ -190,7 +200,12 @@ export default function App() {
           mensagemCarregando="Comparando previsão e valores reais…"
           dicaCarregando="Usa o mesmo cálculo da comparação dos modelos."
         >
-          {teste.data && <GraficoTeste resposta={teste.data} />}
+          {teste.data && (
+            <>
+              <p className="mb-3 text-sm leading-relaxed">{textoTeste(teste.data)}</p>
+              <GraficoTeste resposta={teste.data} />
+            </>
+          )}
         </EstadoConsulta>
       </Cartao>
 
@@ -206,7 +221,7 @@ export default function App() {
           mensagemCarregando="Treinando os 3 cenários (só antes, tudo, só depois)…"
           dicaCarregando="É o cálculo mais pesado: na primeira vez do dia pode levar 1 minuto ou mais."
         >
-          {caso.data && <CasoEstudo resposta={caso.data} />}
+          {caso.data && <CasoEstudo resposta={caso.data} nomeVariavel={nomeVariavel} />}
         </EstadoConsulta>
       </Cartao>
 

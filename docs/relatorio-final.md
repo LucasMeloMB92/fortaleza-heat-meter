@@ -26,9 +26,28 @@
      alguma data, mesmo sem mudança forte.
    - Já identificado: a faixa de 95% não protege contra quebras — um modelo desatualizado fica
      confiante no regime errado (cobertura de 0–10% no caso de estudo, D35).
-9. **Próximos passos** — o que seria necessário para levar a produção.
-   - Já identificado: retreinar com frequência (ex.: diariamente), principal remédio contra
-     quebras estruturais (etapa 5).
+9. **Próximos passos / melhorias futuras** — o que seria necessário para levar a produção.
+   - ~~Retreinar com frequência~~ — **já implementado**: os dados e os modelos são atualizados
+     todo dia automaticamente (D44), o principal remédio contra quebras estruturais (etapa 5).
    - Já identificado: avaliar variáveis externas (umidade, vento) com previsões meteorológicas.
    - Já identificado: com 2+ anos de histórico — climatologia como linha de base, Prophet com
      sazonalidade anual e validação em várias janelas de 7 dias (D23).
+   - **Textos explicativos por IA (opção b)** _(pedido do usuário)_: hoje os textos da tela são
+     gerados por regras (D46) — sempre corretos, mas fixos. Uma melhoria futura é um modelo de
+     linguagem escrever a explicação de forma mais natural e responder perguntas ("por que o
+     SARIMA ganhou?"): **Gemma via Ollama** (gratuito, local, dados não saem) ou **Gemini** na
+     camada gratuita (mais capaz, com limites de uso e dados enviados ao Google — ler os termos).
+     Cuidados: o texto pode inventar ou exagerar (conferir contra os números), latência de segundos
+     por texto e privacidade dos dados do cliente. O modelo de linguagem **explica** a previsão;
+     ele **não** deve fazer a previsão (para números, a ferramenta certa é a próxima).
+   - **Modelo fundacional de séries temporais (IA moderna):** Chronos (Amazon, licença Apache 2.0,
+     gratuito e local) como 5º modelo — lê os 90 dias como contexto e prevê sem treino próprio.
+     Entra pela interface comum (D27) e aparece sozinho na validação, no caso de estudo, na API e
+     na tela. Custo: dependência pesada (PyTorch) e download do modelo na primeira execução.
+   - **Outras métricas além do clima:** conectores de dados (envio de CSV, banco, API do cliente),
+     cadastro de métricas (nome, unidade, frequência, horizonte), sazonalidade semanal e feriados
+     ligados conforme a métrica. É onde previsão por séries temporais mais agrega valor (para
+     temperatura, a previsão meteorológica física é imbatível).
+   - **Publicar online:** frontend estático (Netlify/Vercel), backend com servidor de produção
+     (gunicorn) e ~2 GB de RAM, disco persistente para os CSVs, CORS com o endereço público,
+     HTTPS e "aquecimento" dos modelos ao iniciar o servidor.

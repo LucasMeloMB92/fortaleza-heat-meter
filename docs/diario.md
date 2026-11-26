@@ -505,3 +505,38 @@ temperatura — linha de base 0,29, ETS 0,30, SARIMA 0,45, Prophet 0,17; sensaç
   aviso. O limite geral evitou a tela branca, mas levou a página junto; um limite só para a faixa
   isola o problema. Quanto mais perto do componente, menor o estrago.
 - **`Suspense` resolveu dois problemas de uma vez:** carregamento visível e pacote menor.
+
+---
+
+## Ajustes antes da etapa 8 — tela para o usuário comum (2026-11-26)
+
+### Dúvidas discutidas
+- **Isto é IA?** Os modelos são estatísticos (ETS, SARIMA, Prophet) que aprendem parâmetros com o
+  histórico — "IA" no sentido amplo, mas não redes neurais. Com 90 pontos, estatística clássica é
+  a escolha certa; IA moderna para séries = modelos fundacionais (Chronos, TimesFM).
+- **Chronos:** gratuito (Apache 2.0) e local; baixa o modelo uma vez do Hugging Face e recebe os
+  90 valores como contexto — não busca nem envia dados. Modelos de linguagem (Gemini, Claude)
+  servem para **explicar** a previsão, não para fazê-la.
+- **Evolução:** ML exige mais dados, features e validação em várias janelas; o maior valor está
+  em aplicar a POC a métricas de negócio (vendas, demanda), onde não há "modelo físico" melhor
+  que o histórico. Tudo registrado como melhoria futura no relatório.
+
+### O que foi feito (D46)
+- `frontend/src/textos.ts`: frases geradas por regras (resumo, confiança, comparação, teste, caso
+  de estudo, descrição dos modelos, explicações dos ícones) + `textos.test.ts` (21 testes).
+- Componentes novos: `ResumoPrevisao` (cartões + parágrafos) e `Ajuda` (ícone **i**).
+- Tabela de métricas e caso de estudo em linguagem simples, com detalhes técnicos recolhidos.
+
+### Resultados
+- Frontend: 29 testes, tipos, lint e build sem erros.
+- Verificado no navegador, nas duas variáveis. Exemplo real (sensação, SARIMA): "Nos próximos 7
+  dias, a sensação térmica média deve ficar com leve alta: de 32,0 °C em 26-11-2026 para 32,2 °C
+  em 02-12-2026. O mais provável é que fique entre 31,1 °C e 33,3 °C."
+
+### O que aprendi
+- **Texto gerado também precisa de teste:** cinco problemas só apareceram olhando a tela — o
+  pior foi "Estável" ao lado de "+0,2 °C". Arredondamento pode fazer uma frase contradizer outra.
+- **Uma régua de casas decimais:** temperaturas com 1 casa, erros com 2 — texto e tabela precisam
+  mostrar o mesmo número.
+- **Posicionamento importa:** um aviso dentro de uma tabela com rolagem é cortado pela borda dela;
+  posicionar em relação à janela resolve em qualquer lugar.

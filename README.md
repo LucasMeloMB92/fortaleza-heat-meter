@@ -108,7 +108,9 @@ continua com os dados que tem e a tela mostra um aviso.
 ## Frontend
 
 Tela web em React + Vite + TypeScript (Recharts para gráficos, TanStack Query para consumir a
-API, Tailwind CSS para estilo). Datas exibidas em **DD-MM-AAAA**.
+API, Tailwind CSS para estilo). Datas exibidas em **DD-MM-AAAA**. Pensada para quem não é
+técnico: cartões de destaque, resumos em texto com os números reais, ícones **i** explicando os
+termos e detalhes técnicos recolhidos.
 
 **Instalação** (uma vez), a partir da raiz do projeto:
 
