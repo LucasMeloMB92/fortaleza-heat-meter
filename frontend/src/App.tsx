@@ -1,5 +1,5 @@
-// Tela principal: aviso no topo, seletores e quatro seções (previsão, métricas, teste, caso de
-// estudo). O estado (variável, modelo, horizonte) fica aqui e desce para os componentes.
+// Tela principal: aviso no topo, visão geral com abas (todos os modelos, as duas variáveis —
+// D48, D49), seletores e quatro seções por variável (previsão, métricas, teste, caso de estudo). O estado (variável, modelo, horizonte) fica aqui e desce para os componentes.
 import { useQueryClient } from '@tanstack/react-query'
 import { lazy, useEffect, useRef, useState } from 'react'
 import type { Modelo, Variavel } from './api'
@@ -7,6 +7,7 @@ import { AvisoTopo } from './componentes/AvisoTopo'
 import { Cartao, EstadoConsulta } from './componentes/Cartao'
 import { LimiteDeErro } from './componentes/LimiteDeErro'
 import { Seletores } from './componentes/Seletores'
+import { VisaoGeral } from './componentes/VisaoGeral'
 import { TabelaMetricas } from './componentes/TabelaMetricas'
 import {
   useCasoEstudo,
@@ -78,7 +79,7 @@ export default function App() {
       <header>
         <h1 className="text-2xl font-bold">Fortaleza Heat Meter</h1>
         <p className="mt-1 text-sm text-tinta-2">
-          POC de previsão de séries temporais — temperatura e sensação térmica médias diárias de
+          Previsão de séries temporais — temperatura e sensação térmica médias diárias de
           Fortaleza-CE (fonte: Open-Meteo).
           {saude.data && (
             <>
@@ -94,6 +95,8 @@ export default function App() {
       <LimiteDeErro titulo="O aviso de situação dos dados não pôde ser exibido.">
         <AvisoTopo saude={saude} aoTentarDeNovo={tentarTudoDeNovo} />
       </LimiteDeErro>
+
+      <VisaoGeral modelo={modelo} aoSelecionar={setModelo} />
 
       <EstadoConsulta
         carregando={opcoes.isPending}
@@ -131,7 +134,7 @@ export default function App() {
           carregando={previsao.isPending}
           erro={previsao.error}
           aoTentarDeNovo={() => previsao.refetch()}
-          mensagemCarregando={`Treinando o modelo ${nomeModelo}…`}
+          mensagemCarregando={`Calculando a previsão do modelo ${nomeModelo}…`}
           dicaCarregando="Na primeira vez do dia pode levar alguns segundos; depois fica instantâneo."
         >
           {previsao.data && (
@@ -177,7 +180,7 @@ export default function App() {
           erro={metricas.error}
           aoTentarDeNovo={() => metricas.refetch()}
           alturaEsqueleto="h-56"
-          mensagemCarregando="Treinando e testando os 4 modelos…"
+          mensagemCarregando="Testando todos os modelos…"
           dicaCarregando="Na primeira vez do dia leva cerca de 10 a 30 segundos."
         >
           {metricas.data && (

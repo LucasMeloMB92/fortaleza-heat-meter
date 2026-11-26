@@ -3,7 +3,7 @@
 // (formatacao.ts — decisão D41).
 
 export type Variavel = 'temperatura' | 'sensacao'
-export type Modelo = 'linha_base' | 'ets' | 'sarima' | 'prophet'
+export type Modelo = 'linha_base' | 'ets' | 'sarima' | 'prophet' | 'chronos'
 export type Cenario = 'so_antes' | 'tudo' | 'so_depois'
 
 export interface Ponto {
@@ -30,6 +30,8 @@ export interface Metricas {
   cobertura: number | null
   mae_dias_1_7: number | null
   vies: number | null
+  // Largura média da faixa, em °C (D48). Opcional: versões antigas da API não mandam.
+  largura_faixa?: number | null
 }
 
 export interface Opcoes {
@@ -118,6 +120,41 @@ export interface RespostaCasoEstudo {
   }[]
 }
 
+/** /api/contexto (D50): o período de agora comparado com o mesmo período dos anos anteriores. */
+export interface AnoContexto {
+  ano: number
+  inicio: string
+  fim: string
+  dias: number
+  media: number | null
+  subida: number | null // média dos últimos 15 dias − média dos primeiros 15
+}
+
+export interface DiaContexto {
+  data: string // dia do período atual (os anos anteriores são "transportados" para ele)
+  valores: Record<string, number | null> // ano -> valor naquele dia do calendário
+  normal: number | null // média dos anos anteriores no mesmo dia (suavizada)
+  anomalia: number | null // valor de agora − normal
+}
+
+export interface VariavelContexto {
+  id: Variavel
+  nome: string
+  anos: AnoContexto[]
+  anomalia_media: number | null
+  anomalia_recente: number | null // últimos dias (período de teste)
+  mudanca: { data: string; anomalia_antes: number; anomalia_depois: number }
+  dias: DiaContexto[]
+}
+
+export interface RespostaContexto {
+  ano_atual: number
+  anos_anteriores: number[]
+  dias_subida: number
+  dias_anomalia_recente: number
+  variaveis: VariavelContexto[]
+}
+
 /** Erro devolvido pela API (o corpo JSON traz a mensagem em português — D40). */
 export class ErroApi extends Error {
   status: number
@@ -163,6 +200,8 @@ export const api = {
     buscar<RespostaPrevisao>('previsao', { variavel, modelo, horizonte }),
   metricas: (variavel: Variavel) => buscar<RespostaMetricas>('metricas', { variavel }),
   teste: (variavel: Variavel, modelo: Modelo) => buscar<RespostaTeste>('teste', { variavel, modelo }),
-  casoEstudo: (variavel: Variavel, modelo: Modelo) =>
-    buscar<RespostaCasoEstudo>('caso-estudo', { variavel, modelo }),
+  contexto: () => buscar<RespostaContexto>('contexto'),
+  // Sem `modelo`, a API devolve os resultados de TODOS os modelos (aba "Caso de estudo" da visão geral).
+  casoEstudo: (variavel: Variavel, modelo?: Modelo) =>
+    buscar<RespostaCasoEstudo>('caso-estudo', modelo ? { variavel, modelo } : { variavel }),
 }

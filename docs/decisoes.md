@@ -557,3 +557,110 @@ durante o projeto e aprovadas.
   "errou 0,4 °C" e a tabela "0,38 °C"; (3) o ícone **i** abria e fechava no mesmo clique; (4) o
   aviso do **i** era cortado pela tabela — passou a ser posicionado em relação à janela;
   (5) "acertou só 0 de 10 dias" virou "não acertou nenhum dos 10 dias".
+
+## D47 — Chronos-2 como 5º modelo (evolução 11.2) _(usuário)_
+- **Decisão:** qual versão do Chronos usar, como montar a faixa de 95% e como encaixá-lo no
+  projeto.
+- **Opções consideradas:**
+  - **Chronos-2** (`amazon/chronos-2`, 119,5 milhões de parâmetros, ~456 MB): o mais novo;
+    devolve 21 quantis (1%, 5%, 10%, ..., 90%, 95%, 99%) e não sorteia nada.
+  - **Chronos-Bolt** (tiny/mini/small/base): menor e rápido, mas foi treinado só com quantis de
+    10% a 90% — não daria uma faixa de 95% comparável à dos outros modelos (D10).
+  - **Chronos-T5** (o original): faz sorteios (o resultado muda a cada rodada) e é mais lento.
+- **Escolha:**
+  - **Chronos-2, na CPU**, com PyTorch "+cpu" (~200 MB em vez de ~2 GB da versão com placa de
+    vídeo). Bibliotecas: `torch==2.15.0+cpu` e `chronos-forecasting==2.3.2`, no
+    `requirements.txt` com o repositório oficial do PyTorch (`--extra-index-url`).
+  - **Previsão = mediana (quantil 50%); faixa = quantis de 2,5% e 97,5%.** Esses dois não estão
+    entre os treinados; a própria biblioteca os calcula entre os vizinhos (1% e 5%; 95% e 99%).
+    Níveis acima de 98% dão erro claro (pediriam quantis abaixo de 1%).
+  - **Modelo carregado uma vez por processo** e guardado na memória: carregar leva ~1 s (~25 s
+    na 1ª vez, com o download); prever 7 dias leva ~0,06 s.
+  - **Entra pela interface comum (D27):** `prever("chronos", serie, horizonte, nivel)`; aparece
+    sozinho na validação, no caso de estudo e na API.
+  - **Testes com o modelo real** (sem simulação): o contrato comum + repetibilidade, faixa de 80%
+    mais estreita que a de 95%, nível largo demais e horizonte longo (42 dias). O modelo é baixado
+    uma vez para `~/.cache/huggingface`; depois os testes rodam sem internet.
+- **Por quê:** é a versão mais precisa e a única das três que entrega a faixa de 95% sem sorteio,
+  então dá para comparar com os outros 4 modelos nas mesmas métricas. Licença Apache 2.0
+  (gratuita, permite uso comercial). Os dados não saem do computador: o modelo só recebe os
+  números da série.
+- **Achados do teste rápido (série real, 26-11-2026):** resultados idênticos em duas rodadas; a
+  faixa é **assimétrica** (mais espaço abaixo da mediana do que acima), diferente das faixas
+  simétricas do ETS e do SARIMA.
+- **Na tela (regras de texto da D46, ajustadas):** empates no menor erro (mesmo valor com 2 casas)
+  são citados juntos ("Prophet e Chronos-2 empataram..."); para o Chronos-2 as frases dizem "viu"
+  em vez de "treinado"; e, quando um modelo erra o nível mas a faixa acerta mais da metade dos
+  dias, o texto avisa que foi "só porque era larga".
+
+## D48 — Card "Ranking geral" e largura da faixa como métrica oficial _(usuário)_
+- **Decisão:** como mostrar na tela a comparação de **todos** os modelos nas **duas** variáveis
+  juntas (antes, a tela só comparava os modelos numa variável por vez).
+- **Opções consideradas:** (a) um card no topo, independente dos seletores, com o ranking
+  calculado no frontend a partir de `/api/metricas` das duas variáveis; (b) uma rota nova na API
+  que já devolvesse o ranking pronto; (c) só o ranking no relatório, sem mudar a tela.
+- **Escolha:** (a).
+  - **Critério do ranking** (o mesmo da seção 7.2 do relatório): posição em cada variável pelo
+    erro médio (MAE; empate nas 2 casas → desempata o "vs regra simples", que vem do MAE sem
+    arredondar); ranking geral pela **posição média**; empate → menor **erro médio** das duas.
+  - **Largura da faixa (`largura_faixa`) virou métrica oficial** em `avaliacao.py`: a distância
+    média entre o limite de cima e o de baixo, em °C. Aparece em `/api/metricas`, `/api/teste` e
+    `/api/caso-estudo`.
+  - Contas em `frontend/src/ranking.ts` (funções puras, testadas); frase em `textos.ts` (D46):
+    quem é o mais regular, quem teve o menor erro somado e por que não é o 1º (venceu a regra
+    simples em menos variáveis; faixa ≥ 1,5x mais larga), e quem mais oscilou (≥ 3 posições).
+  - Médias de dois números de 2 casas arredondadas "como à mão" (0,335 → 0,34), para a tela
+    mostrar o mesmo número que o relatório.
+- **Por quê:** (a) reaproveita o que a API já calcula e guarda em cache (o card e a tabela por
+  variável usam a mesma consulta); (b) duplicaria regra de apresentação no backend. A largura
+  precisava ser oficial porque o ranking a usa para explicar por que o modelo de menor erro somado
+  não é o 1º — e porque cobertura sem largura engana (achado da evolução 11.2).
+- **Achado:** o JavaScript guarda 0,335 como 0,33499999…, e a tela mostrava "0,33" onde o
+  relatório dizia "0,34". Corrigido com o arredondamento "como à mão".
+
+## D49 — Visão geral em um card só, com abas _(usuário)_
+- **Decisão:** como organizar na tela as comparações que juntam todos os modelos e as duas
+  variáveis (ranking, caso de estudo, anos anteriores).
+- **Opções consideradas:** (a) três cards separados no topo (plano inicial); (b) **um card só
+  com abas** (pedido do usuário).
+- **Escolha:** (b) — card **"Visão geral dos modelos"** (`VisaoGeral.tsx`) com as abas
+  **Ranking** (D48) e **Caso de estudo**; **Anos anteriores** entra na próxima etapa.
+  - Abas acessíveis (`role="tablist"`, `"tab"`, `"tabpanel"`, `aria-selected`).
+  - **Só o painel aberto é montado:** cada aba busca os próprios dados quando é aberta. O caso de
+    estudo com todos os modelos (o cálculo mais pesado) só roda se alguém abrir a aba.
+  - **Aba "Caso de estudo":** `/api/caso-estudo` **sem** `modelo` (já devolvia todos), para as duas
+    variáveis. Por modelo: erro "só antes", erro "com tudo", **quanto piorou** (÷) e a faixa "só
+    antes" (acertos e largura). Contas em `casoGeral.ts`; frase em `textoCasoEstudoGeral`
+    (`textos.ts`). Regras: "piorou" a partir de 1,3x (o mesmo limite do texto por modelo, agora
+    numa constante só, `LIMITE_PIOROU`); "confiante no nível errado" = acertou a faixa em metade
+    dos dias ou menos; "só porque era larga" = acertou mais da metade nas duas variáveis.
+  - O card de baixo ("Caso de estudo — modelo X", com gráfico) continua, para ver um modelo de
+    cada vez.
+- **Por quê:** menos rolagem e um lugar só para "olhar tudo junto". Montar só a aba aberta evita
+  que a tela dispare o cálculo pesado sem necessidade.
+
+## D50 — Aba "Anos anteriores" e rota `/api/contexto` _(usuário)_
+- **Decisão:** como mostrar na tela (e deixar mais clara no relatório) a comparação do período
+  atual com o mesmo período dos anos anteriores, que até então só existia nos scripts e no diário.
+- **Opções consideradas:** (a) imagens prontas da etapa 2 na tela; (b) rota nova que calcula na
+  hora com as funções da etapa 2; (c) calcular no frontend a partir de `/api/serie` (não serve: a
+  série da API só tem 90 dias).
+- **Escolha:** (b) — `GET /api/contexto`, sem parâmetros, as duas variáveis: média e subida no
+  período por ano, anomalia média e recente, o degrau (mesma detecção do caso de estudo, D26) e a
+  série diária com os anos sobrepostos e o "normal". Reaproveita `mesmo_periodo_por_ano`,
+  `climatologia`, `anomalia` e `detectar_mudanca`.
+  - **Trava própria (`_calculo_leve`):** no teste da tela, a aba esperava ~1 minuto na fila atrás
+    do caso de estudo, embora o cálculo leve menos de 1 s. Cálculos leves agora têm trava
+    própria e leem o CSV direto (sem `_tabela()`, que usa a fila). Resultado: 0,7 s com a fila
+    ocupada.
+  - Texto por regras (`textoAnosAnteriores`, D46): anomalia ≥ 0,3 °C = acima do normal; todos os
+    anos subindo ≥ 0,2 °C no período = "essa parte é a estação do ano"; com anomalia, cita o degrau.
+  - Gráfico (D25): anos anteriores em cinza, ano atual na cor da variável, "normal" tracejado,
+    linha vertical no degrau.
+  - Relatório: subseção "Comparação com os anos anteriores" na seção 3, com tabelas, o gráfico da
+    anomalia (antes só no diário) e a ligação com o caso de estudo.
+- **Por quê:** (a) congelaria os números de 26-11-2026, e a ferramenta atualiza os dados todo dia
+  (D44); (b) mantém tela e relatório com os mesmos cálculos da etapa 2.
+- **Limite:** são **2 anos anteriores**, não 3: o arquivo de contexto começa em 26-11-2023, antes
+  do período de 2023. Incluir 2023 exige baixar mais 3 meses (e mudaria um pouco o "normal" e as
+  datas do degrau).

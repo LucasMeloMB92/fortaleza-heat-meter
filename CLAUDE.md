@@ -32,38 +32,50 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 ### Modelagem
 - Horizonte: 7 dias. Validação: últimos 10 dias como teste.
 - Modelos: (1) linha de base = média dos últimos 7 dias; (2) ETS/Holt-Winters; (3) SARIMA;
-  (4) Prophet (só comparação — feito para séries longas).
-- Os 4 modelos rodam para as 2 variáveis (8 combinações), com a mesma interface:
+  (4) Prophet (só comparação — feito para séries longas); (5) Chronos-2 (IA moderna, D47).
+- Os 5 modelos rodam para as 2 variáveis (10 combinações), com a mesma interface:
   `modelos.prever(nome, serie, horizonte, nivel) -> Previsao(tabela, detalhes)` (D27).
 - ETS/SARIMA escolhem configuração pelo menor AICc, refeito a cada treino (D28). SARIMA: d pelo
   ADF com tendência ("ct"), não fixo (D33). Prophet sem sazonalidades (D32).
 - Métricas: MAE, RMSE, cobertura do intervalo de 95% (+ auxiliares: MAE dias 1–7, viés, MAE vs
-  linha de base — D34). `avaliacao.comparar_modelos(serie)`.
+  linha de base — D34; largura média da faixa `largura_faixa` — D48). `avaliacao.comparar_modelos(serie)`.
 - Resultado da etapa 4 (teste 16/11–25/11): temperatura — Prophet 0,31 °C (−33% vs base), SARIMA
   0,38; sensação — SARIMA 0,29 (−15%), Prophet 0,38 (+13%, pior). SARIMA = mais consistente.
 - Caso de estudo: quebra estrutural — modelo treinado só antes da mudança recente x treinado com tudo
   (+ "só depois"), todos avaliados na mesma janela de teste (D35). `caso_estudo.avaliar_cenarios`.
   Resultado: "só antes" erra 2–6x mais (viés negativo; SARIMA cobertura 0–10%); Prophet sobrevive
   por prolongar a tendência sazonal. Conclusão: retreinar com frequência.
+- **Chronos-2 (evolução 11.2, D47):** `amazon/chronos-2` na CPU (torch +cpu), zero-shot, modelo
+  carregado 1x por processo; previsão = mediana, faixa = quantis 2,5%/97,5% (interpolados).
+  Resultado: temp. 0,31 (empata com Prophet), sens. 0,33 (empata com a base); faixa ~2x mais
+  larga que os outros. Caso de estudo "só antes": erra como o SARIMA, mas cobre 10/10 (faixa
+  larga). Conclusão: empata, não ganha — SARIMA segue recomendado. Testes usam o modelo real
+  (baixado 1x para `~/.cache/huggingface`).
 
 ### Tecnologias
-- Backend: Python 3.12 (venv em `backend/.venv`), pandas, statsmodels, prophet, Flask + Flask-CORS.
+- Backend: Python 3.12 (venv em `backend/.venv`), pandas, statsmodels, prophet, chronos-forecasting
+  (+ torch CPU), Flask + Flask-CORS.
 - Frontend: React + Vite + TypeScript, Recharts, TanStack Query, Tailwind CSS.
 - Qualidade: Git (commit por etapa), pytest + ruff (backend), Vitest + tsc + oxlint (frontend).
 - Monorepo: `/backend`, `/frontend`, `/docs`.
 
 ## Estado atual e como retomar (atualizado em 26-11-2026)
-- **Todas as etapas (0–8) concluídas.** Relatório final em `docs/relatorio-final.md`:
-  recomendação = **SARIMA** (mais consistente); seções "Isto é IA?" e próximos passos.
-- **Próximo ponto de evolução (decisão do usuário): Chronos** como 5º modelo, pela interface
-  comum (D27). NÃO propor roteiro de ML/DL próprio (LightGBM, redes treinadas do zero).
-  Outras melhorias registradas no relatório: textos por IA (Gemma/Gemini), outras métricas
-  (cliente ainda sem métrica real — exemplo genérico: vendas diárias), publicação online.
-- **Última decisão registrada: D46** — a próxima é D47 (`docs/decisoes.md`).
+- **Todas as etapas (0–8) concluídas + evolução 11.2 (Chronos-2) concluída.** Relatório final em
+  `docs/relatorio-final.md`: recomendação = **SARIMA** (mais consistente); seção 5.6 e 11.2 = Chronos.
+- NÃO propor roteiro de ML/DL próprio (LightGBM, redes treinadas do zero) — decisão do usuário.
+  Melhorias ainda registradas no relatório: textos por IA (Gemma/Gemini), outras métricas
+  (cliente ainda sem métrica real — exemplo genérico: vendas diárias), publicação online,
+  repetir a comparação em várias semanas.
+- **Card "Visão geral dos modelos" com abas (D49) ✅** — no topo da tela, todos os modelos e as duas
+  variáveis, sem depender dos seletores; só a aba aberta busca dados. Abas: Ranking (D48,
+  `ranking.ts`), Caso de estudo (`casoGeral.ts`), Anos anteriores (D50, `/api/contexto`;
+  relatório seção 3 "Comparação com os anos anteriores"). Compara com 2 anos anteriores (2024,
+  2025): o CSV de contexto começa em 26-11-2023.
+- **Última decisão registrada: D50** — a próxima é D51 (`docs/decisoes.md`).
 - **Para retomar:** leia o fim de `docs/diario.md` (inclui as dúvidas discutidas). Para ver a tela:
   suba `backend` e `frontend` pelo `.claude/launch.json`. Os números da documentação são um retrato
   de 26-11-2026; a ferramenta atualiza os dados sozinha todo dia (D44).
-- **Qualidade atual:** backend 62 testes (pytest) + ruff limpo; frontend 29 testes (Vitest) +
+- **Qualidade atual:** backend 69 testes (pytest) + ruff limpo; frontend 42 testes (Vitest) +
   tsc + oxlint + build limpos.
 
 ## Etapas (ordem fixa)
@@ -77,6 +89,8 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 7. Frontend ✅ (+ ajustes pedidos depois: atualização automática D44, tela robusta D45,
    linguagem simples D46)
 8. Relatório final ✅
+
+Evoluções depois da POC: 11.2 Chronos-2 ✅ (D47).
 
 Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 
@@ -104,7 +118,8 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 
 ### API (etapa 6)
 - `backend/app.py` (rotas, erros, CORS) + `backend/previsao/servico.py` (respostas + cache).
-- 7 rotas GET em `/api`: saude, opcoes, serie, previsao, metricas, teste, caso-estudo. Parâmetros
+- 8 rotas GET em `/api`: saude, opcoes, serie, previsao, metricas, teste, caso-estudo, contexto (D50,
+  sem parâmetros; cálculo leve com trava própria `_calculo_leve`, fora da fila dos modelos). Parâmetros
   `variavel` (temperatura|sensacao), `modelo`, `horizonte` (1–14). Detalhes em `docs/api.md`.
 - Cache em memória, calcula no 1º pedido, em fila única com RLock (D37 + atualização). CORS só
   `http://localhost:5173` (D39).
@@ -116,6 +131,7 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
   para formatar (bug de fuso).
 - Linguagem simples (D46): toda frase da tela vem de `src/textos.ts` (regras + testes), só afirma
   o que os números mostram. Temperaturas com 1 casa, erros/variações com 2 (iguais às tabelas).
+  Empates no menor erro são citados juntos; para o Chronos, "viu" em vez de "treinado".
   Textos por IA (Gemma/Gemini) = melhoria futura no relatório.
 - Nunca tela branca (D45): limites de erro (seção, faixa, página), esqueletos com contador,
   `lazy` + `Suspense` nos gráficos, faixa de aviso no topo (`AvisoTopo`), "Tentar de novo".

@@ -74,7 +74,7 @@ def test_metricas_tem_uma_linha_por_modelo(cliente):
     por_modelo = {m["modelo"]: m for m in corpo["metricas"]}
     assert set(por_modelo) == {"linha_base", "ets"}
     assert por_modelo["linha_base"]["mae_vs_linha_base"] == 0
-    assert {"mae", "rmse", "cobertura", "vies"} <= set(por_modelo["ets"])
+    assert {"mae", "rmse", "cobertura", "vies", "largura_faixa"} <= set(por_modelo["ets"])
 
 
 def test_teste_traz_10_dias_com_real_e_previsao(cliente):
@@ -177,3 +177,30 @@ def test_pedidos_iguais_simultaneos_calculam_uma_vez_so(monkeypatch):
 
     assert len(chamadas) == 1
     servico.limpar_cache()
+
+
+# --- Comparação com anos anteriores (D50) -------------------------------------
+
+
+def test_contexto_compara_o_mesmo_periodo_em_cada_ano(cliente):
+    resposta = cliente.get("/api/contexto")
+    assert resposta.status_code == 200
+    corpo = resposta.get_json()
+    ano = corpo["ano_atual"]
+    assert corpo["anos_anteriores"] == [ano - 2, ano - 1]
+    assert [v["id"] for v in corpo["variaveis"]] == ["temperatura", "sensacao"]
+
+    temperatura = corpo["variaveis"][0]
+    assert [a["ano"] for a in temperatura["anos"]] == [ano - 2, ano - 1, ano]
+    # O ano atual é exatamente o período dos 90 dias da ferramenta.
+    atual = temperatura["anos"][-1]
+    assert atual["dias"] == 90
+    assert atual["fim"] == cliente.get("/api/saude").get_json()["dados"]["fim"]
+    # Um ponto por dia, com o valor de cada ano no mesmo dia do calendário.
+    assert len(temperatura["dias"]) == 90
+    assert set(temperatura["dias"][0]["valores"]) == {str(ano - 2), str(ano - 1), str(ano)}
+    # Anomalia = valor de agora - normal (com o arredondamento de 2 casas).
+    dia = temperatura["dias"][-1]
+    assert dia["anomalia"] == pytest.approx(dia["valores"][str(ano)] - dia["normal"], abs=0.02)
+    # A mudança detectada fica dentro do período.
+    assert temperatura["dias"][0]["data"] < temperatura["mudanca"]["data"] <= dia["data"]

@@ -8,13 +8,19 @@ import type {
   RespostaMetricas,
   RespostaPrevisao,
   RespostaTeste,
+  VariavelContexto,
 } from './api'
 import { formatarComSinal, formatarData, formatarDiaMes, formatarGraus, formatarNumero } from './formatacao'
+import { acertosSoAntes, type ImpactoMudanca, impactos, LIMITE_PIOROU } from './casoGeral'
+import { type LinhaRanking, vitoriasSobreARegra } from './ranking'
 
 // Temperaturas com 1 casa ("29,1 °C"); erros e variações com 2 casas, iguais às tabelas ("0,38 °C").
 const graus = (valor: number | null | undefined) => formatarGraus(valor, 1)
 const erro = (valor: number | null | undefined) => formatarGraus(valor, 2)
 const plural = (n: number, singular: string, pluralTexto: string) => (n === 1 ? singular : pluralTexto)
+// ["A", "B", "C"] -> "A, B e C"
+const juntarNomes = (nomes: string[]) =>
+  nomes.length > 1 ? `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}` : (nomes[0] ?? '')
 
 // ---------------------------------------------------------------------------
 // Explicações curtas (ícones "i" e descrição dos modelos)
@@ -27,6 +33,8 @@ export const DESCRICAO_MODELO: Record<Modelo, string> = {
   sarima: 'Usa os dias anteriores e a tendência recente para projetar os próximos dias.',
   prophet:
     'Desenha uma linha de tendência sobre o histórico (criado pela Meta). Pensado para séries longas; aqui serve de comparação.',
+  chronos:
+    'IA moderna (criada pela Amazon): uma rede neural que já aprendeu com milhões de séries. Não é treinada com estes dados — só lê o histórico e projeta. Costuma dar uma faixa mais larga.',
 }
 
 export const AJUDA = {
@@ -42,6 +50,19 @@ export const AJUDA = {
   vies: 'Viés: o erro médio com sinal. Negativo = em média previu abaixo do real; positivo = acima.',
   teste:
     'Período de teste: os últimos dias foram escondidos do modelo; ele previu esses dias e comparamos com o que aconteceu.',
+  posicaoMedia:
+    'Média das posições do modelo na temperatura e na sensação (1 = menor erro). Quanto menor, mais regular: o 1º geral é o que foi bem nas duas.',
+  erroMedioGeral: 'Média simples do erro médio na temperatura e na sensação. Mostra quem erra menos no total.',
+  subidaPeriodo:
+    'Quanto a média subiu dentro do período: média dos últimos 15 dias − média dos primeiros 15. Se sobe todo ano, é a estação do ano.',
+  anomalia:
+    'Anomalia: quanto o valor de agora ficou acima (+) ou abaixo (−) do normal — a média dos anos anteriores no mesmo dia do calendário.',
+  piorou:
+    'Erro do modelo que só conhecia os dias antes da mudança ÷ erro do modelo que conhecia todos os dias. 2,0× = errou o dobro; abaixo de 1,3× = quase não sentiu.',
+  faixaSoAntes:
+    'Em quantos dias de teste o valor real caiu dentro da faixa do modelo que só conhecia os dias antes da mudança, e a largura dessa faixa. Poucos acertos com faixa estreita = confiante no nível errado; muitos acertos com faixa larga = acertou só por ser larga.',
+  larguraFaixa:
+    'Largura da faixa: distância média entre o mínimo e o máximo previstos (temperatura / sensação). Faixa estreita que acerta = previsão útil; faixa larga "acerta" fácil, mas diz pouco.',
 }
 
 // ---------------------------------------------------------------------------
@@ -142,13 +163,167 @@ export function rotuloVsRegraSimples(linha: LinhaMetricas): string {
   return `${formatarNumero(Math.abs(pct), 0)}% ${pct < 0 ? 'melhor' : 'pior'}`
 }
 
+/**
+ * Texto do card "Ranking geral" (as duas variáveis juntas). Regras:
+ * - o 1º do ranking = o mais regular (menor posição média);
+ * - se outro modelo tem o menor erro somando as duas, o texto diz isso e por que ele não é o
+ *   1º: venceu a regra simples em menos variáveis e/ou faixa pelo menos 1,5x mais larga;
+ * - o modelo que mais oscilou (3 ou mais posições de diferença entre as variáveis) é citado.
+ */
+export function textoRanking(linhas: LinhaRanking[]): string {
+  if (linhas.length === 0) return ''
+  const primeiro = linhas[0]
+  const posicoesTexto = (l: LinhaRanking) =>
+    `${l.temperatura.posicao}º na temperatura e ${l.sensacao.posicao}º na sensação térmica`
+
+  let texto = `No geral, o ${primeiro.nome} foi o mais regular: ${posicoesTexto(primeiro)}.`
+  if (vitoriasSobreARegra(primeiro) === 2) texto += ' Foi melhor que a regra simples nas duas.'
+
+  // Menor erro somando as duas (no empate, vale a ordem do ranking).
+  const menorErro = linhas.reduce((a, b) => (b.erroMedio < a.erroMedio ? b : a))
+  if (menorErro.modelo !== primeiro.modelo) {
+    const motivos: string[] = []
+    const vitorias = vitoriasSobreARegra(menorErro)
+    if (vitorias < vitoriasSobreARegra(primeiro)) {
+      motivos.push(
+        vitorias === 0
+          ? 'não superou a regra simples em nenhuma das duas'
+          : 'superou a regra simples em só uma das duas',
+      )
+    }
+    if (menorErro.larguraMedia != null && primeiro.larguraMedia != null) {
+      const vezes = menorErro.larguraMedia / primeiro.larguraMedia
+      if (vezes >= 1.5) motivos.push(`sua faixa é ${formatarNumero(vezes, 1)} vezes mais larga`)
+    }
+    texto +=
+      ` O ${menorErro.nome} teve o menor erro somando as duas (${erro(menorErro.erroMedio)} contra ` +
+      `${erro(primeiro.erroMedio)})` +
+      (motivos.length ? `, mas ${motivos.join(' e ')}.` : ', mas ficou atrás nas posições.')
+  }
+
+  // Quem mais oscilou entre as variáveis (ex.: 1º numa, 5º na outra).
+  const oscilacao = (l: LinhaRanking) => Math.abs(l.temperatura.posicao - l.sensacao.posicao)
+  const oscilante = linhas.reduce((a, b) => (oscilacao(b) > oscilacao(a) ? b : a))
+  if (oscilacao(oscilante) >= 3) {
+    texto += ` O ${oscilante.nome} foi o que mais oscilou: ${posicoesTexto(oscilante)}.`
+  }
+  return texto
+}
+
+/**
+ * Texto da aba "Caso de estudo" da visão geral (todos os modelos, as duas variáveis). Regras:
+ * - "sofreu" = erro "só antes" ≥ 1,3x o erro com todos os dias, nas DUAS variáveis;
+ * - "quase não sentiu" = abaixo de 1,3x nas duas;
+ * - faixa "confiante no nível errado" = dos que sofreram, acertou a faixa em metade dos dias ou
+ *   menos em pelo menos uma variável; "só porque era larga" = acertou mais da metade nas duas.
+ */
+export function textoCasoEstudoGeral(temperatura: RespostaCasoEstudo, sensacao: RespostaCasoEstudo): string {
+  const t = impactos(temperatura)
+  const s = impactos(sensacao)
+  const dias = temperatura.teste.dias
+  const nomeVariavel = { temperatura: 'na temperatura', sensacao: 'na sensação térmica' }
+  const par = (i: ImpactoMudanca) => s.find((x) => x.modelo === i.modelo)
+  const modelos = t.filter((i) => par(i)).map((i) => ({ nome: i.nome, t: i, s: par(i) as ImpactoMudanca }))
+  if (modelos.length === 0) return ''
+
+  const sofreram = modelos.filter((m) => m.t.vezes >= LIMITE_PIOROU && m.s.vezes >= LIMITE_PIOROU)
+  const quaseNada = modelos.filter((m) => m.t.vezes < LIMITE_PIOROU && m.s.vezes < LIMITE_PIOROU)
+  const frases: string[] = []
+
+  if (sofreram.length > 0) {
+    const vezes = sofreram.flatMap((m) => [m.t.vezes, m.s.vezes])
+    const pior = [...t, ...s].reduce((a, b) => (b.vezes > a.vezes ? b : a))
+    frases.push(
+      `Sem ver a mudança, ${sofreram.length} dos ${modelos.length} modelos tiveram um erro de ` +
+        `${formatarNumero(Math.min(...vezes), 1)} a ${formatarNumero(Math.max(...vezes), 1)} vezes maior ` +
+        'do que quando viram todos os dias.',
+      `O que mais sofreu foi o ${pior.nome} ${nomeVariavel[pior.variavel]} (${formatarNumero(pior.vezes, 1)} vezes).`,
+    )
+  }
+  if (quaseNada.length > 0) {
+    const nomes = juntarNomes(quaseNada.map((m) => m.nome))
+    frases.push(`${quaseNada.length === 1 ? 'O' : 'Os modelos'} ${nomes} quase não ${quaseNada.length === 1 ? 'sentiu' : 'sentiram'} a mudança nas duas variáveis.`)
+  }
+
+  const confiantes = sofreram.filter((m) => acertosSoAntes(m.t, dias) <= dias / 2 || acertosSoAntes(m.s, dias) <= dias / 2)
+  if (confiantes.length > 0) {
+    frases.push(
+      `${juntarNomes(confiantes.map((m) => m.nome))} ${confiantes.length === 1 ? 'acertou' : 'acertaram'} a faixa em ` +
+        'metade dos dias ou menos em pelo menos uma variável: confiantes, mas no nível errado.',
+    )
+  }
+  const largos = sofreram.filter((m) => acertosSoAntes(m.t, dias) > dias / 2 && acertosSoAntes(m.s, dias) > dias / 2)
+  if (largos.length > 0) {
+    frases.push(
+      `${juntarNomes(largos.map((m) => m.nome))} ${largos.length === 1 ? 'acertou' : 'acertaram'} a faixa na maioria ` +
+        'dos dias mesmo errando o nível — só porque a faixa era larga.',
+    )
+  }
+  frases.push(
+    'Lição: quando o comportamento muda, os modelos precisam dos dados recentes — por isso esta ferramenta atualiza os dados e refaz os modelos todo dia.',
+  )
+  return frases.join(' ')
+}
+
+/** Anomalia "perto do normal" abaixo de 0,3 °C (a variação típica da temperatura é ~0,5 °C). */
+const LIMITE_ANOMALIA = 0.3
+/** "Subiu no período" a partir de 0,2 °C (o mesmo limite do "estável" da tendência, D46). */
+const LIMITE_SUBIDA = 0.2
+
+/**
+ * Texto da aba "Anos anteriores" para UMA variável (D50). Regras:
+ * - nível: anomalia média ≥ 0,3 °C = acima do normal; ≤ −0,3 = abaixo; senão perto do normal;
+ * - estação: se TODOS os anos subiram ≥ 0,2 °C no período, a subida é da estação do ano;
+ * - degrau: a data em que a anomalia mudou de patamar (a mesma do caso de estudo).
+ */
+export function textoAnosAnteriores(v: VariavelContexto, anosAnteriores: number[]): string {
+  const atual = v.anos.at(-1)
+  if (!atual) return ''
+  const nome = v.nome.toLowerCase()
+  const anom = v.anomalia_media ?? 0
+  const normalDe = `a média de ${juntarNomes(anosAnteriores.map(String))} no mesmo dia`
+  const nivel =
+    anom >= LIMITE_ANOMALIA
+      ? `${erro(anom)} acima do normal (${normalDe})`
+      : anom <= -LIMITE_ANOMALIA
+        ? `${erro(Math.abs(anom))} abaixo do normal (${normalDe})`
+        : `perto do normal (${normalDe}; diferença de ${formatarComSinal(anom)})`
+  let texto = `Em ${atual.ano}, a ${nome} do período (média dos ${atual.dias} dias) foi ${graus(atual.media)} — ${nivel}.`
+
+  const subidas = v.anos.map((a) => `${a.ano}: ${formatarComSinal(a.subida)}`).join('; ')
+  const todosSobem = v.anos.every((a) => (a.subida ?? 0) >= LIMITE_SUBIDA)
+  texto += todosSobem
+    ? ` Todo ano ela sobe nesse período (${subidas}) — essa parte é a estação do ano.`
+    : ` A subida dentro do período variou entre os anos (${subidas}).`
+
+  if (anom >= LIMITE_ANOMALIA || anom <= -LIMITE_ANOMALIA) {
+    const m = v.mudanca
+    texto +=
+      ` O que muda em ${atual.ano} é o nível; e a partir de ${formatarData(m.data)} a diferença para o normal ` +
+      `mudou de patamar (de ${formatarComSinal(m.anomalia_antes)} para ${formatarComSinal(m.anomalia_depois)}).`
+  }
+  return texto
+}
+
 export function textoComparacao(resposta: RespostaMetricas): string {
   const linhas = [...resposta.metricas].sort((a, b) => (a.mae ?? Infinity) - (b.mae ?? Infinity))
   const melhor = linhas[0]
   const base = resposta.metricas.find((l) => l.modelo === 'linha_base')
-  let texto = `O modelo com menor erro foi o ${melhor.nome_modelo}: errou em média ${erro(melhor.mae)}.`
-  if (base && melhor.modelo !== 'linha_base' && melhor.mae_vs_linha_base != null) {
-    texto += ` Isso é ${formatarNumero(-melhor.mae_vs_linha_base, 0)}% menos erro que a regra simples.`
+  // Empate: a API manda o erro com 2 casas; se dois modelos têm o mesmo número, a tabela marca os
+  // dois como "menor erro" — o texto precisa dizer o mesmo (achado com o 5º modelo, Chronos-2).
+  const empatados = linhas.filter((l) => l.mae === melhor.mae)
+  let texto =
+    empatados.length > 1
+      ? `${juntarNomes(empatados.map((l) => l.nome_modelo))} empataram com o menor erro: ${erro(melhor.mae)} em média.`
+      : `O modelo com menor erro foi o ${melhor.nome_modelo}: errou em média ${erro(melhor.mae)}.`
+  const ganhos = empatados
+    .filter((l) => l.modelo !== 'linha_base' && l.mae_vs_linha_base != null)
+    .map((l) => Math.round(-(l.mae_vs_linha_base as number)))
+  if (base && ganhos.length > 0) {
+    const menor = Math.min(...ganhos)
+    const maior = Math.max(...ganhos)
+    const faixa = menor === maior ? `${menor}%` : `${menor}% a ${maior}%`
+    texto += ` Isso é ${faixa} menos erro que a regra simples.`
   }
   if (base && (base.mae ?? 0) - (melhor.mae ?? 0) < 0.05) {
     texto += ' As diferenças entre os modelos são pequenas (menos de 0,05 °C): com poucos dias de teste, podem ser sorte.'
@@ -186,27 +361,37 @@ export function textoCasoEstudo(resposta: RespostaCasoEstudo, nomeVariavel: stri
   const maeAntes = antes.metricas.mae ?? 0
   const maeTudo = tudo.metricas.mae ?? 0
   const diasTeste = resposta.teste.dias
+  // O Chronos-2 não é treinado com os nossos dados: ele só "vê" o histórico (D47). As frases
+  // dizem "viu" em vez de "treinado" para não afirmar algo falso (D46).
+  const semTreino = antes.modelo === 'chronos'
+  const soAntes = semTreino ? 'que só viu os dias anteriores' : 'treinado só com os dias anteriores'
+  const comTudo = semTreino ? 'que viu todos os dias' : 'treinado com todos os dias'
 
   let texto = `A partir de ${formatarData(resposta.data_mudanca)}, a ${nome} passou a ficar mais ${subiu ? 'alta' : 'baixa'} que antes. `
-  if (maeTudo > 0 && maeAntes > maeTudo * 1.3) {
+  if (maeTudo > 0 && maeAntes > maeTudo * LIMITE_PIOROU) {
     const vies = antes.metricas.vies ?? 0
     texto +=
-      `O modelo treinado só com os dias anteriores errou em média ${erro(maeAntes)} — ` +
-      `${formatarNumero(maeAntes / maeTudo, 1)} vezes o erro do modelo treinado com todos os dias (${erro(maeTudo)}). ` +
+      `O modelo ${soAntes} errou em média ${erro(maeAntes)} — ` +
+      `${formatarNumero(maeAntes / maeTudo, 1)} vezes o erro do modelo ${comTudo} (${erro(maeTudo)}). ` +
       `Ele continuou preso ao nível antigo e previu ${vies < 0 ? 'abaixo' : 'acima'} do real (em média ${erro(Math.abs(vies))}).`
     const acertos = Math.round(((antes.metricas.cobertura ?? 0) / 100) * diasTeste)
     if (acertos <= diasTeste / 2) {
       const quanto =
         acertos === 0 ? `não acertou nenhum dos ${diasTeste} dias` : `acertou só ${acertos} de ${diasTeste} dias`
       texto += ` E a faixa de confiança dele ${quanto}: estava confiante, mas no nível errado.`
+    } else {
+      // Errou o nível, mas a faixa "acertou": só pode ser porque a faixa era larga (ex.: Chronos-2).
+      texto +=
+        ` A faixa dele ainda cobriu ${acertos} de ${diasTeste} dias, mas só porque era larga: ` +
+        'acertar a faixa não quer dizer que a previsão foi boa.'
     }
   } else {
     texto +=
-      `Neste modelo, treinar só com os dias anteriores quase não atrapalhou (${erro(maeAntes)} contra ${erro(maeTudo)}): ` +
+      `Neste modelo, ${semTreino ? 'ver só os dias anteriores' : 'treinar só com os dias anteriores'} quase não atrapalhou (${erro(maeAntes)} contra ${erro(maeTudo)}): ` +
       'ele prolonga a tendência que já vinha antes da mudança.'
   }
-  return (
-    texto +
-    ' Lição: quando o comportamento muda, o modelo precisa ser treinado de novo com os dados recentes — por isso esta ferramenta atualiza e retreina todo dia.'
-  )
+  const licao = semTreino
+    ? ' Lição: quando o comportamento muda, o modelo precisa receber os dados recentes — por isso esta ferramenta atualiza os dados todo dia.'
+    : ' Lição: quando o comportamento muda, o modelo precisa ser treinado de novo com os dados recentes — por isso esta ferramenta atualiza e retreina todo dia.'
+  return texto + licao
 }

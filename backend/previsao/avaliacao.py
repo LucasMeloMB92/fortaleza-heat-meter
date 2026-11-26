@@ -9,6 +9,8 @@ Métricas (decisão D08):
 - RMSE = raiz da média do erro², em °C (pesa mais os erros grandes).
 - Cobertura = % dos dias reais que caíram dentro da faixa de 95%.
 Extras (decisão D34): MAE nos dias 1–7 (o horizonte do produto) e MAE relativo à linha de base.
+Largura da faixa (decisão D48): distância média entre o limite de cima e o de baixo, em °C.
+Lida junto com a cobertura: uma faixa larga "acerta" com facilidade, mas diz pouco.
 """
 
 import numpy as np
@@ -42,6 +44,11 @@ def cobertura(real, inferior, superior) -> float:
     return float(100 * dentro.mean())
 
 
+def largura_faixa(inferior, superior) -> float:
+    """Largura média da faixa, em °C (D48). Menor = previsão mais útil, se a cobertura for boa."""
+    return float(np.mean(np.asarray(superior) - np.asarray(inferior)))
+
+
 # ---------------------------------------------------------------------------
 # Avaliação
 # ---------------------------------------------------------------------------
@@ -73,6 +80,7 @@ def comparar_com_real(prevista: pd.DataFrame, real: pd.Series) -> tuple[pd.DataF
         "cobertura": cobertura(comparacao["real"], comparacao["inferior"], comparacao["superior"]),
         "mae_dias_1_7": mae(primeiros["real"], primeiros["previsao"]),
         "vies": float(comparacao["erro"].mean()),  # + = em média previu alto demais
+        "largura_faixa": largura_faixa(comparacao["inferior"], comparacao["superior"]),
     }
     return comparacao, metricas
 
@@ -89,7 +97,7 @@ def avaliar(nome: str, serie: pd.Series, dias_teste: int = DIAS_TESTE) -> dict:
 
 
 def comparar_modelos(serie: pd.Series, dias_teste: int = DIAS_TESTE) -> tuple[pd.DataFrame, dict]:
-    """Avalia os 4 modelos na mesma série.
+    """Avalia todos os modelos (modelos.MODELOS) na mesma série.
 
     Devolve (tabela de métricas — uma linha por modelo, {nome: resultado completo de avaliar}).
     A coluna "mae_vs_linha_base" diz quanto % o MAE do modelo é menor (-) ou maior (+) que o

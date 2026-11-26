@@ -134,7 +134,7 @@ def _periodo(serie: pd.Series) -> dict:
 _FILA_DE_CALCULOS = threading.RLock()
 
 
-def _calculo_unico(funcao):
+def _calculo_unico(funcao, trava=_FILA_DE_CALCULOS):
     """Cache + fila única: cálculos novos rodam um de cada vez; os já feitos respondem na hora.
 
     Por que fila e não paralelo: no Python, threads não executam código Python de verdade ao
@@ -149,13 +149,20 @@ def _calculo_unico(funcao):
     def envolvida(*args):
         if args in resultados:  # já calculado: responde sem entrar na fila
             return resultados[args]
-        with _FILA_DE_CALCULOS:
+        with trava:
             if args not in resultados:  # alguém pode ter calculado enquanto esperávamos
                 resultados[args] = funcao(*args)
             return resultados[args]
 
     envolvida.cache_clear = resultados.clear
     return envolvida
+
+
+def _calculo_leve(funcao):
+    """Como _calculo_unico, mas com trava própria: cálculos leves (ler CSV, fazer médias) não
+    esperam na fila dos modelos. Sem isso, a aba "Anos anteriores" (< 1 s) esperava ~1 minuto
+    atrás do caso de estudo na primeira vez do dia (visto no teste da tela, D50)."""
+    return _calculo_unico(funcao, trava=threading.RLock())
 
 
 @_calculo_unico
@@ -182,6 +189,22 @@ def _validacao(variavel: str):
 def _datas_de_mudanca() -> dict:
     contexto = pd.read_csv(exploracao.CAMINHO_CONTEXTO, parse_dates=["data"])
     return caso_estudo.datas_de_mudanca(_tabela().reset_index(), contexto)
+
+
+DIAS_SUBIDA = 15  # subida no período = média dos últimos 15 dias - média dos primeiros 15 (etapa 2)
+DIAS_ANOMALIA_RECENTE = 10  # anomalia "agora" = média dos últimos 10 dias (o período de teste)
+
+
+@_calculo_leve
+def _contexto():
+    """Comparação com anos anteriores (D24, D26, D50): mesmo período do calendário em cada ano,
+    o "normal" (média dos anos anteriores) e a anomalia de agora. Só para ENTENDER a série."""
+    # Lê o CSV direto (e não _tabela()): _tabela usa a fila dos modelos e poderia esperar nela.
+    datas = coleta.carregar_csv(coleta.CAMINHO_CSV)["data"]
+    inicio, fim = datas.min().date(), datas.max().date()
+    contexto = pd.read_csv(exploracao.CAMINHO_CONTEXTO, parse_dates=["data"])
+    periodos = exploracao.mesmo_periodo_por_ano(contexto, inicio, fim)
+    return periodos, fim.year
 
 
 @_calculo_unico
@@ -263,7 +286,7 @@ def situacao_atualizacao() -> dict:
 
 def limpar_cache() -> None:
     """Esquece todos os resultados guardados (usado nos testes)."""
-    for funcao in (_tabela, _prever, _validacao, _datas_de_mudanca, _caso_estudo):
+    for funcao in (_tabela, _prever, _validacao, _datas_de_mudanca, _caso_estudo, _contexto):
         funcao.cache_clear()
 
 
@@ -394,4 +417,64 @@ def caso(variavel: str, modelo: str | None = None) -> dict:
             for cenario in caso_estudo.CENARIOS
             for nome in nomes
         ],
+    }
+
+
+def contexto() -> dict:
+    """Os 90 dias de agora comparados com o mesmo período dos anos anteriores (D50)."""
+    periodos, ano_atual = _contexto()
+    normal = exploracao.climatologia(periodos, ano_atual)
+    anom = exploracao.anomalia(periodos, ano_atual)
+    atual = periodos[periodos["ano"] == ano_atual]
+    anos = sorted(int(a) for a in periodos["ano"].unique())
+
+    variaveis = []
+    for variavel, coluna in VARIAVEIS_API.items():
+        por_ano = []
+        for ano in anos:
+            trecho = periodos[periodos["ano"] == ano].sort_values("data")[coluna]
+            por_ano.append(
+                {
+                    "ano": ano,
+                    "inicio": _data(periodos.loc[periodos["ano"] == ano, "data"].min()),
+                    "fim": _data(periodos.loc[periodos["ano"] == ano, "data"].max()),
+                    "dias": int(trecho.count()),
+                    "media": _numero(trecho.mean()),
+                    "subida": _numero(
+                        trecho.iloc[-DIAS_SUBIDA:].mean() - trecho.iloc[:DIAS_SUBIDA].mean()
+                    ),
+                }
+            )
+        mudanca = exploracao.detectar_mudanca(anom[coluna].dropna())
+        # Um ponto por dia do período atual: o valor de cada ano no mesmo dia do calendário.
+        largo = periodos.pivot_table(index="data_ref", columns="ano", values=coluna)
+        variaveis.append(
+            {
+                "id": variavel,
+                "nome": NOMES_VARIAVEIS[variavel],
+                "anos": por_ano,
+                "anomalia_media": _numero(anom[coluna].mean()),
+                "anomalia_recente": _numero(anom[coluna].iloc[-DIAS_ANOMALIA_RECENTE:].mean()),
+                "mudanca": {
+                    "data": _data(mudanca["data"]),
+                    "anomalia_antes": mudanca["media_antes"],
+                    "anomalia_depois": mudanca["media_depois"],
+                },
+                "dias": [
+                    {
+                        "data": _data(data),
+                        "valores": {str(ano): _numero(largo.at[data, ano]) for ano in anos},
+                        "normal": _numero(normal.at[data, coluna]),
+                        "anomalia": _numero(anom.at[data, coluna]),
+                    }
+                    for data in atual.sort_values("data")["data_ref"]
+                ],
+            }
+        )
+    return {
+        "ano_atual": ano_atual,
+        "anos_anteriores": [a for a in anos if a != ano_atual],
+        "dias_subida": DIAS_SUBIDA,
+        "dias_anomalia_recente": DIAS_ANOMALIA_RECENTE,
+        "variaveis": variaveis,
     }

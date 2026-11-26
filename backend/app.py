@@ -86,6 +86,11 @@ def create_app() -> Flask:
 
     # --- Erros: sempre em JSON (decisão D40) --------------------------------
 
+    @app.get("/api/contexto")
+    def rota_contexto():
+        # Comparação com anos anteriores (D50): sem parâmetros, as duas variáveis juntas.
+        return jsonify(servico.contexto())
+
     @app.errorhandler(servico.ErroParametro)
     def erro_parametro(erro: servico.ErroParametro):
         corpo = {"erro": erro.mensagem, "parametro": erro.parametro}

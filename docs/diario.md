@@ -574,3 +574,148 @@ temperatura — linha de base 0,29, ETS 0,30, SARIMA 0,45, Prophet 0,17; sensaç
   séries novas todo dia, ficar sempre acima da régua pesa mais que ganhar um teste isolado.
 - **Ser honesto sobre "IA"** evita expectativa errada: a POC é estatística clássica, e o caminho
   para IA moderna (Chronos) já está desenhado e encaixa na interface comum.
+
+---
+
+## Evolução 11.2 — Chronos-2 como 5º modelo (2026-11-26)
+
+### Passo 1 — instalar e testar fora do projeto
+- `torch 2.15.0+cpu` (repositório oficial do PyTorch para CPU) e `chronos-forecasting 2.3.2`; o
+  `pip check` não acusou conflitos (pandas e numpy continuaram nas mesmas versões).
+- Modelo `amazon/chronos-2`: 119,5 milhões de parâmetros, 456 MB em `~/.cache/huggingface`.
+- Teste rápido com a série real: carregar o modelo levou 23,8 s na 1ª vez (com download) e 1,2 s
+  depois; prever 7 dias, **0,06 s**; duas rodadas deram **exatamente** o mesmo resultado.
+- Quantis treinados: 1%, 5%, 10%, ..., 95%, 99%. Os de 2,5% e 97,5% (faixa de 95%) a biblioteca
+  calcula entre os vizinhos.
+
+### Passo 2 — `prever_chronos` (D47)
+- `backend/previsao/modelos.py`: previsão = mediana; faixa = quantis de 2,5% e 97,5%; modelo
+  carregado uma vez por processo; nível acima de 98% dá erro claro.
+- Entrou em `MODELOS` → validação, caso de estudo e API passaram a incluí-lo **sem mudar uma
+  linha** nesses arquivos (a interface comum, D27, funcionou como planejado).
+- `requirements.txt` com `--extra-index-url` do PyTorch; 5 testes novos com o modelo real.
+
+### Passo 3 — validação e caso de estudo com 5 modelos
+
+| MAE no teste (°C) | Base | ETS | SARIMA | Prophet | Chronos-2 |
+|---|---|---|---|---|---|
+| Temperatura | 0,46 | 0,43 | 0,38 | **0,31** | **0,31** (−32%) |
+| Sensação | 0,34 | 0,33 | **0,29** | 0,38 | 0,33 (−1%) |
+
+| Largura média da faixa (°C) | Base | ETS | SARIMA | Prophet | Chronos-2 |
+|---|---|---|---|---|---|
+| Temperatura | 1,19 | 1,30 | 1,14 | 1,01 | **2,14** |
+| Sensação | 2,21 | 3,42 | 2,02 | 1,66 | **4,05** |
+
+- Caso de estudo, Chronos-2 "só antes": 1,04 °C (temp.) e 1,49 °C (sens.), com cobertura de
+  **10 de 10 dias** — errou o nível, mas a faixa larga "acertou".
+- Os scripts das etapas 3 a 5 tinham a grade de gráficos fixa em 4 colunas; agora usam uma coluna
+  por modelo. Gráficos refeitos em `docs/img/`.
+
+### Passo 4 — API e tela
+- `api.ts` (tipo `Modelo`) e `textos.ts` (descrição do Chronos-2). Mensagens de carregamento sem
+  "treinando" (o Chronos não treina).
+- **Achados no teste da tela (corrigidos):**
+  1. Prophet e Chronos-2 apareciam os dois como "menor erro" na tabela (0,31 °C, a API arredonda
+     para 2 casas), mas a frase citava só o Prophet. Agora: "Prophet e Chronos-2 empataram com o
+     menor erro: 0,31 °C em média. Isso é 32% a 33% menos erro que a regra simples."
+  2. O caso de estudo dizia "modelo treinado só com os dias anteriores" — falso para o Chronos.
+     Agora diz "que só viu os dias anteriores" e a lição fala em "receber os dados recentes".
+  3. O Chronos "só antes" errou 1,04 °C mas acertou a faixa em 10 de 10 dias, e o texto não
+     comentava. Nova regra (vale para qualquer modelo): erro alto + faixa acertando mais da
+     metade → "a faixa ainda cobriu X de N dias, mas só porque era larga".
+- Verificado no navegador com um backend próprio na porta 5001 (5000 e 5173 estavam em uso por
+  outra sessão, com o código antigo).
+
+### Resultados
+- Backend: 67 testes (eram 62) + ruff limpo. Frontend: 31 testes (eram 29) + tsc + oxlint + build.
+- **Resposta à pergunta da evolução: a IA moderna empata, não ganha.** O SARIMA continua sendo a
+  recomendação.
+
+### O que aprendi
+- **Zero-shot de verdade:** sem treino nem configuração, o Chronos-2 ficou no nível dos melhores
+  modelos clássicos. Numa métrica nova, é um ótimo ponto de partida no primeiro dia.
+- **Cobertura sozinha engana:** uma faixa larga "acerta" sempre. A largura da faixa precisa ser
+  lida junto — hoje ela não é métrica oficial da POC (candidata a melhoria).
+- **Modelo fundacional também fica preso ao contexto:** se a mudança não está nos dados que ele
+  recebe, ele não a vê. Atualizar os dados todo dia (D44) vale para ele também.
+- **Um modelo novo muda os textos:** empates e "treinado" só apareceram como problema com o 5º
+  modelo — de novo, o texto gerado precisou ser visto na tela, não só nos testes.
+
+---
+
+## Cards gerais — card 1: Ranking geral dos modelos (2026-11-26)
+
+### Pedido
+Comparações ainda "avulsas", uma variável e um modelo por vez. O usuário pediu três cards gerais,
+com todos os modelos e sem depender da variável escolhida: (1) ranking geral, (2) caso de estudo
+com todos, (3) comparação com anos anteriores. Uma etapa por card.
+
+### O que foi feito (D48)
+- **Largura da faixa** (`largura_faixa`) virou métrica oficial em `avaliacao.py` → aparece em
+  `/api/metricas`, `/api/teste` e `/api/caso-estudo`. Backend: 68 testes.
+- `frontend/src/ranking.ts`: posição em cada variável (MAE; empate → "vs regra simples"),
+  ranking geral pela posição média (empate → erro médio). `textoRanking` em `textos.ts`.
+- `RankingGeral.tsx`: card no topo da tela, antes dos seletores. Clicar num modelo o seleciona.
+- Frontend: 38 testes (eram 31), tsc + oxlint limpos; conferido no navegador.
+
+### Resultado (tela, 26-11-2026)
+"No geral, o SARIMA foi o mais regular: 3º na temperatura e 1º na sensação térmica. Foi melhor que
+a regra simples nas duas. O Chronos-2 teve o menor erro somando as duas (0,32 °C contra 0,34 °C),
+mas superou a regra simples em só uma das duas e sua faixa é 2,0 vezes mais larga. O Prophet foi o
+que mais oscilou: 1º na temperatura e 5º na sensação térmica."
+
+### O que aprendi
+- **0,335 não é 0,335 para o computador:** a média de 0,38 e 0,29 virou "0,33" na tela e "0,34"
+  no relatório. Arredondar "como à mão" (com `Number.EPSILON`) mantém tela e relatório iguais.
+- **O SARIMA "só antes" tinha faixa estreita (1,77 °C) e errou 1,79 °C:** com a largura oficial,
+  dá para ver em números a "falsa confiança" que o caso de estudo descrevia em palavras.
+
+## Visão geral com abas — aba "Caso de estudo" (2026-11-26)
+
+### Pedido
+Em vez de três cards, **um card só com abas** (D49). O card do ranking virou a aba "Ranking" do
+card "Visão geral dos modelos"; nesta etapa entrou a aba "Caso de estudo".
+
+### O que foi feito
+- `VisaoGeral.tsx` (abas acessíveis; só o painel aberto é montado e busca dados).
+- `casoGeral.ts` (quanto cada modelo piorou: erro "só antes" ÷ erro "com tudo") +
+  `textoCasoEstudoGeral` em `textos.ts`; `CasoEstudoGeral.tsx` com uma tabela por variável.
+- `api.casoEstudo` com `modelo` opcional; o limite de 1,3x virou a constante `LIMITE_PIOROU`.
+- Relatório, seção 8: tabela "quanto cada modelo piorou" + frase-resumo.
+- Frontend: 40 testes, tsc + oxlint limpos; conferido no navegador.
+
+### Resultado (tela)
+"Sem ver a mudança, 4 dos 5 modelos tiveram um erro de 2,0 a 6,2 vezes maior do que quando viram
+todos os dias. O que mais sofreu foi o SARIMA na sensação térmica (6,2 vezes). O Prophet quase não
+sentiu a mudança nas duas variáveis. SARIMA, ETS e Linha de base acertaram a faixa em metade dos
+dias ou menos em pelo menos uma variável: confiantes, mas no nível errado. Chronos-2 acertou a
+faixa na maioria dos dias mesmo errando o nível — só porque a faixa era larga."
+
+### O que aprendi
+- **Juntar os modelos mostra dois jeitos de errar:** faixa estreita no lugar errado (SARIMA: 0 de
+  10 dias, largura 1,77 °C) e faixa tão larga que "acerta" sem informar (ETS na sensação: 5,92 °C).
+  Olhando um modelo por vez, isso não aparecia.
+
+## Visão geral — aba "Anos anteriores" (2026-11-26)
+
+### O que foi feito (D50)
+- `GET /api/contexto` (`servico.contexto`): mesmo período em 2024, 2025 e 2026, normal, anomalia
+  e degrau, com as funções da etapa 2. Teste novo na API (backend: 69 testes).
+- Aba "Anos anteriores": texto por regras (`textoAnosAnteriores`), gráfico com os anos
+  sobrepostos (`GraficoAnos.tsx`), tabela por ano e a diferença para o normal. Frontend: 42 testes.
+- Relatório, seção 3: subseção "Comparação com os anos anteriores" (tabelas + gráfico da anomalia).
+
+### Resultado (tela)
+"Em 2026, a temperatura média do período (média dos 90 dias) foi 28,2 °C — 0,66 °C acima do normal
+(a média de 2024 e 2025 no mesmo dia). Todo ano ela sobe nesse período (2024: +0,95 °C; 2025:
++0,55 °C; 2026: +0,94 °C) — essa parte é a estação do ano. O que muda em 2026 é o nível; e a
+partir de 15-10-2026 a diferença para o normal mudou de patamar (de +0,49 °C para +0,86 °C)."
+Os números batem com os da etapa 2.
+
+### O que aprendi
+- **Fila única tem custo para o que é leve:** a aba (< 1 s de cálculo) esperava ~1 minuto atrás do
+  caso de estudo. A fila (D37) existe para cálculos pesados; o leve ganhou trava própria e passou
+  a responder em 0,7 s com a fila ocupada.
+- **Só 2 anos anteriores:** o contexto de "3 anos" termina ontem, então só cobre 2 períodos
+  completos antes de 2026 — o relatório agora diz isso explicitamente.

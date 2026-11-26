@@ -18,6 +18,13 @@ matplotlib==3.11.2
 statsmodels==0.15.0   # ETS (Holt-Winters) e SARIMA
 prophet==1.5.0        # modelo da Meta, só para comparação
 
+# --- Chronos-2, modelo fundacional da Amazon (evolução 11.2, decisão D47) ---
+# PyTorch só para CPU: ~200 MB em vez de ~2 GB da versão com placa de vídeo (CUDA).
+# O endereço abaixo é o repositório oficial do PyTorch para essas versões "+cpu".
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0+cpu
+chronos-forecasting==2.3.2   # baixa o modelo (~456 MB) do Hugging Face no 1º uso
+
 # --- API web ---
 flask==3.1.3
 flask-cors==6.0.5

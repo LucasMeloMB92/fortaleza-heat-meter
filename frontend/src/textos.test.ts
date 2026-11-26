@@ -15,7 +15,7 @@ const metricasVazias = { rmse: 0.5, mae_dias_1_7: 0.3 }
 function linha(modelo: LinhaMetricas['modelo'], mae: number, vsBase: number, cobertura = 90): LinhaMetricas {
   return {
     modelo,
-    nome_modelo: { linha_base: 'Linha de base', ets: 'ETS', sarima: 'SARIMA', prophet: 'Prophet' }[modelo],
+    nome_modelo: { linha_base: 'Linha de base', ets: 'ETS', sarima: 'SARIMA', prophet: 'Prophet', chronos: 'Chronos-2' }[modelo],
     configuracao: null,
     mae,
     cobertura,
@@ -121,6 +121,15 @@ describe('textoComparacao', () => {
     expect(texto).toBe('O modelo com menor erro foi o Prophet: errou em média 0,31 °C. Isso é 33% menos erro que a regra simples.')
   })
 
+  it('cita todos os modelos empatados no menor erro (como a tabela)', () => {
+    const texto = textoComparacao(
+      resposta([linha('linha_base', 0.46, 0), linha('prophet', 0.31, -33.11), linha('chronos', 0.31, -31.86)]),
+    )
+    expect(texto).toBe(
+      'Prophet e Chronos-2 empataram com o menor erro: 0,31 °C em média. Isso é 32% a 33% menos erro que a regra simples.',
+    )
+  })
+
   it('avisa quando a diferença é pequena demais para confiar', () => {
     const texto = textoComparacao(resposta([linha('linha_base', 0.34, 0), linha('ets', 0.33, -2.34)]))
     expect(texto).toContain('podem ser sorte')
@@ -183,6 +192,21 @@ describe('textoCasoEstudo', () => {
     const texto = textoCasoEstudo(caso(1.79, -1.79, 0), 'Sensação térmica média')
     expect(texto).toContain('não acertou nenhum dos 10 dias')
     expect(texto).not.toContain('só 0')
+  })
+
+  it('Chronos-2 não é treinado: diz "viu" e explica a faixa larga que "acertou"', () => {
+    const resposta = caso(1.04, -0.98, 100)
+    resposta.resultados.forEach((r) => {
+      r.modelo = 'chronos'
+      r.nome_modelo = 'Chronos-2'
+    })
+    resposta.resultados[1].metricas.mae = 0.31
+    const texto = textoCasoEstudo(resposta, 'Temperatura média')
+    expect(texto).toContain('O modelo que só viu os dias anteriores errou em média 1,04 °C')
+    expect(texto).toContain('o erro do modelo que viu todos os dias (0,31 °C)')
+    expect(texto).toContain('cobriu 10 de 10 dias, mas só porque era larga')
+    expect(texto).toContain('precisa receber os dados recentes')
+    expect(texto).not.toContain('treinad')
   })
 
   it('quando a mudança não atrapalhou, explica o porquê', () => {
