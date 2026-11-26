@@ -14,6 +14,34 @@
 
 ---
 
+## Em poucas palavras
+
+**O que fizemos.** Construímos uma ferramenta que olha os últimos 90 dias de temperatura e de
+sensação térmica de Fortaleza e tenta adivinhar a próxima semana. Ela não dá só um número: dá
+também uma **faixa** onde o valor real deve cair ("29,2 °C, provavelmente entre 28,1 e 29,6").
+Comparamos cinco formas de prever — de uma regra simples ("repetir a média da última semana") até
+uma IA moderna da Amazon — e, para saber qual funciona, escondemos os últimos 10 dias, pedimos a
+previsão e conferimos com o que aconteceu de verdade.
+
+**O que descobrimos.**
+1. **Dá para prever melhor que a regra simples, mas o ganho é modesto.** Os melhores modelos
+   erraram em média 0,3 °C por dia — até um terço menos que a regra simples. Fortaleza varia
+   pouco, então todos erram pouco.
+2. **O mais confiável é o SARIMA.** Ele não ganhou em tudo, mas foi bem nas duas variáveis. Um
+   modelo que só às vezes é o melhor é arriscado para usar todo dia.
+3. **A IA moderna empatou, não ganhou.** O Chronos-2 previu tão bem quanto os melhores sem
+   aprender nada com os nossos dados — mas com uma faixa duas vezes mais larga, ou seja, menos
+   útil. Com uma série curta e calma, a estatística clássica basta.
+4. **Um modelo só conhece o passado que viu.** Quando o clima mudou de patamar em outubro, os
+   modelos que não viram a mudança erraram de 2 a 6 vezes mais — e com falsa confiança. Por isso
+   a ferramenta atualiza os dados e refaz os modelos sozinha, todo dia.
+5. **Para o tempo em si, a meteorologia ganha.** Sites como o do Google simulam a atmosfera
+   inteira; nossos modelos só olham o histórico. O valor deste trabalho está no **método**, que
+   serve para números do negócio (vendas, demanda), onde não existe uma "simulação da atmosfera"
+   para consultar.
+
+---
+
 ## 1. Resumo executivo
 
 - **O que foi feito:** uma ferramenta web que baixa os últimos 90 dias de temperatura média e
