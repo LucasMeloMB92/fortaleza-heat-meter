@@ -52,16 +52,15 @@ def separar_treino_teste(serie: pd.Series, dias_teste: int = DIAS_TESTE):
     return serie.iloc[:-dias_teste], serie.iloc[-dias_teste:]
 
 
-def avaliar(nome: str, serie: pd.Series, dias_teste: int = DIAS_TESTE) -> dict:
-    """Treina o modelo `nome` no treino, prevê o período de teste e calcula as métricas.
+def comparar_com_real(prevista: pd.DataFrame, real: pd.Series) -> tuple[pd.DataFrame, dict]:
+    """Compara uma previsão com os valores reais, dia a dia, nas datas de `real`.
 
-    Devolve {"comparacao": tabela dia a dia, "metricas": dict, "detalhes": o que o modelo escolheu}.
+    `prevista` é a tabela de um modelo (previsao, inferior, superior); ela pode cobrir mais dias
+    que `real` (ex.: caso de estudo, que prevê de mais longe) — só as datas de `real` contam.
+    Devolve (tabela dia a dia, métricas). Usada pela validação (etapa 4) e pelo caso de estudo.
     """
-    treino, teste = separar_treino_teste(serie, dias_teste)
-    resultado = modelos.prever(nome, treino, horizonte=dias_teste)
-
-    comparacao = resultado.tabela.copy()
-    comparacao.insert(0, "real", teste.to_numpy())
+    comparacao = prevista.loc[real.index].copy()
+    comparacao.insert(0, "real", real.to_numpy())
     comparacao["erro"] = comparacao["previsao"] - comparacao["real"]  # + = previu alto demais
     comparacao["dentro_da_faixa"] = (comparacao["real"] >= comparacao["inferior"]) & (
         comparacao["real"] <= comparacao["superior"]
@@ -75,6 +74,17 @@ def avaliar(nome: str, serie: pd.Series, dias_teste: int = DIAS_TESTE) -> dict:
         "mae_dias_1_7": mae(primeiros["real"], primeiros["previsao"]),
         "vies": float(comparacao["erro"].mean()),  # + = em média previu alto demais
     }
+    return comparacao, metricas
+
+
+def avaliar(nome: str, serie: pd.Series, dias_teste: int = DIAS_TESTE) -> dict:
+    """Treina o modelo `nome` no treino, prevê o período de teste e calcula as métricas.
+
+    Devolve {"comparacao": tabela dia a dia, "metricas": dict, "detalhes": o que o modelo escolheu}.
+    """
+    treino, teste = separar_treino_teste(serie, dias_teste)
+    resultado = modelos.prever(nome, treino, horizonte=dias_teste)
+    comparacao, metricas = comparar_com_real(resultado.tabela, teste)
     return {"comparacao": comparacao, "metricas": metricas, "detalhes": resultado.detalhes}
 
 

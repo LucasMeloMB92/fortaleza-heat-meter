@@ -87,3 +87,16 @@ def test_escolher_d_reta_com_ruido_e_passeio_aleatorio():
 def test_modelo_desconhecido_da_erro_claro(serie):
     with pytest.raises(ValueError, match="Modelo desconhecido"):
         modelos.prever("arima_magico", serie)
+
+
+def test_linha_base_horizonte_longo_tem_faixa_finita(serie):
+    # 48 dias de treino e 42 de horizonte (como no caso de estudo): não pode virar NaN.
+    tabela = modelos.prever("linha_base", serie.iloc[:48], horizonte=42).tabela
+    assert np.isfinite(tabela.to_numpy()).all()
+    larguras = tabela["superior"] - tabela["inferior"]
+    assert (larguras > 0).all()
+
+
+def test_linha_base_serie_curta_demais_da_erro_claro(serie):
+    with pytest.raises(ValueError, match="curta demais"):
+        modelos.prever("linha_base", serie.iloc[:10])

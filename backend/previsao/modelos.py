@@ -28,6 +28,7 @@ from previsao.exploracao import teste_adf
 
 NIVEL = 0.95  # tamanho do intervalo (D10)
 JANELA_BASE = 7  # linha de base = média dos últimos 7 dias (D07)
+MIN_EXEMPLOS_ERRO = 10  # mínimo de erros passados para estimar a faixa da linha de base (D29)
 
 NOMES_MODELOS = {
     "linha_base": "Linha de base (média 7 dias)",
@@ -100,17 +101,30 @@ def prever_linha_base(serie: pd.Series, horizonte: int = 7, nivel: float = NIVEL
     Intervalo (decisão D29): olhamos quanto essa mesma regra ERROU no passado a 1, 2, ..., h
     dias de distância. O desvio-padrão desses erros, vezes 1,96 (para 95%), dá a meia-largura
     da faixa. Quanto mais longe, maior o erro passado -> faixa mais larga.
+
+    Horizonte longo (ex.: caso de estudo, ~42 dias): com h grande sobram poucos exemplos no
+    passado para medir o erro. Exigimos pelo menos MIN_EXEMPLOS_ERRO; acima da maior distância
+    que dá para medir, repetimos o desvio dessa distância (a faixa para de crescer — limitação).
     """
     serie = _preparar(serie)
     valores = serie.to_numpy()
     valor = valores[-JANELA_BASE:].mean()
 
+    # Exemplos disponíveis para a distância h: len - JANELA_BASE - h + 1.
+    h_maximo = len(valores) - JANELA_BASE - MIN_EXEMPLOS_ERRO + 1
+    if h_maximo < 1:
+        raise ValueError(
+            f"Série curta demais para a linha de base: {len(valores)} dias "
+            f"(mínimo {JANELA_BASE + MIN_EXEMPLOS_ERRO})."
+        )
+
     desvios = []
     for h in range(1, horizonte + 1):
+        distancia = min(h, h_maximo)
         # Para cada dia t do passado: "se eu tivesse previsto em t, quanto erraria h dias depois?"
         erros = [
-            valores[t + h - 1] - valores[t - JANELA_BASE : t].mean()
-            for t in range(JANELA_BASE, len(valores) - h + 1)
+            valores[t + distancia - 1] - valores[t - JANELA_BASE : t].mean()
+            for t in range(JANELA_BASE, len(valores) - distancia + 1)
         ]
         desvios.append(np.std(erros, ddof=1))
     z = norm.ppf(0.5 + nivel / 2)  # 1,96 para 95%

@@ -37,7 +37,10 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
   linha de base — D34). `avaliacao.comparar_modelos(serie)`.
 - Resultado da etapa 4 (teste 16/11–25/11): temperatura — Prophet 0,31 °C (−33% vs base), SARIMA
   0,38; sensação — SARIMA 0,29 (−15%), Prophet 0,38 (+13%, pior). SARIMA = mais consistente.
-- Caso de estudo: quebra estrutural — modelo treinado só antes da mudança recente x treinado com tudo.
+- Caso de estudo: quebra estrutural — modelo treinado só antes da mudança recente x treinado com tudo
+  (+ "só depois"), todos avaliados na mesma janela de teste (D35). `caso_estudo.avaliar_cenarios`.
+  Resultado: "só antes" erra 2–6x mais (viés negativo; SARIMA cobertura 0–10%); Prophet sobrevive
+  por prolongar a tendência sazonal. Conclusão: retreinar com frequência.
 
 ### Tecnologias
 - Backend: Python 3.12 (venv em `backend/.venv`), pandas, statsmodels, prophet, Flask + Flask-CORS.
@@ -51,7 +54,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 2. Exploração ✅
 3. Modelagem ✅
 4. Validação ✅
-5. Caso de estudo
+5. Caso de estudo ✅
 6. API Flask
 7. Frontend
 8. Relatório final

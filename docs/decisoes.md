@@ -343,3 +343,29 @@ durante o projeto e aprovadas.
   ranking. Com 10 dias, um teste formal teria pouco poder — mostrar os erros é mais honesto.
 - **Teste anti-vazamento:** um teste automático altera os valores do período de teste e confere
   que a previsão não muda (o modelo nunca vê a prova).
+
+## D35 — Desenho do caso de estudo (quebra estrutural)
+- **Decisão:** como comparar "modelo treinado só antes da mudança" x "treinado com tudo".
+- **Opções consideradas:** (a) cada modelo avaliado numa janela diferente (logo após o próprio
+  treino); (b) todos avaliados na **mesma janela de teste** (16/11–25/11), cada um prevendo do fim
+  do seu treino até o fim do teste; (c) reaproveitar os parâmetros aprendidos "antes" aplicando-os
+  aos dados recentes sem reaprender. Também: uma data comum ou uma por variável; incluir ou não um
+  cenário "só depois".
+- **Escolha:** (b), com data por variável (15/10 temperatura, 23/10 sensação — recalculadas a
+  partir dos dados, D26), os 4 modelos e **três** cenários: só antes, tudo e só depois (extra).
+  O script mostra também o erro do "só antes" nos 10 primeiros dias após a mudança.
+- **Por quê:** a mesma janela torna os números comparáveis com a etapa 4. A ressalva de (b) é que
+  o "só antes" prevê de mais longe (34–42 dias): para linha de base e ETS isso não muda a
+  previsão (é uma reta horizontal), só a faixa; para SARIMA e Prophet, muda — por isso o erro
+  "logo após a mudança" separa o efeito da distância. (c) é mais sutil e difícil de explicar.
+  O cenário "só depois" responde à pergunta prática "vale descartar o passado?".
+
+## D36 — Linha de base com horizonte longo (ajuste da D29)
+- **Decisão:** o que fazer quando o horizonte é maior que o histórico disponível para medir o
+  erro (caso de estudo: 48 dias de treino, 42 de horizonte → o cálculo dava NaN).
+- **Opções consideradas:** recusar horizontes longos; extrapolar o crescimento do erro; repetir o
+  desvio da maior distância mensurável.
+- **Escolha:** exigir pelo menos 10 exemplos de erro por distância; acima da maior distância
+  mensurável, repetir o desvio dela. Série curta demais (< 17 dias) → erro claro.
+- **Por quê:** simples e sem inventar dados; limitação documentada no código: nesses casos a faixa
+  para de crescer e tende a ficar estreita demais.

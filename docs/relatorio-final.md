@@ -20,7 +20,11 @@
      térmica; temperatura e sensação são previstas de forma independente (D19).
    - Já identificado: com 90 dias, o modelo não conhece o ciclo anual (~2 °C em Fortaleza); a
      tendência de alta de nov/2026 é parte estação, que se estabiliza em dezembro (D23, D24).
+   - Já identificado: a faixa de 95% não protege contra quebras — um modelo desatualizado fica
+     confiante no regime errado (cobertura de 0–10% no caso de estudo, D35).
 9. **Próximos passos** — o que seria necessário para levar a produção.
+   - Já identificado: retreinar com frequência (ex.: diariamente), principal remédio contra
+     quebras estruturais (etapa 5).
    - Já identificado: avaliar variáveis externas (umidade, vento) com previsões meteorológicas.
    - Já identificado: com 2+ anos de histórico — climatologia como linha de base, Prophet com
      sazonalidade anual e validação em várias janelas de 7 dias (D23).
