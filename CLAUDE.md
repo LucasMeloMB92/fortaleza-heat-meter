@@ -20,7 +20,8 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 - Período: 90 dias terminando ONTEM (D20). CSV: `backend/data/fortaleza_diario.csv`.
 - Sensação é prevista sozinha (não é apoio da temperatura); sem umidade/vento (D02, D19).
 - Contexto de 3 anos (`backend/data/fortaleza_contexto_3anos.csv`) só para entender, nunca para
-  treinar (D24). Achados da etapa 2: série não estacionária (d=1), PACF só na defasagem 1, sem
+  treinar (D24). Achados da etapa 2: não estacionária em torno de nível fixo (mas a sensação é
+  estacionária em torno de uma reta — corrigido na etapa 3, D33), PACF só na defasagem 1, sem
   sazonalidade semanal; anomalia de 2026 com mudança em 15/10 (temp.) e 23/10 (sensação) (D26).
 - Cores fixas: temperatura `#2a78d6` (azul), sensação `#eb6834` (laranja); um eixo por painel (D25).
 
@@ -28,7 +29,10 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 - Horizonte: 7 dias. Validação: últimos 10 dias como teste.
 - Modelos: (1) linha de base = média dos últimos 7 dias; (2) ETS/Holt-Winters; (3) SARIMA;
   (4) Prophet (só comparação — feito para séries longas).
-- Os 4 modelos rodam para as 2 variáveis (8 combinações), com a mesma interface.
+- Os 4 modelos rodam para as 2 variáveis (8 combinações), com a mesma interface:
+  `modelos.prever(nome, serie, horizonte, nivel) -> Previsao(tabela, detalhes)` (D27).
+- ETS/SARIMA escolhem configuração pelo menor AICc, refeito a cada treino (D28). SARIMA: d pelo
+  ADF com tendência ("ct"), não fixo (D33). Prophet sem sazonalidades (D32).
 - Métricas: MAE, RMSE, cobertura do intervalo de 95%.
 - Caso de estudo: quebra estrutural — modelo treinado só antes da mudança recente x treinado com tudo.
 
@@ -42,7 +46,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 0. Preparação ✅
 1. Coleta de dados ✅
 2. Exploração ✅
-3. Modelagem
+3. Modelagem ✅
 4. Validação
 5. Caso de estudo
 6. API Flask

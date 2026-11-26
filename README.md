@@ -61,6 +61,13 @@ contexto):
 .venv\Scripts\python -m scripts.etapa2_exploracao
 ```
 
+**Treinar os 4 modelos e prever os próximos 7 dias** (gráfico em `docs/img/`; leva ~30 s por
+causa da busca do SARIMA):
+
+```powershell
+.venv\Scripts\python -m scripts.etapa3_modelagem
+```
+
 **Testes e qualidade do código:**
 
 ```powershell

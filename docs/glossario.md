@@ -153,3 +153,25 @@ que o normal para a data. Remove o efeito da estação.
 
 **Ponto de mudança** — data em que a série passa a se comportar de outro jeito (ex.: nível médio
 mais alto). Detectá-lo é o primeiro passo para estudar uma quebra estrutural.
+
+## Modelagem
+
+**AIC / AICc** — "nota" de um modelo que soma o quanto ele erra nos dados de treino com uma multa
+por cada parâmetro. Menor = melhor. Evita escolher sempre o modelo mais complexo (que decora o
+ruído). **AICc** é a versão corrigida para poucos dados. Só compara modelos ajustados sobre os
+mesmos dados.
+
+**Parâmetro α (alfa, `smoothing_level`) do ETS** — de 0 a 1, o peso do dia mais recente. α
+perto de 0: média longa, previsão estável. α perto de 1: quase "amanhã = hoje", e a incerteza
+cresce rápido com a distância.
+
+**Drift** — num modelo com d = 1, uma subida (ou descida) média constante por dia.
+
+**Tendência linear (determinística)** — a série oscila em torno de uma reta. Diferente do drift:
+a série sempre volta para perto da reta.
+
+**Sobrediferenciação** — diferenciar uma série que não precisava. Sintoma típico: o termo MA
+estimado fica perto de −1 (o modelo tenta desfazer a diferença).
+
+**Teste de contrato** — teste que verifica se várias peças (aqui, os 4 modelos) respeitam o mesmo
+"acordo" de entrada e saída. Se uma quebrar o acordo, quem a usa (API, métricas) quebra junto.

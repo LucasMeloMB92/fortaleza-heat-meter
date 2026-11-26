@@ -32,13 +32,18 @@ def media_movel(serie: pd.Series, janela: int = 7) -> pd.Series:
     return serie.rolling(janela).mean()
 
 
-def teste_adf(serie: pd.Series) -> dict:
+def teste_adf(serie: pd.Series, regressao: str = "c") -> dict:
     """Teste ADF (Dickey-Fuller aumentado) de estacionariedade.
 
     Hipótese do teste: "a série NÃO é estacionária" (anda sem voltar a um nível fixo).
     p-valor < 0,05 -> rejeitamos essa hipótese -> tratamos a série como estacionária.
+
+    `regressao` diz em torno de quê a série seria estacionária:
+    - "c":  em torno de um nível constante (padrão);
+    - "ct": em torno de uma reta (tendência linear). Lição da etapa 3 (D33): uma série
+            que sobe de forma regular pode falhar no "c" e passar no "ct".
     """
-    resultado = adfuller(serie.dropna(), result_object=True)
+    resultado = adfuller(serie.dropna(), regression=regressao, result_object=True)
     return {
         "estatistica": round(float(resultado.statistic), 3),
         "p_valor": round(float(resultado.pvalue), 3),
