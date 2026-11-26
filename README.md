@@ -157,3 +157,4 @@ npm run build
 - [Glossário](docs/glossario.md) — termos explicados de forma simples
 - [API](docs/api.md) — endpoints do backend
 - [Relatório final](docs/relatorio-final.md) — resumo para o cliente
+- [Guia técnico](docs/relatorio-tecnico.md) — passo a passo para reproduzir a POC ou aplicar o método em outra série
