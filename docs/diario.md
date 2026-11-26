@@ -670,3 +670,29 @@ que mais oscilou: 1º na temperatura e 5º na sensação térmica."
   no relatório. Arredondar "como à mão" (com `Number.EPSILON`) mantém tela e relatório iguais.
 - **O SARIMA "só antes" tinha faixa estreita (1,77 °C) e errou 1,79 °C:** com a largura oficial,
   dá para ver em números a "falsa confiança" que o caso de estudo descrevia em palavras.
+
+## Visão geral com abas — aba "Caso de estudo" (2026-11-26)
+
+### Pedido
+Em vez de três cards, **um card só com abas** (D49). O card do ranking virou a aba "Ranking" do
+card "Visão geral dos modelos"; nesta etapa entrou a aba "Caso de estudo".
+
+### O que foi feito
+- `VisaoGeral.tsx` (abas acessíveis; só o painel aberto é montado e busca dados).
+- `casoGeral.ts` (quanto cada modelo piorou: erro "só antes" ÷ erro "com tudo") +
+  `textoCasoEstudoGeral` em `textos.ts`; `CasoEstudoGeral.tsx` com uma tabela por variável.
+- `api.casoEstudo` com `modelo` opcional; o limite de 1,3x virou a constante `LIMITE_PIOROU`.
+- Relatório, seção 8: tabela "quanto cada modelo piorou" + frase-resumo.
+- Frontend: 40 testes, tsc + oxlint limpos; conferido no navegador.
+
+### Resultado (tela)
+"Sem ver a mudança, 4 dos 5 modelos tiveram um erro de 2,0 a 6,2 vezes maior do que quando viram
+todos os dias. O que mais sofreu foi o SARIMA na sensação térmica (6,2 vezes). O Prophet quase não
+sentiu a mudança nas duas variáveis. SARIMA, ETS e Linha de base acertaram a faixa em metade dos
+dias ou menos em pelo menos uma variável: confiantes, mas no nível errado. Chronos-2 acertou a
+faixa na maioria dos dias mesmo errando o nível — só porque a faixa era larga."
+
+### O que aprendi
+- **Juntar os modelos mostra dois jeitos de errar:** faixa estreita no lugar errado (SARIMA: 0 de
+  10 dias, largura 1,77 °C) e faixa tão larga que "acerta" sem informar (ETS na sensação: 5,92 °C).
+  Olhando um modelo por vez, isso não aparecia.

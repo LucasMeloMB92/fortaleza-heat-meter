@@ -165,6 +165,7 @@ export const api = {
     buscar<RespostaPrevisao>('previsao', { variavel, modelo, horizonte }),
   metricas: (variavel: Variavel) => buscar<RespostaMetricas>('metricas', { variavel }),
   teste: (variavel: Variavel, modelo: Modelo) => buscar<RespostaTeste>('teste', { variavel, modelo }),
-  casoEstudo: (variavel: Variavel, modelo: Modelo) =>
-    buscar<RespostaCasoEstudo>('caso-estudo', { variavel, modelo }),
+  // Sem `modelo`, a API devolve os resultados de TODOS os modelos (aba "Caso de estudo" da visão geral).
+  casoEstudo: (variavel: Variavel, modelo?: Modelo) =>
+    buscar<RespostaCasoEstudo>('caso-estudo', modelo ? { variavel, modelo } : { variavel }),
 }

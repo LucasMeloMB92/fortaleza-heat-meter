@@ -45,3 +45,11 @@ export const useCasoEstudo = (variavel: Variavel, modelo: Modelo) =>
     queryKey: ['caso-estudo', variavel, modelo],
     queryFn: () => api.casoEstudo(variavel, modelo),
   })
+
+// Caso de estudo com TODOS os modelos (aba da visão geral). Só é chamado quando a aba é aberta
+// (o painel só é montado nessa hora) — é o cálculo mais pesado da API.
+export const useCasoEstudoTodos = (variavel: Variavel) =>
+  useQuery({
+    queryKey: ['caso-estudo', variavel, 'todos'],
+    queryFn: () => api.casoEstudo(variavel),
+  })

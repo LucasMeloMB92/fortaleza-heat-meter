@@ -403,8 +403,8 @@ Como ler as colunas:
 - **Caso de estudo "só antes":** o erro do modelo que só conhecia os dias anteriores à mudança de
   outubro (seção 8). Mede como ele se sai quando o clima muda e ele não viu.
 
-Na ferramenta web, este ranking aparece no topo da tela, no card **"Ranking geral dos modelos"**,
-calculado com os números do dia e sem depender da variável escolhida.
+Na ferramenta web, este ranking aparece no topo da tela, na aba **"Ranking"** do card **"Visão
+geral dos modelos"**, calculado com os números do dia e sem depender da variável escolhida.
 
 ### 7.3 Por que o SARIMA, e não os outros
 
@@ -469,6 +469,24 @@ mesmos 10 dias de teste (16-11-2026 a 25-11-2026):
 | Chronos-2 | 1,04 (10/10) | 0,31 (9/10) | 0,35 (9/10) | 1,49 (10/10) | 0,33 (10/10) | 0,33 (10/10) |
 
 *No Chronos-2, "treinado com" quer dizer "recebeu como contexto": ele não é treinado.*
+
+**Quanto cada modelo piorou sem ver a mudança** (erro "só antes" ÷ erro com "tudo"; 2,0× = errou
+o dobro) e a faixa do modelo "só antes" (dias em que o real caiu dentro / largura):
+
+| Modelo | Temp.: piorou | Temp.: faixa "só antes" | Sens.: piorou | Sens.: faixa "só antes" |
+|---|---|---|---|---|
+| SARIMA | 2,9× | 1 de 10 dias / 1,05 °C | **6,2×** | **0 de 10 dias / 1,77 °C** |
+| Chronos-2 | **3,4×** | 10 de 10 dias / 3,51 °C | 4,5× | 10 de 10 dias / 4,54 °C |
+| ETS | 2,2× | 5 de 10 dias / 2,01 °C | 4,1× | 10 de 10 dias / 5,92 °C |
+| Linha de base | 2,0× | 1 de 10 dias / 1,12 °C | 3,8× | 5 de 10 dias / 2,43 °C |
+| Prophet | 1,0× | 9 de 10 dias / 1,50 °C | 0,9× | 9 de 10 dias / 1,89 °C |
+
+**Em uma frase:** sem ver a mudança, 4 dos 5 modelos erraram de 2,0 a 6,2 vezes mais; os de faixa
+estreita (SARIMA, linha de base) ficaram **confiantes no nível errado**, e os de faixa larga
+(Chronos-2, ETS na sensação) "acertaram" a faixa só porque ela era larga. Só o Prophet passou ileso.
+
+Na ferramenta web, esta comparação está na aba **"Caso de estudo"** do card **"Visão geral dos
+modelos"**, no topo da tela; o card de baixo continua mostrando o gráfico de um modelo por vez.
 
 **O que aprendemos:**
 1. **O modelo desatualizado erra muito e sempre para o mesmo lado.** Linha de base, ETS e SARIMA

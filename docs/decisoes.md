@@ -617,3 +617,24 @@ durante o projeto e aprovadas.
   não é o 1º — e porque cobertura sem largura engana (achado da evolução 11.2).
 - **Achado:** o JavaScript guarda 0,335 como 0,33499999…, e a tela mostrava "0,33" onde o
   relatório dizia "0,34". Corrigido com o arredondamento "como à mão".
+
+## D49 — Visão geral em um card só, com abas _(usuário)_
+- **Decisão:** como organizar na tela as comparações que juntam todos os modelos e as duas
+  variáveis (ranking, caso de estudo, anos anteriores).
+- **Opções consideradas:** (a) três cards separados no topo (plano inicial); (b) **um card só
+  com abas** (pedido do usuário).
+- **Escolha:** (b) — card **"Visão geral dos modelos"** (`VisaoGeral.tsx`) com as abas
+  **Ranking** (D48) e **Caso de estudo**; **Anos anteriores** entra na próxima etapa.
+  - Abas acessíveis (`role="tablist"`, `"tab"`, `"tabpanel"`, `aria-selected`).
+  - **Só o painel aberto é montado:** cada aba busca os próprios dados quando é aberta. O caso de
+    estudo com todos os modelos (o cálculo mais pesado) só roda se alguém abrir a aba.
+  - **Aba "Caso de estudo":** `/api/caso-estudo` **sem** `modelo` (já devolvia todos), para as duas
+    variáveis. Por modelo: erro "só antes", erro "com tudo", **quanto piorou** (÷) e a faixa "só
+    antes" (acertos e largura). Contas em `casoGeral.ts`; frase em `textoCasoEstudoGeral`
+    (`textos.ts`). Regras: "piorou" a partir de 1,3x (o mesmo limite do texto por modelo, agora
+    numa constante só, `LIMITE_PIOROU`); "confiante no nível errado" = acertou a faixa em metade
+    dos dias ou menos; "só porque era larga" = acertou mais da metade nas duas variáveis.
+  - O card de baixo ("Caso de estudo — modelo X", com gráfico) continua, para ver um modelo de
+    cada vez.
+- **Por quê:** menos rolagem e um lugar só para "olhar tudo junto". Montar só a aba aberta evita
+  que a tela dispare o cálculo pesado sem necessidade.

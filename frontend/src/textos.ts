@@ -10,6 +10,7 @@ import type {
   RespostaTeste,
 } from './api'
 import { formatarComSinal, formatarData, formatarDiaMes, formatarGraus, formatarNumero } from './formatacao'
+import { acertosSoAntes, type ImpactoMudanca, impactos, LIMITE_PIOROU } from './casoGeral'
 import { type LinhaRanking, vitoriasSobreARegra } from './ranking'
 
 // Temperaturas com 1 casa ("29,1 °C"); erros e variações com 2 casas, iguais às tabelas ("0,38 °C").
@@ -51,6 +52,10 @@ export const AJUDA = {
   posicaoMedia:
     'Média das posições do modelo na temperatura e na sensação (1 = menor erro). Quanto menor, mais regular: o 1º geral é o que foi bem nas duas.',
   erroMedioGeral: 'Média simples do erro médio na temperatura e na sensação. Mostra quem erra menos no total.',
+  piorou:
+    'Erro do modelo que só conhecia os dias antes da mudança ÷ erro do modelo que conhecia todos os dias. 2,0× = errou o dobro; abaixo de 1,3× = quase não sentiu.',
+  faixaSoAntes:
+    'Em quantos dias de teste o valor real caiu dentro da faixa do modelo que só conhecia os dias antes da mudança, e a largura dessa faixa. Poucos acertos com faixa estreita = confiante no nível errado; muitos acertos com faixa larga = acertou só por ser larga.',
   larguraFaixa:
     'Largura da faixa: distância média entre o mínimo e o máximo previstos (temperatura / sensação). Faixa estreita que acerta = previsão útil; faixa larga "acerta" fácil, mas diz pouco.',
 }
@@ -200,6 +205,61 @@ export function textoRanking(linhas: LinhaRanking[]): string {
   return texto
 }
 
+/**
+ * Texto da aba "Caso de estudo" da visão geral (todos os modelos, as duas variáveis). Regras:
+ * - "sofreu" = erro "só antes" ≥ 1,3x o erro com todos os dias, nas DUAS variáveis;
+ * - "quase não sentiu" = abaixo de 1,3x nas duas;
+ * - faixa "confiante no nível errado" = dos que sofreram, acertou a faixa em metade dos dias ou
+ *   menos em pelo menos uma variável; "só porque era larga" = acertou mais da metade nas duas.
+ */
+export function textoCasoEstudoGeral(temperatura: RespostaCasoEstudo, sensacao: RespostaCasoEstudo): string {
+  const t = impactos(temperatura)
+  const s = impactos(sensacao)
+  const dias = temperatura.teste.dias
+  const nomeVariavel = { temperatura: 'na temperatura', sensacao: 'na sensação térmica' }
+  const par = (i: ImpactoMudanca) => s.find((x) => x.modelo === i.modelo)
+  const modelos = t.filter((i) => par(i)).map((i) => ({ nome: i.nome, t: i, s: par(i) as ImpactoMudanca }))
+  if (modelos.length === 0) return ''
+
+  const sofreram = modelos.filter((m) => m.t.vezes >= LIMITE_PIOROU && m.s.vezes >= LIMITE_PIOROU)
+  const quaseNada = modelos.filter((m) => m.t.vezes < LIMITE_PIOROU && m.s.vezes < LIMITE_PIOROU)
+  const frases: string[] = []
+
+  if (sofreram.length > 0) {
+    const vezes = sofreram.flatMap((m) => [m.t.vezes, m.s.vezes])
+    const pior = [...t, ...s].reduce((a, b) => (b.vezes > a.vezes ? b : a))
+    frases.push(
+      `Sem ver a mudança, ${sofreram.length} dos ${modelos.length} modelos tiveram um erro de ` +
+        `${formatarNumero(Math.min(...vezes), 1)} a ${formatarNumero(Math.max(...vezes), 1)} vezes maior ` +
+        'do que quando viram todos os dias.',
+      `O que mais sofreu foi o ${pior.nome} ${nomeVariavel[pior.variavel]} (${formatarNumero(pior.vezes, 1)} vezes).`,
+    )
+  }
+  if (quaseNada.length > 0) {
+    const nomes = juntarNomes(quaseNada.map((m) => m.nome))
+    frases.push(`${quaseNada.length === 1 ? 'O' : 'Os modelos'} ${nomes} quase não ${quaseNada.length === 1 ? 'sentiu' : 'sentiram'} a mudança nas duas variáveis.`)
+  }
+
+  const confiantes = sofreram.filter((m) => acertosSoAntes(m.t, dias) <= dias / 2 || acertosSoAntes(m.s, dias) <= dias / 2)
+  if (confiantes.length > 0) {
+    frases.push(
+      `${juntarNomes(confiantes.map((m) => m.nome))} ${confiantes.length === 1 ? 'acertou' : 'acertaram'} a faixa em ` +
+        'metade dos dias ou menos em pelo menos uma variável: confiantes, mas no nível errado.',
+    )
+  }
+  const largos = sofreram.filter((m) => acertosSoAntes(m.t, dias) > dias / 2 && acertosSoAntes(m.s, dias) > dias / 2)
+  if (largos.length > 0) {
+    frases.push(
+      `${juntarNomes(largos.map((m) => m.nome))} ${largos.length === 1 ? 'acertou' : 'acertaram'} a faixa na maioria ` +
+        'dos dias mesmo errando o nível — só porque a faixa era larga.',
+    )
+  }
+  frases.push(
+    'Lição: quando o comportamento muda, os modelos precisam dos dados recentes — por isso esta ferramenta atualiza os dados e refaz os modelos todo dia.',
+  )
+  return frases.join(' ')
+}
+
 export function textoComparacao(resposta: RespostaMetricas): string {
   const linhas = [...resposta.metricas].sort((a, b) => (a.mae ?? Infinity) - (b.mae ?? Infinity))
   const melhor = linhas[0]
@@ -263,7 +323,7 @@ export function textoCasoEstudo(resposta: RespostaCasoEstudo, nomeVariavel: stri
   const comTudo = semTreino ? 'que viu todos os dias' : 'treinado com todos os dias'
 
   let texto = `A partir de ${formatarData(resposta.data_mudanca)}, a ${nome} passou a ficar mais ${subiu ? 'alta' : 'baixa'} que antes. `
-  if (maeTudo > 0 && maeAntes > maeTudo * 1.3) {
+  if (maeTudo > 0 && maeAntes > maeTudo * LIMITE_PIOROU) {
     const vies = antes.metricas.vies ?? 0
     texto +=
       `O modelo ${soAntes} errou em média ${erro(maeAntes)} — ` +

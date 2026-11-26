@@ -66,14 +66,15 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
   Melhorias ainda registradas no relatório: textos por IA (Gemma/Gemini), outras métricas
   (cliente ainda sem métrica real — exemplo genérico: vendas diárias), publicação online,
   repetir a comparação em várias semanas.
-- **Em andamento: 3 cards gerais na tela** (todos os modelos, sem depender da variável): (1) ranking
-  geral ✅ (D48, `ranking.ts` + `RankingGeral.tsx`); (2) caso de estudo com todos os modelos;
-  (3) comparação com anos anteriores (rota nova `/api/contexto` + seção no relatório). Um por vez.
-- **Última decisão registrada: D48** — a próxima é D49 (`docs/decisoes.md`).
+- **Em andamento: card "Visão geral dos modelos" com abas (D49)** — todos os modelos, as duas
+  variáveis, sem depender dos seletores; só a aba aberta busca dados. Abas: Ranking ✅ (D48,
+  `ranking.ts`), Caso de estudo ✅ (`casoGeral.ts`), **Anos anteriores — falta** (rota nova
+  `/api/contexto` + subseção na seção 3 do relatório). Uma aba por vez.
+- **Última decisão registrada: D49** — a próxima é D50 (`docs/decisoes.md`).
 - **Para retomar:** leia o fim de `docs/diario.md` (inclui as dúvidas discutidas). Para ver a tela:
   suba `backend` e `frontend` pelo `.claude/launch.json`. Os números da documentação são um retrato
   de 26-11-2026; a ferramenta atualiza os dados sozinha todo dia (D44).
-- **Qualidade atual:** backend 68 testes (pytest) + ruff limpo; frontend 38 testes (Vitest) +
+- **Qualidade atual:** backend 68 testes (pytest) + ruff limpo; frontend 40 testes (Vitest) +
   tsc + oxlint + build limpos.
 
 ## Etapas (ordem fixa)

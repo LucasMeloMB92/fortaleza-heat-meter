@@ -1,5 +1,5 @@
-// Tela principal: aviso no topo, ranking geral (as duas variáveis juntas), seletores e quatro
-// seções por variável (previsão, métricas, teste, caso de estudo). O estado (variável, modelo, horizonte) fica aqui e desce para os componentes.
+// Tela principal: aviso no topo, visão geral com abas (todos os modelos, as duas variáveis —
+// D48, D49), seletores e quatro seções por variável (previsão, métricas, teste, caso de estudo). O estado (variável, modelo, horizonte) fica aqui e desce para os componentes.
 import { useQueryClient } from '@tanstack/react-query'
 import { lazy, useEffect, useRef, useState } from 'react'
 import type { Modelo, Variavel } from './api'
@@ -7,7 +7,7 @@ import { AvisoTopo } from './componentes/AvisoTopo'
 import { Cartao, EstadoConsulta } from './componentes/Cartao'
 import { LimiteDeErro } from './componentes/LimiteDeErro'
 import { Seletores } from './componentes/Seletores'
-import { RankingGeral } from './componentes/RankingGeral'
+import { VisaoGeral } from './componentes/VisaoGeral'
 import { TabelaMetricas } from './componentes/TabelaMetricas'
 import {
   useCasoEstudo,
@@ -64,11 +64,6 @@ export default function App() {
   const previsao = usePrevisao(variavel, modelo, horizonte)
   const serieOutra = useSerie(outraVariavel, comparar)
   const metricas = useMetricas(variavel)
-  // Ranking geral (D48): as métricas das duas variáveis, sempre (o cache evita pedir de novo).
-  const metricasTemp = useMetricas('temperatura')
-  const metricasSens = useMetricas('sensacao')
-  const rankingCarregando = metricasTemp.isPending || metricasSens.isPending
-  const rankingErro = metricasTemp.error ?? metricasSens.error
   const teste = useTeste(variavel, modelo)
   const caso = useCasoEstudo(variavel, modelo)
 
@@ -101,33 +96,7 @@ export default function App() {
         <AvisoTopo saude={saude} aoTentarDeNovo={tentarTudoDeNovo} />
       </LimiteDeErro>
 
-      <Cartao
-        titulo="Ranking geral dos modelos"
-        atualizando={(metricasTemp.isFetching || metricasSens.isFetching) && !rankingCarregando}
-        alturaEsqueleto="h-64"
-        subtitulo="Temperatura e sensação térmica juntas, no mesmo teste de 10 dias que os modelos não conheciam. Não depende da variável escolhida abaixo. Clique num modelo para selecioná-lo."
-      >
-        <EstadoConsulta
-          carregando={rankingCarregando}
-          erro={rankingErro}
-          aoTentarDeNovo={() => {
-            metricasTemp.refetch()
-            metricasSens.refetch()
-          }}
-          alturaEsqueleto="h-64"
-          mensagemCarregando="Testando todos os modelos nas duas variáveis…"
-          dicaCarregando="Na primeira vez do dia leva cerca de 20 a 60 segundos."
-        >
-          {metricasTemp.data && metricasSens.data && (
-            <RankingGeral
-              temperatura={metricasTemp.data}
-              sensacao={metricasSens.data}
-              modeloSelecionado={modelo}
-              aoSelecionar={setModelo}
-            />
-          )}
-        </EstadoConsulta>
-      </Cartao>
+      <VisaoGeral modelo={modelo} aoSelecionar={setModelo} />
 
       <EstadoConsulta
         carregando={opcoes.isPending}
