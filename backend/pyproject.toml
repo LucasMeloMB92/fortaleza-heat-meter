@@ -1,0 +1,16 @@
+# Configuração das ferramentas de qualidade do backend.
+# (As dependências ficam no requirements.txt, para manter a instalação simples.)
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F = erros básicos e código inválido, I = ordem dos imports,
+# B = armadilhas comuns, UP = sintaxe moderna do Python.
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Permite "import previsao" nos testes sem instalar o pacote.
+pythonpath = ["."]

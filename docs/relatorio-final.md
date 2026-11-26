@@ -1,0 +1,14 @@
+# Relatório final — POC de previsão de temperatura em Fortaleza
+
+> Status: **a preencher na etapa 8**, com os resultados das etapas anteriores.
+
+## Estrutura prevista
+
+1. **Objetivo** — o que a POC demonstra (ciclo dados → modelo → previsão → gráfico).
+2. **Dados** — temperatura média e sensação térmica média diárias, 90 dias, Open-Meteo.
+3. **Gráficos** — histórico + previsão de 7 dias + faixa de incerteza, para as duas variáveis.
+4. **Comparação dos modelos** — MAE, RMSE e cobertura por modelo e variável.
+5. **Modelo vencedor** — e o erro médio esperado em °C.
+6. **Caso de estudo** — efeito da mudança recente de temperatura (quebra estrutural).
+7. **Limites do modelo** — o que a POC não faz e cuidados ao usar as previsões.
+8. **Próximos passos** — o que seria necessário para levar a produção.
