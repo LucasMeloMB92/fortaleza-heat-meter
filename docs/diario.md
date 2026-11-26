@@ -183,3 +183,71 @@ Registro de cada etapa: o que foi feito, os resultados e o que aprendi.
   dia de chuva), seguido de volta rápida a 28,6–29,3. Ele vai pesar nas métricas da etapa 4.
 - **Testes estatísticos erram.** O teste do ADF falhou com uma semente aleatória "azarada" (p =
   0,013 num passeio aleatório): é o erro de ~5% que o próprio teste admite.
+
+---
+
+## Etapa 3 — Modelagem (2026-11-26)
+
+### O que foi feito
+- `backend/previsao/modelos.py`: os 4 modelos com a mesma interface (D27). ETS e SARIMA escolhem
+  a configuração pelo menor AICc (D28); o SARIMA escolhe d por teste (D33).
+- `backend/scripts/etapa3_modelagem.py`: treina nos 90 dias, prevê 26/11 a 02/12 e gera
+  `docs/img/etapa3_previsoes.png`.
+- `backend/tests/test_modelos.py`: teste de contrato dos 4 modelos + regras específicas (10 testes).
+- `exploracao.teste_adf` ganhou o parâmetro `regressao` ("c" ou "ct").
+
+### Resultados
+
+![Previsões](img/etapa3_previsoes.png)
+
+**Configurações escolhidas**
+
+| | Temperatura | Sensação |
+|---|---|---|
+| ETS | sem tendência, α = 0,29 | sem tendência, α = 0,89 |
+| SARIMA | (1,1,1) + drift — d = 1 (ADF c/ tendência p = 0,17) | (1,0,0) + tendência linear — d = 0 (p = 0,002) |
+| Melhor SARIMA *com* parte sazonal | 3º lugar (+4,5 no AICc) | 5º lugar (+1,8) |
+| Prophet | tendência por partes, sem sazonalidade | idem |
+
+**Previsões (26/11 → 02/12) e inclinação**
+
+| | Temp. 26/11 | Temp. 02/12 | °C/dia | Sens. 26/11 | Sens. 02/12 | °C/dia |
+|---|---|---|---|---|---|---|
+| Linha de base | 29,06 | 29,06 | 0 | 32,16 | 32,16 | 0 |
+| ETS | 29,07 | 29,07 | 0 | 32,04 | 32,04 | 0 |
+| SARIMA | 29,09 | 29,26 | +0,028 | 32,04 | 32,23 | +0,031 |
+| Prophet | 28,99 | 29,11 | +0,020 | 32,34 | 32,53 | +0,033 |
+
+Último valor real: 29,1 (temperatura) e 32,0 (sensação).
+
+**Largura da faixa de 95% (1º → 7º dia, °C)**
+
+| | Temperatura | Sensação |
+|---|---|---|
+| Linha de base | 1,30 → 1,40 | 1,94 → 2,19 |
+| ETS | 1,24 → 1,52 | 1,72 → **4,15** |
+| SARIMA | 1,14 → 1,21 | 1,57 → 2,06 |
+| Prophet | 1,11 → 1,21 | 1,61 → 1,78 |
+
+- `pytest`: 25 testes passaram. `ruff`: sem erros.
+
+### O que aprendi
+- **O ajuste diz quando o modelo está errado.** Com d = 1 fixo, o SARIMA estimou MA = −1,0 — o
+  modelo "desfazendo" a diferenciação. Investigando, vimos que o ADF da etapa 2 só testou
+  estacionariedade em torno de um nível fixo; a sensação é estacionária **em torno de uma reta**
+  (p = 0,002). Corrigido: d agora vem do ADF com tendência (D33).
+- **Os dados confirmaram a etapa 2:** a sazonalidade semanal entrou como candidata e perdeu.
+- **α conta a história do ETS:** temperatura com α = 0,29 (média de vários dias — a faixa cresce
+  devagar); sensação com α = 0,89 (quase "amanhã = hoje" — a faixa explode de 1,7 para 4,2 °C em
+  7 dias). Nenhum ETS escolheu tendência.
+- **Dois grupos de modelos:** linha de base e ETS preveem **estabilidade**; SARIMA e Prophet
+  **prolongam a alta** (+0,02 a +0,03 °C/dia ≈ +0,2 °C na semana). A etapa 2 mostrou que parte da
+  alta é estação, que estabiliza em dezembro — a validação dirá quem acerta mais.
+- **Prophet não tem memória de curto prazo:** ele desenha uma linha de tendência, sem olhar o
+  último valor. Por isso começa em 28,99 (abaixo do último real, 29,1) na temperatura e salta para
+  32,34 (acima de 32,0) na sensação. ETS e SARIMA partem do último valor porque usam a
+  autocorrelação.
+- **Faixas estreitas não são necessariamente melhores:** Prophet e SARIMA têm as faixas mais
+  estreitas. Se forem estreitas demais, a cobertura na etapa 4 vai ficar abaixo de 95%.
+- **Testes lentos custam:** a busca de 72 combinações do SARIMA tornava a suíte lenta (55 s). Uma
+  *fixture* que treina cada modelo uma vez reduziu para 41 s.

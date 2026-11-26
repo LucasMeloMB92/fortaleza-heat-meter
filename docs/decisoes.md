@@ -257,3 +257,76 @@ durante o projeto e aprovadas.
 - **Por quê:** ~10 linhas que dá para entender inteiras, sem dependência nova. Na série bruta o
   método confunde a subida da estação com mudança; na anomalia, a estação já foi descontada.
   Resultado: **15/10** (temperatura, +0,49 → +0,86 °C) e **23/10** (sensação, +1,35 → +1,96 °C).
+
+## D27 — Interface comum dos modelos
+- **Decisão:** como organizar os 4 modelos no código.
+- **Opções consideradas:** uma classe por modelo com herança; uma função por modelo com a mesma
+  assinatura; código separado em cada script.
+- **Escolha:** uma função por modelo (`prever_linha_base`, `prever_ets`, `prever_sarima`,
+  `prever_prophet`), todas com a assinatura `(serie, horizonte, nivel) -> Previsao`, registradas
+  no dicionário `MODELOS` e acessadas por `prever(nome, ...)`. `Previsao` tem a `tabela`
+  (previsao, inferior, superior por data) e os `detalhes` (o que o modelo escolheu).
+- **Por quê:** funções são mais simples de ler que classes; a assinatura única permite que a
+  avaliação (etapa 4) e a API (etapa 6) tratem todos os modelos igual. Um teste de "contrato"
+  garante que todos devolvem a mesma estrutura.
+
+## D28 — Escolha da configuração por AICc, refeita a cada treino
+- **Decisão:** como escolher a configuração do ETS e do SARIMA.
+- **Opções consideradas:** fixar à mão com as pistas da etapa 2; testar várias e escolher por
+  AIC, AICc ou BIC; escolher pelo erro no período de teste.
+- **Escolha:** testar candidatos e ficar com o **menor AICc**. A busca faz parte do modelo e roda
+  sobre os dados que ele recebe (na etapa 4, só os 80 dias de treino).
+- **Por quê:** o AICc equilibra ajuste e simplicidade e corrige o AIC para séries curtas (nossos
+  90 pontos). Escolher pelo erro no teste seria "espiar a prova": o teste deixaria de medir o
+  desempenho em dados novos.
+
+## D29 — Intervalo da linha de base pelos erros passados
+- **Decisão:** como dar uma faixa de incerteza à regra "média dos últimos 7 dias", que não tem
+  fórmula estatística.
+- **Opções consideradas:** desvio-padrão da série; desvio dos erros de 1 dia para todos os
+  horizontes; desvio dos erros passados **para cada distância** (1 a 7 dias).
+- **Escolha:** para cada distância h, aplicamos a regra em todos os dias do passado, medimos o
+  erro h dias depois e usamos ±1,96 × desvio-padrão desses erros.
+- **Por quê:** é honesto (mostra quanto a própria regra errou) e a faixa cresce com a distância.
+  Limitação: supõe erros simétricos e parecidos com os do passado.
+
+## D30 — ETS: `ETSModel`, erro aditivo, 3 candidatos sem sazonalidade
+- **Decisão:** qual implementação e quais configurações do ETS.
+- **Opções consideradas:** `ExponentialSmoothing` (Holt-Winters clássico) ou `ETSModel` do
+  statsmodels; com/sem tendência, amortecida, sazonalidade de 7 dias.
+- **Escolha:** `ETSModel` com erro aditivo; candidatos: sem tendência, tendência, tendência
+  amortecida; nenhum com sazonalidade.
+- **Por quê:** o `ETSModel` calcula intervalos de previsão (o `ExponentialSmoothing` não). A
+  etapa 2 não achou padrão semanal (força ~0,1), então sazonalidade só acrescentaria parâmetros.
+
+## D31 — SARIMA: 72 candidatos (p, q, parte sazonal, tendência)
+- **Decisão:** quais combinações do SARIMA testar.
+- **Opções consideradas:** fixar ARIMA(1,1,0); busca ampla (p, q até 5); busca moderada;
+  biblioteca `pmdarima` (`auto_arima`).
+- **Escolha:** busca própria e moderada: p e q de 0 a 2; parte sazonal de 7 dias (P, Q de 0 a 1)
+  **como candidata**; com/sem tendência — 72 combinações (~6–20 s). O d vem antes, por teste (D33).
+- **Por quê:** com 90 pontos, ordens altas só decoram ruído. Incluir a sazonalidade semanal como
+  candidata deixa os dados confirmarem a etapa 2 (e confirmaram: o melhor sazonal ficou em 3º/5º).
+  Busca própria = código visível e sem dependência nova.
+
+## D32 — Prophet sem sazonalidades
+- **Decisão:** configuração do Prophet.
+- **Opções consideradas:** padrão (sazonalidades anual e semanal automáticas); tudo desligado.
+- **Escolha:** `yearly_seasonality`, `weekly_seasonality` e `daily_seasonality` desligadas;
+  `interval_width=0.95`; semente fixa (`np.random.seed(0)`) antes de prever.
+- **Por quê:** 90 dias não contêm um ano (a sazonalidade anual seria inventada) e não há padrão
+  semanal. Sobra a tendência linear por partes — o que mostra bem como o Prophet se comporta
+  numa série curta. A semente fixa torna o intervalo (feito por simulação) reproduzível.
+
+## D33 — SARIMA: d escolhido pelo teste ADF **com tendência** (correção da etapa 2)
+- **Decisão:** quantas diferenciações (d) usar no SARIMA.
+- **Opções consideradas:** (a) d = 1 fixo, pela etapa 2; (b) deixar o AICc escolher d;
+  (c) escolher d por teste estatístico e o resto por AICc (método do `auto.arima`).
+- **Escolha:** (c) — ADF com tendência (`regression="ct"`) na série de treino: p < 0,05 → d = 0
+  com tendência linear; senão d = 1 com drift opcional.
+- **Por quê:** com d = 1 fixo, o SARIMA da sensação ajustou o termo MA em **−1,0**: sinal de
+  **sobrediferenciação** — o modelo "desfazendo" a diferença. O ADF da etapa 2 só testou
+  estacionariedade em torno de um nível constante; com tendência, a sensação é estacionária
+  (p = 0,002). A temperatura ficou inconclusiva (p = 0,17) e manteve d = 1 (o MA continua perto
+  de −1: com 90 pontos o teste tem pouca força). (b) não funciona: AICc de modelos com d diferente
+  não é comparável (medem o ajuste sobre dados diferentes).
