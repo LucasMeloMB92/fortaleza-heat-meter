@@ -26,6 +26,10 @@ durante o projeto e aprovadas.
   sensação depende de umidade e vento, então deve oscilar mais e ter erros/intervalos maiores.
   A opção (c) exigiria prever a variável auxiliar antes de prever a principal — complexo demais
   para uma POC.
+- **Na prática:** a sensação **não é apoio da temperatura** — é prevista sozinha, a partir do seu
+  próprio histórico, com os mesmos 4 modelos, métricas, gráficos e caso de estudo. As duas
+  previsões são independentes (nada garante que a sensação prevista fique acima da temperatura
+  prevista). Ver também D19.
 
 ## D03 — Local e fuso horário _(cliente/usuário)_
 - **Decisão:** ponto geográfico e fuso.
@@ -150,3 +154,19 @@ durante o projeto e aprovadas.
   pytest com um teste de ambiente que treina um Prophet minúsculo.
 - **Por quê:** pega erros reais sem virar burocracia. O teste do Prophet existe porque é a
   instalação mais frágil no Windows (depende do CmdStan compilado).
+
+## D19 — Não usar umidade e vento para prever a sensação térmica
+- **Decisão:** acrescentar umidade e vento como variáveis externas (exógenas) para tentar
+  prever a sensação térmica com mais precisão.
+- **Opções consideradas:** (a) manter o escopo atual — sensação prevista só pelo próprio
+  histórico; (b) SARIMAX/Prophet com umidade e vento previstos pelos nossos próprios modelos;
+  (c) usar a previsão de umidade e vento do Open-Meteo; (d) experimento extra em "modo oráculo"
+  (usar no teste os valores reais de umidade e vento) só para medir o ganho máximo possível.
+- **Escolha:** (a) — manter o escopo atual.
+- **Por quê:** para prever a sensação de amanhã com umidade e vento, precisaríamos saber a umidade
+  e o vento de amanhã. Em (b) os erros dessas previsões se somam ao erro da sensação; em (c) o
+  Open-Meteo já entrega a sensação prevista pronta, e a POC viraria só um repasse; (d) mostra um
+  teto, mas não serve para prever de verdade. Além disso, linha de base e ETS não aceitam
+  variáveis externas (comparação desigual), e com só 90 dias cada variável a mais aumenta o risco
+  de overfitting. A limitação fica registrada no relatório final, e o uso de variáveis externas
+  entra como próximo passo para produção.

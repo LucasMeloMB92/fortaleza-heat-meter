@@ -34,3 +34,14 @@ Registro de cada etapa: o que foi feito, os resultados e o que aprendi.
   problemas de instalação antes de começarmos o trabalho de verdade.
 - **Linter na prática:** o ruff apontou uma linha com 106 caracteres (limite 100); o
   `ruff format` corrigiu automaticamente.
+
+### Dúvidas discutidas após a etapa
+- **"A sensação térmica é só apoio da temperatura?"** Não: ela é prevista sozinha, com os mesmos
+  modelos e métricas (D02 reescrita para deixar isso claro). A "variável auxiliar" era a opção
+  descartada.
+- **"Adicionar umidade e vento deixaria a sensação mais precisa?"** Em teoria, sim, mas para
+  prever o futuro precisaríamos também da umidade e do vento futuros, que ainda não aconteceram.
+  Prevê-los soma erros; usar a previsão pronta do Open-Meteo esvazia a POC. Decidimos manter o
+  escopo (D19).
+- **Lição:** uma variável que ajuda a *explicar* o passado nem sempre ajuda a *prever* o futuro.
+  Ela só ajuda se o valor futuro dela for conhecido ou fácil de prever.

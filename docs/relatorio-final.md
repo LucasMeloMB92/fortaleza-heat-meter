@@ -11,4 +11,7 @@
 5. **Modelo vencedor** — e o erro médio esperado em °C.
 6. **Caso de estudo** — efeito da mudança recente de temperatura (quebra estrutural).
 7. **Limites do modelo** — o que a POC não faz e cuidados ao usar as previsões.
+   - Já identificado: os modelos não enxergam umidade nem vento, que influenciam a sensação
+     térmica; temperatura e sensação são previstas de forma independente (D19).
 8. **Próximos passos** — o que seria necessário para levar a produção.
+   - Já identificado: avaliar variáveis externas (umidade, vento) com previsões meteorológicas.
