@@ -115,6 +115,8 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 ## Documentação (em português) — manter sempre atualizada
 - `README.md`: o que é, como instalar e rodar.
 - `docs/decisoes.md`: uma entrada por decisão — "Decisão / Opções consideradas / Escolha / Por quê".
+  Descreve só o que vale **hoje**, agrupado por tema; números nunca mudam nem são reaproveitados.
+  Decisão que deixa de valer → sai do texto e vai para a tabela "Decisões que não valem mais".
 - `docs/diario.md`: por etapa — o que foi feito, resultados (números e gráficos), o que aprendi.
 - `docs/glossario.md`: termos explicados de forma simples.
 - `docs/api.md`: cada endpoint (método, rota, parâmetros, exemplos de requisição/resposta, erros).

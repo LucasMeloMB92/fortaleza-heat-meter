@@ -816,3 +816,24 @@ Pedido: mapear o projeto e achar o que ainda dava para simplificar sem perder o 
   vez; filtrar na tela é mais simples que pedir de novo.
 - **Código "por via das dúvidas" (rota sem uso, campo que ninguém lê, checagem para API antiga)
   vai se acumulando.** Mapear quem usa cada peça é um jeito rápido de achar o que pode sair.
+
+---
+
+## Registro de decisões enxuto — 27-11-2026
+
+### O que foi feito
+Pedido: deixar em `docs/decisoes.md` só as decisões que fazem sentido no projeto de hoje.
+- **Numeração mantida** (D01…D56): o código e os documentos citam os números em muitos lugares;
+  renumerar quebraria essas referências.
+- Cada decisão foi reescrita **como vale hoje**, sem "Atualização…" e "Substituída…" no meio do
+  texto, e agrupada por tema (dados; modelagem e avaliação; código; API; tela).
+- **Saíram do texto** (tabela "Decisões que não valem mais" no fim): D02 (duas séries → D52), D09
+  (juntada à D35) e D49 (abas → D50, D53). Restos da sensação térmica, do ranking e das abas foram
+  tirados das outras decisões; a D37 absorveu a fila única; a D47 absorveu a recomendação do
+  Chronos-2.
+- O arquivo foi de 784 para 624 linhas.
+
+### O que aprendi
+- **Um registro de decisões que acumula "atualizações" vira um diário.** Separar os dois deixa
+  cada arquivo com uma função: `decisoes.md` diz o que vale; `diario.md` e o Git contam como
+  chegamos lá.
