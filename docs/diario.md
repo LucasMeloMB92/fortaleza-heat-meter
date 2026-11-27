@@ -837,3 +837,32 @@ Pedido: deixar em `docs/decisoes.md` só as decisões que fazem sentido no proje
 - **Um registro de decisões que acumula "atualizações" vira um diário.** Separar os dois deixa
   cada arquivo com uma função: `decisoes.md` diz o que vale; `diario.md` e o Git contam como
   chegamos lá.
+
+---
+
+## Relatórios revisados e roteiro de apresentação — 27-11-2026
+
+### O que foi feito
+Pedido: revisar os relatórios final e técnico, criar um roteiro de apresentação de 15 a 20 minutos
+e tirar o termo "POC" do README.
+- **Relatório final:** cabeçalho reescrito como a versão atual (sem a pilha de "Atualização…");
+  nova **seção 2.1 "Como a ferramenta funciona"** (backend e frontend para leigos); nova **seção
+  11.7 "Como levar estes modelos para soluções com IA"** (previsão como ferramenta de um
+  assistente, alertas, muitas séries, pessoa no meio, cuidados). Numeração das outras seções
+  mantida, porque outros documentos citam "seção 7", "5.6" e "11.2".
+- **Guia técnico:** corrigidos trechos desatualizados — SARIMA ainda aparecia como recomendado e
+  o Chronos-2 como "empata, não ganha"; a API ainda tinha 8 rotas com `/api/serie`; o caso de
+  estudo dizia "2 a 6 vezes" (hoje 2,0 a 3,4). Entrou um resumo de **como cada modelo aprende** e
+  um **Passo 10** (próximo): ligar a API a um assistente de IA por *function calling*.
+- **Roteiro de apresentação** (`docs/roteiro-apresentacao.md`): 15 slides em 4 blocos (como roda,
+  modelos, resultados, IA), tempo por slide, o que mostrar, o que falar, checklist antes de
+  apresentar, versão de 15 minutos e perguntas prováveis.
+- **"POC" saiu** do README e dos dois relatórios ("estudo", "ferramenta", "projeto"). O diário e
+  as decisões mantêm o termo onde contam a história.
+- **README:** seções novas "Novidades", "Os modelos" e "Como funciona".
+
+### O que aprendi
+- **Documento que acumula avisos de versão fica difícil de ler.** Melhor descrever o estado atual
+  e deixar a história no diário.
+- **Revisar por busca de termos antigos** (`serie`, "8 rotas", "recomendado") acha o que a
+  leitura corrida deixa passar.

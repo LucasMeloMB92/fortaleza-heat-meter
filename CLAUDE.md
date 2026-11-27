@@ -97,7 +97,10 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
    linguagem simples D46)
 8. Relatório final ✅
 
-Evoluções depois da POC: 11.2 Chronos-2 ✅ (D47); simplificação só temperatura ✅ (D52); menos peças ✅ (D53–D56).
+Evoluções depois da POC: 11.2 Chronos-2 ✅ (D47); simplificação só temperatura ✅ (D52); menos peças ✅ (D53–D56);
+relatórios revisados + roteiro de apresentação ✅ (`docs/roteiro-apresentacao.md`; relatório final
+ganhou seções 2.1 "Como a ferramenta funciona" e 11.7 "soluções com IA"; README/relatórios sem o
+termo "POC").
 
 Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 

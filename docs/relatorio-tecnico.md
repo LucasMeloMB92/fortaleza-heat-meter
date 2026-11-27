@@ -1,9 +1,9 @@
-# Guia técnico — passo a passo para reproduzir a POC
+# Guia técnico — passo a passo para reproduzir o estudo
 
-> Roteiro do que foi feito, na ordem, para alguém **refazer esta POC** ou **aplicar o mesmo
+> Roteiro do que foi feito, na ordem, para alguém **refazer este estudo** ou **aplicar o mesmo
 > método a outra série** (vendas diárias, acessos, consumo de energia…). Cada passo traz:
 > **objetivo → o que fazer → código-chave → como conferir → como adaptar**.
-> O porquê completo de cada escolha está em [decisoes.md](decisoes.md) (D01…D50); termos em
+> O porquê completo de cada escolha está em [decisoes.md](decisoes.md) (D01…D56); termos em
 > [glossário](glossario.md); resultados para o cliente no [relatório final](relatorio-final.md).
 
 **Resultado final:** 90 dias de dados diários → 5 modelos comparados → previsão de 7 dias com
@@ -20,7 +20,7 @@ Fonte (API) ─► coleta.py ─► CSV ─► exploracao.py ─► modelos.py �
 ## Tecnologias usadas e por quê
 
 Antes do passo a passo, um mapa do que foi usado. Regra geral das escolhas: **gratuito, simples de
-entender e suficiente para o problema** — nada de infraestrutura que a POC não precisa.
+entender e suficiente para o problema** — nada de infraestrutura que o projeto não precisa.
 
 ### Fonte dos dados: APIs do Open-Meteo
 
@@ -52,7 +52,7 @@ mostra cada mudança. Um banco (SQLite, Postgres) só valeria com muito mais dad
 | **statsmodels** | Estatística clássica | Traz ETS, SARIMA, teste ADF e autocorrelação, com intervalos de previsão prontos. |
 | **prophet** | Biblioteca de previsão da Meta | Muito conhecida no mercado; entra para **comparar** (D07). |
 | **chronos-forecasting** + **torch** (CPU) | Modelo de IA pré-treinado da Amazon | Representa a "IA moderna" sem treinar rede nenhuma; PyTorch só CPU tem ~200 MB em vez de ~2 GB (D47). |
-| **Flask** + **Flask-CORS** | Servidor web mínimo | Poucas linhas para criar rotas; fácil de ler para quem aprende. CORS libera a tela (outra porta) a chamar a API (D12). **Descartados:** FastAPI e Django, mais conceitos do que a POC precisa. |
+| **Flask** + **Flask-CORS** | Servidor web mínimo | Poucas linhas para criar rotas; fácil de ler para quem aprende. CORS libera a tela (outra porta) a chamar a API (D12). **Descartados:** FastAPI e Django, mais conceitos do que o projeto precisa. |
 | **pytest** + **ruff** | Testes + verificador/formatador de código | Pega erros cedo e mantém o código num padrão só (D18). |
 
 Formato do trabalho: **scripts `.py`** (um por etapa), não notebooks Jupyter — diff limpo no Git e
@@ -63,13 +63,23 @@ o mesmo código reaproveitado pela API (D16).
 Todos recebem a série de 90 dias e devolvem a previsão de cada dia **e uma faixa** onde o valor
 real deve cair em 95% das vezes (D10).
 
-| Modelo | Explicação simples | Por que está na POC |
+| Modelo | Explicação simples | Por que está no estudo |
 |---|---|---|
 | **Linha de base** (média dos últimos 7 dias) | "Amanhã vai ser como a média da última semana." | É a **régua**: se um modelo sofisticado não supera isso, não vale a complexidade. |
 | **ETS** (suavização exponencial / Holt-Winters) | Média ponderada em que os dias mais recentes pesam mais; pode ter tendência de subida/descida. | Clássico para séries curtas; rápido e fácil de explicar. |
-| **SARIMA** | Explica cada dia pelos dias anteriores (parte AR), pelos erros anteriores (parte MA), pela diferença entre dias (I) e, se houver, por um ciclo (S = sazonal). | O clássico mais completo para séries curtas; testa 72 combinações e fica com a melhor. **Foi o recomendado.** |
+| **SARIMA** | Explica cada dia pelos dias anteriores (parte AR), pelos erros anteriores (parte MA), pela diferença entre dias (I) e, se houver, por um ciclo (S = sazonal). | O clássico mais completo para séries curtas; testa 72 combinações e fica com a melhor. |
 | **Prophet** | Soma uma tendência com ciclos (anual, semanal) e feriados. | Feito para séries **longas**; incluí-lo mostra o que acontece quando a ferramenta não combina com o problema. |
-| **Chronos-2** | Modelo de IA "fundacional": já foi treinado com milhões de séries de todo tipo e prevê a nossa sem treinar nada (*zero-shot*). | Testar se a IA moderna ganha dos clássicos numa série pequena. Resultado: empata, não ganha. |
+| **Chronos-2** | Modelo de IA "fundacional": já foi treinado com milhões de séries de todo tipo e prevê a nossa sem treinar nada (*zero-shot*). | Testar se a IA moderna ganha dos clássicos numa série pequena. Resultado: empatou com o melhor no 1º teste e venceu no 2º — **é o recomendado** (D52). |
+
+**Como cada um "aprende":**
+- **Linha de base:** não aprende; só calcula uma média. A faixa vem dos erros que a própria regra
+  cometeu no histórico.
+- **ETS e SARIMA:** treinam **vários candidatos** (3 e 72) com a série, ajustando poucos
+  parâmetros por máxima verossimilhança, e ficam com o de menor **AICc** (erro + multa por
+  complexidade). Tudo refeito a cada treino.
+- **Prophet:** ajusta uma reta que pode mudar de inclinação em alguns pontos (sem ciclos aqui).
+- **Chronos-2:** **não treina** com a série. Já vem treinado pela Amazon; recebe os 90 valores
+  como contexto e devolve quantis (mediana = previsão; 2,5% e 97,5% = faixa).
 
 **Descartados:** machine learning próprio (LightGBM, gradient boosting) e redes neurais treinadas do
 zero — precisam de muito mais que 90 pontos para aprender algo (D07).
@@ -441,7 +451,10 @@ a tendência continua. Ponto fraco do Chronos-2: faixa ~2x mais larga.
 .venv\Scripts\python -m scripts.etapa5_caso_estudo
 ```
 
-**Nosso resultado:** "só antes" erra **2 a 6 vezes mais**, sempre para baixo.
+**Nosso resultado:** sem ver a mudança, 4 dos 5 modelos erram **2,0 a 3,4 vezes mais**, sempre
+para baixo; o SARIMA "só antes" acertou a faixa em só 1 de 10 dias (confiante no nível errado) e o
+Chronos-2 em 10 de 10, só porque a faixa era larga. O Prophet passou ileso por prolongar a
+tendência.
 **Conclusão prática: retreinar com frequência** — o que levou ao Passo 7.
 
 **Como adaptar:** qualquer série de negócio tem mudanças (promoção, preço novo, pandemia). Rode este
@@ -456,10 +469,10 @@ teste com a data do evento para saber quanto tempo o modelo leva para "se recupe
 **O que fazer:**
 1. [servico.py](../backend/previsao/servico.py) monta as respostas (JSON, datas `AAAA-MM-DD`,
    números com 2 casas, `null` no lugar de NaN); [app.py](../backend/app.py) só tem as rotas.
-2. **8 rotas `GET`** em `/api`, uma por elemento da tela (D38): `saude`, `opcoes`, `serie`,
-   `previsao`, `metricas`, `teste`, `caso-estudo`, `contexto`. Parâmetros na URL com padrão
-   (`modelo=chronos`, `horizonte=7`, limitado a 1–14). Documente cada uma
-   em [api.md](api.md).
+2. **7 rotas `GET`** em `/api`, uma por elemento da tela (D38): `saude`, `opcoes`, `previsao`,
+   `metricas`, `teste`, `caso-estudo` (todos os modelos de uma vez — D53) e `contexto` (D50).
+   Parâmetros na URL com padrão (`modelo=chronos`, `horizonte=7`, limitado a 1–14). Não há rota
+   só de histórico: ele já vem em `previsao` (D54). Documente cada uma em [api.md](api.md).
 3. **Cache + fila única** (D37): treina no 1º pedido e guarda na memória; cálculos novos rodam um
    de cada vez (o GIL do Python impede ganho real com threads):
    ```python
@@ -539,6 +552,41 @@ Não é um passo final — acontece em todos:
 - **`diario.md`**: por etapa, o que foi feito, números e o que aprendeu.
 - **Um commit por etapa**, com testes e lint passando.
 - **Relatório final** para o cliente: modelo vencedor, erro em unidades reais, limites.
+
+---
+
+## Passo 10 — (Próximo) Ligar a previsão a um assistente de IA
+
+**Objetivo:** um modelo de linguagem (Claude, Gemini, Gemma…) responder perguntas sobre a
+previsão **sem inventar números**. Ainda não implementado; o desenho abaixo usa só o que já existe.
+
+**O que fazer:**
+1. Descrever a API como uma **ferramenta** (*function calling*): nome, para que serve e
+   parâmetros. Exemplo (formato JSON Schema, aceito pelos principais fornecedores):
+   ```json
+   {
+     "name": "prever_serie",
+     "description": "Previsão dos próximos dias com faixa de 95%. Chama GET /api/previsao.",
+     "input_schema": {
+       "type": "object",
+       "properties": {
+         "modelo": {"type": "string", "enum": ["linha_base", "ets", "sarima", "prophet", "chronos"]},
+         "horizonte": {"type": "integer", "minimum": 1, "maximum": 14}
+       }
+     }
+   }
+   ```
+2. Quando o modelo de linguagem pedir a ferramenta, o seu código chama a API e devolve o JSON;
+   o modelo de linguagem escreve a resposta a partir dele. Uma segunda ferramenta em
+   `/api/metricas` deixa ele dizer **quanto confiar** ("errou 0,31 °C em média no teste").
+3. Instruir: "use só os números das ferramentas; cite a faixa, não só a previsão".
+
+**Confira:** compare cada número do texto com o JSON da API (é o mesmo princípio dos testes de
+`textos.ts`, D46).
+
+**Como adaptar:** a mesma API, sem mudanças, serve de ferramenta para qualquer série. Outros usos
+(alertas quando o real sai da faixa, muitas séries de uma vez, decisão com pessoa no meio) estão
+no [relatório final, seção 11.7](relatorio-final.md#117-como-levar-estes-modelos-para-soluções-com-ia).
 
 ---
 

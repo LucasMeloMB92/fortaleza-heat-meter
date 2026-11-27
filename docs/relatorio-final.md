@@ -1,16 +1,12 @@
-# Relatório final — POC de previsão de temperatura em Fortaleza
+# Relatório final — previsão de temperatura em Fortaleza
 
-> **Retrato de 26-11-2026.** Os números deste relatório usam os 90 dias de 28-08-2026 a
-> 25-11-2026. A ferramenta atualiza os dados e retreina os modelos sozinha todo dia (D44), então a
-> tela mostra sempre números atuais, que podem diferir dos daqui.
+> **Retrato de 26-11-2026, revisado em 27-11-2026.** Os números deste relatório usam os 90 dias
+> de 28-08-2026 a 25-11-2026. A ferramenta atualiza os dados e retreina os modelos sozinha todo
+> dia (D44), então a tela mostra sempre números atuais, que podem diferir dos daqui.
 >
-> **Atualização (evolução 11.2, 26-11-2026):** o **Chronos-2**, um modelo de IA moderna, entrou
-> como 5º modelo, com os mesmos dados e o mesmo teste (D47). Os resultados dele estão nas seções
-> 4 a 9 e o resumo da evolução está na 11.2.
->
-> **Simplificação (27-11-2026, D52):** a POC passou a prever **só a temperatura média**. A
-> sensação térmica, que era uma segunda série, foi retirada: dobrava telas, tabelas e números sem
-> trazer uma lição nova. Sem ela, a recomendação mudou de SARIMA para **Chronos-2** (seção 7).
+> **Versão atual da ferramenta:** uma série (temperatura média — D52), cinco modelos (linha de
+> base, ETS, SARIMA, Prophet e **Chronos-2**, a IA moderna — D47), recomendação **Chronos-2**
+> (seção 7) e uma tela com cinco cards (seção 2.1).
 >
 > Os códigos entre parênteses (D07, D33...) apontam para as decisões detalhadas em
 > [`decisoes.md`](decisoes.md). Este relatório se explica sozinho: não é preciso abrir outros
@@ -76,8 +72,54 @@ Uma **série temporal** é uma sequência de valores medidos ao longo do tempo, 
 regulares — aqui, um valor por dia. "Prever" é estimar os próximos valores a partir do
 comportamento dos anteriores.
 
-A pergunta central da POC: **com só 90 dias de histórico, dá para prever a próxima semana melhor
+A pergunta central do estudo: **com só 90 dias de histórico, dá para prever a próxima semana melhor
 do que uma regra simples?** Resposta curta: sim, com ganho moderado (seção 6).
+
+A temperatura foi escolhida por ser **pública, gratuita e diária** — serve de campo de testes. O
+objetivo não é o clima em si, e sim o **método** e a **ferramenta**, que valem para qualquer
+número medido por dia (vendas, demanda, acessos).
+
+### 2.1 Como a ferramenta funciona
+
+A ferramenta tem duas partes que conversam pela internet (hoje, no mesmo computador):
+
+```
+Open-Meteo ──► backend (Python + Flask) ──JSON──► frontend (React) ──► pessoa no navegador
+ (dados)        baixa, guarda, treina,             desenha gráficos,
+                avalia e responde                   tabelas e textos
+```
+
+**Backend — o "motor" (Python).** É um programa que roda num servidor e faz todo o trabalho
+pesado:
+1. **Busca os dados:** pede ao Open-Meteo os 90 dias até ontem e guarda num arquivo CSV (uma
+   tabela simples, que abre no Excel).
+2. **Mantém os dados em dia:** no primeiro acesso de cada dia, percebe que falta o dia novo,
+   baixa, grava e manda refazer os modelos. Sem internet, segue com os dados que tem e avisa.
+3. **Roda os modelos:** os cinco recebem a série e devolvem previsão + faixa, sempre no mesmo
+   formato — por isso trocar ou acrescentar um modelo não muda o resto do sistema.
+4. **Avalia:** esconde os últimos 10 dias, prevê e mede o erro de cada modelo (seção 6); refaz o
+   caso de estudo (seção 8) e a comparação com os anos anteriores (seção 3).
+5. **Responde pedidos:** uma **API** (um "balcão de atendimento" para outros programas) com 7
+   endereços, um por parte da tela — previsão, comparação dos modelos, teste, caso de estudo,
+   anos anteriores, situação dos dados e opções. A resposta é **JSON** (texto organizado que
+   qualquer linguagem lê).
+6. **Guarda resultados prontos:** o primeiro pedido do dia treina o modelo (segundos); os
+   seguintes voltam da memória na hora. Os cálculos pesados entram numa fila, um de cada vez,
+   para o servidor não travar.
+
+**Frontend — a "vitrine" (React, no navegador).** Não calcula nada de previsão: pede os dados
+prontos ao backend e os mostra para quem não é técnico:
+- **Seletores:** qual modelo ver (abre no Chronos-2) e quantos dias prever (1 a 14).
+- **Cinco cards:** (1) previsão dos próximos dias com faixa e um resumo em texto; (2) comparação
+  dos modelos (erro, cobertura, largura da faixa); (3) previsão × real nos 10 dias de teste;
+  (4) comparação com os anos anteriores; (5) caso de estudo.
+- **Textos em linguagem simples**, gerados por regras a partir dos números (nunca afirmam o que
+  os números não mostram), datas em DD-MM-AAAA e ícones **i** explicando cada termo.
+- **Nunca tela branca:** enquanto um card carrega, aparece um bloco com contador de segundos; se
+  uma parte falha, só ela mostra o erro, com o botão "Tentar de novo".
+
+**Qualidade:** cada parte tem testes automáticos (69 no backend, mais os do frontend), verificação
+de estilo do código e um teste que garante que nenhum modelo "espia" os dias de teste.
 
 ---
 
@@ -283,7 +325,7 @@ Esta seção explica cada modelo do zero. Antes, quatro ideias que valem para to
 
 - **O que é:** um modelo da Meta (2017) que desenha a série como uma **soma de curvas**: uma
   tendência + ciclos (anual, semanal) + feriados. Foi feito para séries **longas** de negócio
-  (anos de dados diários, com sazonalidades fortes). Entrou na POC **só como comparação**, para
+  (anos de dados diários, com sazonalidades fortes). Entrou no estudo **só como comparação**, para
   mostrar o que acontece quando a ferramenta não combina com o problema (D07).
 - **Tendência por partes:** a tendência é uma linha que pode **mudar de inclinação** em alguns
   pontos (os "pontos de mudança"), que o próprio Prophet escolhe.
@@ -513,7 +555,7 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
 
 **O mapa:**
 
-| Nível | Exemplos | Aprende com os dados? | Onde a POC está |
+| Nível | Exemplos | Aprende com os dados? | Onde este estudo está |
 |---|---|---|---|
 | 1. Regras fixas | "média dos últimos 7 dias" | Não | Linha de base |
 | 2. Estatística clássica | ETS, SARIMA, Prophet | Sim — ajusta poucos parâmetros (2 a 6) só com os seus dados | **ETS, SARIMA, Prophet** |
@@ -522,7 +564,7 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
 
 - No sentido amplo, os níveis 2 a 4 são todos "aprendizado a partir de dados". No sentido comum
   do mercado, "IA" quer dizer os níveis 3 e 4.
-- **Por que a POC usa estatística clássica (D07):** com 90 valores, machine learning e redes
+- **Por que o estudo usa estatística clássica (D07):** com 90 valores, machine learning e redes
   neurais próprias não têm dados suficientes e tendem a decorar o ruído. Para séries curtas, a
   estatística clássica costuma ser igual ou melhor, e é bem mais fácil de explicar.
 - **A exceção são os modelos fundacionais:** como já vêm treinados com milhões de séries, eles
@@ -532,13 +574,13 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
 
 **Como descrever o projeto, de forma honesta:**
 
-> "POC de previsão de séries temporais com modelos estatísticos que aprendem com o histórico
+> "Ferramenta de previsão de séries temporais com modelos estatísticos que aprendem com o histórico
 > (ETS, SARIMA e Prophet) e um modelo de IA moderna já treinado (Chronos-2), comparados a uma
 > regra simples."
 
 ---
 
-## 10. Limites da POC
+## 10. Limites
 
 - **Não enxerga umidade, vento nem chuva.** Para usá-los na previsão seria preciso saber os
   valores *futuros* deles — que também teriam de ser previstos (D19). A temperatura é prevista só
@@ -555,7 +597,7 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
   grau entre modelos podem ser sorte.
 - **Para prever o tempo em si, a previsão meteorológica é melhor.** Os serviços de meteorologia
   simulam a atmosfera inteira e nenhum modelo treinado só com o histórico de uma cidade os supera.
-  O valor desta POC está no **método**, que serve para métricas onde não existe esse "modelo
+  O valor deste estudo está no **método**, que serve para métricas onde não existe esse "modelo
   físico" (seção 11).
 - **Números mudam com o tempo.** Este relatório é um retrato de 26-11-2026; a ferramenta mostra
   sempre os números atuais.
@@ -633,3 +675,46 @@ a atualização automática e os testes. O que precisaria ser generalizado:
 ### 11.6 Com mais histórico (2 anos ou mais)
 Usar o "normal" dos anos anteriores (climatologia) como régua, ligar a sazonalidade anual no
 Prophet e validar em várias janelas de 7 dias, em vez de uma só (D23).
+
+### 11.7 Como levar estes modelos para soluções com IA
+
+Os modelos deste estudo **não conversam**: recebem números e devolvem números. Os assistentes de
+IA que conversam (ChatGPT, Gemini, Claude, Gemma) são **modelos de linguagem**: ótimos com texto,
+fracos com contas e previsões numéricas — podem inventar um número com toda a confiança. A
+combinação que funciona é **cada um no seu papel**:
+
+| Papel | Quem faz | Exemplo |
+|---|---|---|
+| Prever os números | Chronos-2 (ou o modelo que vencer a validação) | "Vendas de amanhã: 1.240, entre 1.050 e 1.400" |
+| Medir se a previsão é confiável | A validação deste estudo (erro, cobertura, largura da faixa) | "Nas últimas semanas, errou em média 6%" |
+| Explicar, conversar, decidir o próximo passo | Modelo de linguagem | "A previsão sobe por causa da tendência das últimas semanas; sugiro reforçar o estoque de sexta" |
+
+**Formas práticas de juntar as duas coisas:**
+1. **Previsão como ferramenta de um assistente (agente).** O assistente recebe uma pergunta
+   ("quanto vamos vender na semana que vem?"), **chama a nossa API** (`/api/previsao`), recebe a
+   previsão e a faixa e responde em português, citando os números. A API já devolve JSON, que é
+   exatamente o formato que esses assistentes usam para chamar ferramentas (*function calling*).
+   O modelo de linguagem nunca chuta o número: ele só lê e explica.
+2. **Relatórios e alertas automáticos.** Todo dia a ferramenta já atualiza os dados e refaz as
+   previsões. Um passo a mais: quando o valor real sair da faixa de 95% (sinal de mudança, como no
+   caso de estudo) ou a previsão passar de um limite, o sistema gera um aviso em texto e o envia
+   (e-mail, chat). A regra decide **quando** avisar; o modelo de linguagem escreve **o quê**.
+3. **Explicações na própria tela** (seção 11.3): trocar os textos por regras por textos escritos
+   por um modelo de linguagem, sempre a partir dos números da API e conferidos contra eles.
+4. **Muitas séries de uma vez.** O Chronos-2 prevê sem treino; por isso dá para aplicar a mesma
+   ferramenta a centenas de produtos, lojas ou sensores no primeiro dia, e usar a validação para
+   descobrir em quais séries ele erra mais — onde vale a pena um modelo próprio.
+5. **Decisão com pessoa no meio.** A previsão vira sugestão ("pedir 20% a mais"), mas quem aprova
+   é uma pessoa — principalmente quando a faixa é larga ou o caso de estudo mostra mudança recente.
+
+**Cuidados que este estudo já ensinou e que valem em qualquer solução com IA:**
+- **Sempre comparar com uma regra simples.** Se a IA não erra menos que "repetir a média da
+  semana", ela não vale o custo.
+- **Faixa larga não é acerto.** O Chronos-2 acertou a faixa mesmo errando o nível (seção 8); a
+  cobertura precisa ser lida junto com a largura.
+- **Retreinar / reatualizar o contexto com frequência.** Nenhum modelo, nem a IA moderna, percebe
+  uma mudança que não viu.
+- **Fixar a versão do modelo** (como já feito com o Chronos-2 — D51), para que uma atualização do
+  fornecedor não mude os números sem aviso.
+- **Privacidade:** o Chronos-2 roda no próprio computador e os dados não saem; modelos de
+  linguagem na nuvem enviam os dados ao fornecedor — ler os termos antes de usar dados do cliente.
