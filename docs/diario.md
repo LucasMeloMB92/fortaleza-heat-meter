@@ -733,3 +733,62 @@ Os números batem com os da etapa 2.
   Depois, "Os arquivos Python": cada módulo de `previsao/`, o `app.py`, os scripts de etapa e os
   testes, com o que cada função recebe e devolve.
 - Ligado no README e no CLAUDE.md. Nenhuma decisão nova (a próxima continua sendo D51).
+
+## Chronos-2 sem internet (D51) — 2026-11-26
+
+### Dúvida
+O relatório dizia que o Chronos-2 "funciona sem internet" depois do download, mas o log da API
+mostrava consultas ao Hugging Face a cada carga.
+
+### Teste (internet simulada como fora do ar com um proxy inválido)
+- Com internet: 24,5 s. Sem internet: **56,1 s** (5 tentativas de rede antes de usar o cache).
+  Sem internet com `HF_HUB_OFFLINE=1`: 13,6 s. A previsão foi a mesma nos três.
+
+### O que foi feito
+- `CHRONOS_VERSAO` (versão fixa) e `_pasta_do_chronos()` (cache sem rede; senão, baixa) em
+  `modelos.py`; o modelo é carregado pela pasta. Teste novo (backend: 70 testes).
+- Sem internet, a previsão do projeto passou a carregar em **11,6 s**, sem tentativas de rede.
+
+### O que aprendi
+- **"Funciona offline" precisa ser testado sem rede.** Funcionava, mas com ~30 s de espera — e
+  ainda podia trocar de versão do modelo sozinho.
+- **Opção que não é repassada não adianta:** `local_files_only=True` sozinho não bastava, porque
+  o Chronos faz uma consulta antes (procura um "adaptador") sem repassá-la. Carregar pela pasta
+  local resolve na raiz.
+
+## Simplificação: só a temperatura (D52) — 2026-11-27
+
+### Dúvida
+Ao estudar a POC pronta, o usuário achou que ela ficou complexa demais e que a sensação térmica
+estava "deslocada": dobrava telas e tabelas sem trazer uma lição nova. Pedido: remover tudo dela.
+
+### O que foi feito
+- **Backend:** coleta, serviço, rotas, scripts das etapas 1–5 e testes com uma série só; parâmetro
+  `variavel` removido da API; CSVs sem a coluna `sensacao_media`; 7 gráficos de `docs/img`
+  refeitos. Backend: **69 testes** (saiu o de `variavel` inválida) + ruff limpo.
+- **Frontend:** sem seletor de variável, sem "comparar com a sensação", sem a aba "Ranking"
+  (largura da faixa foi para os detalhes da comparação). Frontend: **35 testes** (saíram os 7 do
+  ranking) + tsc + oxlint + build limpos. Tela conferida no navegador.
+- **Docs:** README, api.md, relatório final, guia técnico e glossário só com a temperatura.
+- **Recomendação:** SARIMA → **Chronos-2** (ver abaixo). Modelo padrão da API e da tela: `chronos`.
+
+### Resultado
+| Modelo | Teste 16–25/11 | Teste 17–26/11 |
+|---|---|---|
+| Chronos-2 | 0,31 °C | **0,38 °C** |
+| Prophet | 0,31 °C | 0,47 °C |
+| SARIMA | 0,38 °C | 0,68 °C |
+| ETS | 0,43 °C | 0,63 °C |
+| Linha de base | 0,46 °C | 0,62 °C |
+
+O teste de 17–26/11 apareceu ao abrir a tela: a API atualizou os dados sozinha (D44), o que
+também confirmou que a coleta nova funciona de ponta a ponta. Os CSVs do repositório voltaram ao
+retrato de 25-11 para bater com os documentos.
+
+### O que aprendi
+- **Uma recomendação depende do que se compara.** O SARIMA ganhava por ser regular entre duas
+  séries; com uma só, esse argumento sumiu e o resultado mudou.
+- **Um dia a mais já mudou o ranking.** Com 10 dias de teste, os vencedores trocam de lugar — por
+  isso repetir a comparação em várias semanas é o próximo passo antes de fixar um modelo.
+- **Tirar uma série mudou o formato das funções, não só apagou linhas:** `anomalia` passou a
+  devolver uma série e o caso de estudo uma data só — o código ficou mais simples de ler.

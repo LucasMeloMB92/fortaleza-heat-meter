@@ -12,7 +12,7 @@ import {
   YAxis,
 } from 'recharts'
 import type { RespostaTeste } from '../api'
-import { COR_GRADE, COR_REAL, COR_VARIAVEL } from '../cores'
+import { COR_GRADE, COR_REAL, COR_TEMPERATURA } from '../cores'
 import { DicaGrafico } from './DicaGrafico'
 import { MARGEM_GRAFICO, PROPS_EIXO_X, PROPS_EIXO_Y } from './eixos'
 
@@ -56,7 +56,7 @@ function MarcadorReal(props: { cx?: number; cy?: number; payload?: Linha }) {
 
 export function GraficoTeste(props: { resposta: RespostaTeste }) {
   const { resposta } = props
-  const cor = COR_VARIAVEL[resposta.variavel]
+  const cor = COR_TEMPERATURA
 
   return (
     <div

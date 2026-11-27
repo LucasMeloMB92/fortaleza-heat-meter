@@ -1,4 +1,4 @@
-// Tabela comparando os 4 modelos no período de teste, em linguagem simples (D46): resumo em
+// Tabela comparando os 5 modelos no período de teste, em linguagem simples (D46): resumo em
 // texto, colunas com nomes do dia a dia e detalhes técnicos recolhidos. Clicar seleciona o modelo.
 import { useState } from 'react'
 import type { Modelo, RespostaMetricas } from '../api'
@@ -48,6 +48,10 @@ export function TabelaMetricas(props: {
                     Viés
                     <Ajuda rotulo="viés" texto={AJUDA.vies} />
                   </th>
+                  <th className={`${th} whitespace-nowrap pl-4 text-right`}>
+                    Largura da faixa
+                    <Ajuda rotulo="largura da faixa" texto={AJUDA.larguraFaixa} />
+                  </th>
                 </>
               )}
             </tr>
@@ -92,6 +96,7 @@ export function TabelaMetricas(props: {
                     <>
                       <td className={num}>{formatarGraus(l.rmse)}</td>
                       <td className={num}>{formatarComSinal(l.vies)}</td>
+                      <td className={num}>{formatarGraus(l.largura_faixa)}</td>
                     </>
                   )}
                 </tr>
@@ -106,7 +111,7 @@ export function TabelaMetricas(props: {
         aria-expanded={detalhes}
         className="mt-3 text-xs text-tinta-2 underline decoration-dotted hover:text-tinta"
       >
-        {detalhes ? 'Esconder detalhes técnicos' : 'Mostrar detalhes técnicos (RMSE, viés, configuração)'}
+        {detalhes ? 'Esconder detalhes técnicos' : 'Mostrar detalhes técnicos (RMSE, viés, largura da faixa, configuração)'}
       </button>
     </div>
   )

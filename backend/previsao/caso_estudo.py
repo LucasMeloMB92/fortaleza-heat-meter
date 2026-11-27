@@ -3,7 +3,7 @@
 Pergunta: um modelo que só conhece os dados ANTES da mudança consegue prever DEPOIS dela?
 
 Desenho (decisão D35):
-- Data da mudança por variável, detectada na anomalia (diferença para o normal) — D26.
+- Data da mudança detectada na anomalia (diferença para o normal) — D26.
 - Três cenários de treino, todos avaliados na MESMA janela de teste (últimos 10 dias):
     "so_antes"  -> do início até a véspera da mudança;
     "tudo"      -> do início até a véspera do teste (o mesmo treino da etapa 4);
@@ -13,7 +13,7 @@ Desenho (decisão D35):
 
 import pandas as pd
 
-from previsao import avaliacao, coleta, exploracao, modelos
+from previsao import avaliacao, exploracao, modelos
 
 CENARIOS = {
     "so_antes": "Só antes da mudança",
@@ -22,15 +22,15 @@ CENARIOS = {
 }
 
 
-def datas_de_mudanca(tabela: pd.DataFrame, contexto: pd.DataFrame) -> dict[str, pd.Timestamp]:
-    """Detecta a data da mudança de cada variável na anomalia (reaproveita a etapa 2).
+def data_da_mudanca(tabela: pd.DataFrame, contexto: pd.DataFrame) -> pd.Timestamp:
+    """Detecta a data da mudança na anomalia da temperatura (reaproveita a etapa 2).
 
     `tabela` = os 90 dias (coluna "data"); `contexto` = os 3 anos de contexto.
     """
     inicio, fim = tabela["data"].min().date(), tabela["data"].max().date()
     periodos = exploracao.mesmo_periodo_por_ano(contexto, inicio, fim)
     anom = exploracao.anomalia(periodos, fim.year)
-    return {v: exploracao.detectar_mudanca(anom[v])["data"] for v in coleta.VARIAVEIS}
+    return exploracao.detectar_mudanca(anom)["data"]
 
 
 def montar_cenarios(

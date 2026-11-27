@@ -5,12 +5,13 @@ Como rodar (a partir da pasta backend/):
 
 Endpoints (todos GET, respostas em JSON) — documentação completa em docs/api.md:
     /api/saude        o servidor está no ar? até quando vão os dados?
-    /api/opcoes       variáveis, modelos e limites aceitos (para montar os seletores da tela)
+    /api/opcoes       série, modelos e limites aceitos (para montar os seletores da tela)
     /api/serie        histórico de 90 dias
     /api/previsao     histórico + previsão + faixa de 95%
     /api/metricas     tabela comparativa dos modelos no período de teste
     /api/teste        previsão x real, dia a dia, no período de teste
     /api/caso-estudo  modelo treinado só antes da mudança x tudo x só depois
+    /api/contexto     os 90 dias de agora x o mesmo período dos anos anteriores
 """
 
 import logging
@@ -57,39 +58,34 @@ def create_app() -> Flask:
 
     @app.get("/api/serie")
     def rota_serie():
-        variavel = servico.validar_variavel(request.args.get("variavel"))
-        return jsonify(servico.serie(variavel))
+        return jsonify(servico.serie())
 
     @app.get("/api/previsao")
     def rota_previsao():
-        variavel = servico.validar_variavel(request.args.get("variavel"))
         modelo = servico.validar_modelo(request.args.get("modelo"))
         horizonte = servico.validar_horizonte(request.args.get("horizonte"))
-        return jsonify(servico.previsao(variavel, modelo, horizonte))
+        return jsonify(servico.previsao(modelo, horizonte))
 
     @app.get("/api/metricas")
     def rota_metricas():
-        variavel = servico.validar_variavel(request.args.get("variavel"))
-        return jsonify(servico.metricas(variavel))
+        return jsonify(servico.metricas())
 
     @app.get("/api/teste")
     def rota_teste():
-        variavel = servico.validar_variavel(request.args.get("variavel"))
         modelo = servico.validar_modelo(request.args.get("modelo"))
-        return jsonify(servico.teste(variavel, modelo))
+        return jsonify(servico.teste(modelo))
 
     @app.get("/api/caso-estudo")
     def rota_caso_estudo():
-        variavel = servico.validar_variavel(request.args.get("variavel"))
         modelo = servico.validar_modelo(request.args.get("modelo"), obrigatorio=False)
-        return jsonify(servico.caso(variavel, modelo))
-
-    # --- Erros: sempre em JSON (decisão D40) --------------------------------
+        return jsonify(servico.caso(modelo))
 
     @app.get("/api/contexto")
     def rota_contexto():
-        # Comparação com anos anteriores (D50): sem parâmetros, as duas variáveis juntas.
+        # Comparação com anos anteriores (D50), sem parâmetros.
         return jsonify(servico.contexto())
+
+    # --- Erros: sempre em JSON (decisão D40) --------------------------------
 
     @app.errorhandler(servico.ErroParametro)
     def erro_parametro(erro: servico.ErroParametro):

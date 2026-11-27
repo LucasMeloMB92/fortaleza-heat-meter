@@ -4,9 +4,11 @@ Prova de conceito que demonstra o ciclo completo de previsão de séries tempora
 
 **dados → modelo → previsão → gráfico**
 
-Usamos 90 dias de **temperatura média** e **sensação térmica média** diárias de Fortaleza-CE
-(fonte: [Open-Meteo](https://open-meteo.com/), gratuita e sem cadastro), comparamos 5 modelos
-(linha de base, ETS, SARIMA, Prophet e Chronos-2, um modelo de IA moderna) e prevemos os próximos 7 dias com faixa de incerteza.
+Usamos 90 dias de **temperatura média** diária de Fortaleza-CE (fonte:
+[Open-Meteo](https://open-meteo.com/), gratuita e sem cadastro), comparamos 5 modelos (linha de
+base, ETS, SARIMA, Prophet e Chronos-2, um modelo de IA moderna) e prevemos os próximos 7 dias com
+faixa de incerteza. (A sensação térmica, que era uma segunda série, foi retirada para simplificar a
+POC — decisão D52.)
 
 > Status: **POC concluída** (etapas 0 a 8). Resultados e recomendação no
 > [relatório final](docs/relatorio-final.md); andamento detalhado em [docs/diario.md](docs/diario.md).
@@ -46,7 +48,8 @@ O ambiente virtual (`.venv`) isola as bibliotecas deste projeto das do resto do 
 O `requirements.txt` instala o PyTorch só para CPU (~200 MB) a partir do repositório oficial do
 PyTorch. Na primeira previsão do **Chronos-2** (inclusive nos testes), o modelo (~456 MB) é
 baixado do Hugging Face para `%USERPROFILE%\.cache\huggingface`; depois disso, tudo funciona sem
-internet (D47).
+internet (D47). A versão do modelo é fixa (`CHRONOS_VERSAO` em `backend/previsao/modelos.py`) e,
+com o modelo já baixado, a ferramenta não consulta a internet para carregá-lo (D51).
 
 ## Rodando o backend
 

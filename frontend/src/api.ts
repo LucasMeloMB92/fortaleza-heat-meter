@@ -2,7 +2,6 @@
 // Datas chegam no padrão técnico AAAA-MM-DD; a conversão para DD-MM-AAAA é só na exibição
 // (formatacao.ts — decisão D41).
 
-export type Variavel = 'temperatura' | 'sensacao'
 export type Modelo = 'linha_base' | 'ets' | 'sarima' | 'prophet' | 'chronos'
 export type Cenario = 'so_antes' | 'tudo' | 'so_depois'
 
@@ -35,9 +34,9 @@ export interface Metricas {
 }
 
 export interface Opcoes {
-  variaveis: { id: Variavel; nome: string; unidade: string }[]
+  serie: { nome: string; unidade: string } // uma série só: a temperatura média (D52)
   modelos: { id: Modelo; nome: string }[]
-  padroes: { variavel: Variavel; modelo: Modelo }
+  padroes: { modelo: Modelo }
   horizonte: { padrao: number; minimo: number; maximo: number }
   nivel_intervalo: number
 }
@@ -55,16 +54,7 @@ export interface Saude {
   }
 }
 
-export interface Serie {
-  variavel: Variavel
-  nome: string
-  unidade: string
-  periodo: Periodo
-  dados: Ponto[]
-}
-
 export interface RespostaPrevisao {
-  variavel: Variavel
   modelo: Modelo
   nome_modelo: string
   horizonte: number
@@ -82,7 +72,6 @@ export interface LinhaMetricas extends Metricas {
 }
 
 export interface RespostaMetricas {
-  variavel: Variavel
   teste: Periodo
   metricas: LinhaMetricas[]
 }
@@ -94,7 +83,6 @@ export interface DiaTeste extends PontoPrevisto {
 }
 
 export interface RespostaTeste {
-  variavel: Variavel
   modelo: Modelo
   nome_modelo: string
   configuracao: string | null
@@ -105,7 +93,6 @@ export interface RespostaTeste {
 }
 
 export interface RespostaCasoEstudo {
-  variavel: Variavel
   data_mudanca: string
   teste: Periodo
   cenarios: ({ id: Cenario; nome: string; media_treino: number | null } & Periodo)[]
@@ -137,22 +124,17 @@ export interface DiaContexto {
   anomalia: number | null // valor de agora − normal
 }
 
-export interface VariavelContexto {
-  id: Variavel
+export interface RespostaContexto {
   nome: string
+  ano_atual: number
+  anos_anteriores: number[]
+  dias_subida: number
+  dias_anomalia_recente: number
   anos: AnoContexto[]
   anomalia_media: number | null
   anomalia_recente: number | null // últimos dias (período de teste)
   mudanca: { data: string; anomalia_antes: number; anomalia_depois: number }
   dias: DiaContexto[]
-}
-
-export interface RespostaContexto {
-  ano_atual: number
-  anos_anteriores: number[]
-  dias_subida: number
-  dias_anomalia_recente: number
-  variaveis: VariavelContexto[]
 }
 
 /** Erro devolvido pela API (o corpo JSON traz a mensagem em português — D40). */
@@ -195,13 +177,11 @@ async function buscar<T>(rota: string, parametros: Record<string, string | numbe
 export const api = {
   saude: () => buscar<Saude>('saude'),
   opcoes: () => buscar<Opcoes>('opcoes'),
-  serie: (variavel: Variavel) => buscar<Serie>('serie', { variavel }),
-  previsao: (variavel: Variavel, modelo: Modelo, horizonte: number) =>
-    buscar<RespostaPrevisao>('previsao', { variavel, modelo, horizonte }),
-  metricas: (variavel: Variavel) => buscar<RespostaMetricas>('metricas', { variavel }),
-  teste: (variavel: Variavel, modelo: Modelo) => buscar<RespostaTeste>('teste', { variavel, modelo }),
+  previsao: (modelo: Modelo, horizonte: number) =>
+    buscar<RespostaPrevisao>('previsao', { modelo, horizonte }),
+  metricas: () => buscar<RespostaMetricas>('metricas'),
+  teste: (modelo: Modelo) => buscar<RespostaTeste>('teste', { modelo }),
   contexto: () => buscar<RespostaContexto>('contexto'),
   // Sem `modelo`, a API devolve os resultados de TODOS os modelos (aba "Caso de estudo" da visão geral).
-  casoEstudo: (variavel: Variavel, modelo?: Modelo) =>
-    buscar<RespostaCasoEstudo>('caso-estudo', modelo ? { variavel, modelo } : { variavel }),
+  casoEstudo: (modelo?: Modelo) => buscar<RespostaCasoEstudo>('caso-estudo', modelo ? { modelo } : {}),
 }

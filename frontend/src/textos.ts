@@ -5,14 +5,13 @@ import type {
   LinhaMetricas,
   Modelo,
   RespostaCasoEstudo,
+  RespostaContexto,
   RespostaMetricas,
   RespostaPrevisao,
   RespostaTeste,
-  VariavelContexto,
 } from './api'
 import { formatarComSinal, formatarData, formatarDiaMes, formatarGraus, formatarNumero } from './formatacao'
-import { acertosSoAntes, type ImpactoMudanca, impactos, LIMITE_PIOROU } from './casoGeral'
-import { type LinhaRanking, vitoriasSobreARegra } from './ranking'
+import { acertosSoAntes, impactos, LIMITE_PIOROU } from './casoGeral'
 
 // Temperaturas com 1 casa ("29,1 °C"); erros e variações com 2 casas, iguais às tabelas ("0,38 °C").
 const graus = (valor: number | null | undefined) => formatarGraus(valor, 1)
@@ -50,9 +49,6 @@ export const AJUDA = {
   vies: 'Viés: o erro médio com sinal. Negativo = em média previu abaixo do real; positivo = acima.',
   teste:
     'Período de teste: os últimos dias foram escondidos do modelo; ele previu esses dias e comparamos com o que aconteceu.',
-  posicaoMedia:
-    'Média das posições do modelo na temperatura e na sensação (1 = menor erro). Quanto menor, mais regular: o 1º geral é o que foi bem nas duas.',
-  erroMedioGeral: 'Média simples do erro médio na temperatura e na sensação. Mostra quem erra menos no total.',
   subidaPeriodo:
     'Quanto a média subiu dentro do período: média dos últimos 15 dias − média dos primeiros 15. Se sobe todo ano, é a estação do ano.',
   anomalia:
@@ -62,7 +58,7 @@ export const AJUDA = {
   faixaSoAntes:
     'Em quantos dias de teste o valor real caiu dentro da faixa do modelo que só conhecia os dias antes da mudança, e a largura dessa faixa. Poucos acertos com faixa estreita = confiante no nível errado; muitos acertos com faixa larga = acertou só por ser larga.',
   larguraFaixa:
-    'Largura da faixa: distância média entre o mínimo e o máximo previstos (temperatura / sensação). Faixa estreita que acerta = previsão útil; faixa larga "acerta" fácil, mas diz pouco.',
+    'Largura da faixa: distância média entre o mínimo e o máximo previstos. Faixa estreita que acerta = previsão útil; faixa larga "acerta" fácil, mas diz pouco.',
 }
 
 // ---------------------------------------------------------------------------
@@ -93,10 +89,7 @@ export interface Cartao {
   detalhe: string
 }
 
-export function resumoPrevisao(
-  resposta: RespostaPrevisao,
-  nomeVariavel: string,
-): { cartoes: Cartao[]; texto: string } {
+export function resumoPrevisao(resposta: RespostaPrevisao): { cartoes: Cartao[]; texto: string } {
   const prev = resposta.previsao
   const primeiro = prev[0]
   const ultimo = prev[prev.length - 1]
@@ -105,7 +98,6 @@ export function resumoPrevisao(
   const tendencia = classificarTendencia(variacao)
   const minimo = Math.min(...prev.map((p) => p.inferior ?? Infinity))
   const maximo = Math.max(...prev.map((p) => p.superior ?? -Infinity))
-  const nome = nomeVariavel.toLowerCase()
 
   const cartoes: Cartao[] = [
     {
@@ -129,9 +121,9 @@ export function resumoPrevisao(
 
   const texto =
     prev.length === 1
-      ? `Amanhã (${formatarData(primeiro.data)}), a ${nome} deve ficar em ${graus(primeiro.previsao)}, ` +
+      ? `Amanhã (${formatarData(primeiro.data)}), a temperatura média deve ficar em ${graus(primeiro.previsao)}, ` +
         `provavelmente entre ${graus(primeiro.inferior)} e ${graus(primeiro.superior)}.`
-      : `Nos próximos ${prev.length} dias, a ${nome} deve ficar ${tendencia.frase}: ` +
+      : `Nos próximos ${prev.length} dias, a temperatura média deve ficar ${tendencia.frase}: ` +
         `de ${graus(primeiro.previsao)} em ${formatarData(primeiro.data)} para ${graus(ultimo.previsao)} ` +
         `em ${formatarData(ultimo.data)}. O mais provável é que fique entre ${graus(minimo)} e ${graus(maximo)}.`
   return { cartoes, texto }
@@ -164,95 +156,44 @@ export function rotuloVsRegraSimples(linha: LinhaMetricas): string {
 }
 
 /**
- * Texto do card "Ranking geral" (as duas variáveis juntas). Regras:
- * - o 1º do ranking = o mais regular (menor posição média);
- * - se outro modelo tem o menor erro somando as duas, o texto diz isso e por que ele não é o
- *   1º: venceu a regra simples em menos variáveis e/ou faixa pelo menos 1,5x mais larga;
- * - o modelo que mais oscilou (3 ou mais posições de diferença entre as variáveis) é citado.
- */
-export function textoRanking(linhas: LinhaRanking[]): string {
-  if (linhas.length === 0) return ''
-  const primeiro = linhas[0]
-  const posicoesTexto = (l: LinhaRanking) =>
-    `${l.temperatura.posicao}º na temperatura e ${l.sensacao.posicao}º na sensação térmica`
-
-  let texto = `No geral, o ${primeiro.nome} foi o mais regular: ${posicoesTexto(primeiro)}.`
-  if (vitoriasSobreARegra(primeiro) === 2) texto += ' Foi melhor que a regra simples nas duas.'
-
-  // Menor erro somando as duas (no empate, vale a ordem do ranking).
-  const menorErro = linhas.reduce((a, b) => (b.erroMedio < a.erroMedio ? b : a))
-  if (menorErro.modelo !== primeiro.modelo) {
-    const motivos: string[] = []
-    const vitorias = vitoriasSobreARegra(menorErro)
-    if (vitorias < vitoriasSobreARegra(primeiro)) {
-      motivos.push(
-        vitorias === 0
-          ? 'não superou a regra simples em nenhuma das duas'
-          : 'superou a regra simples em só uma das duas',
-      )
-    }
-    if (menorErro.larguraMedia != null && primeiro.larguraMedia != null) {
-      const vezes = menorErro.larguraMedia / primeiro.larguraMedia
-      if (vezes >= 1.5) motivos.push(`sua faixa é ${formatarNumero(vezes, 1)} vezes mais larga`)
-    }
-    texto +=
-      ` O ${menorErro.nome} teve o menor erro somando as duas (${erro(menorErro.erroMedio)} contra ` +
-      `${erro(primeiro.erroMedio)})` +
-      (motivos.length ? `, mas ${motivos.join(' e ')}.` : ', mas ficou atrás nas posições.')
-  }
-
-  // Quem mais oscilou entre as variáveis (ex.: 1º numa, 5º na outra).
-  const oscilacao = (l: LinhaRanking) => Math.abs(l.temperatura.posicao - l.sensacao.posicao)
-  const oscilante = linhas.reduce((a, b) => (oscilacao(b) > oscilacao(a) ? b : a))
-  if (oscilacao(oscilante) >= 3) {
-    texto += ` O ${oscilante.nome} foi o que mais oscilou: ${posicoesTexto(oscilante)}.`
-  }
-  return texto
-}
-
-/**
- * Texto da aba "Caso de estudo" da visão geral (todos os modelos, as duas variáveis). Regras:
- * - "sofreu" = erro "só antes" ≥ 1,3x o erro com todos os dias, nas DUAS variáveis;
- * - "quase não sentiu" = abaixo de 1,3x nas duas;
+ * Texto da aba "Caso de estudo" da visão geral (todos os modelos). Regras:
+ * - "sofreu" = erro "só antes" ≥ 1,3x o erro com todos os dias;
+ * - "quase não sentiu" = abaixo de 1,3x;
  * - faixa "confiante no nível errado" = dos que sofreram, acertou a faixa em metade dos dias ou
- *   menos em pelo menos uma variável; "só porque era larga" = acertou mais da metade nas duas.
+ *   menos; "só porque era larga" = acertou mais da metade.
  */
-export function textoCasoEstudoGeral(temperatura: RespostaCasoEstudo, sensacao: RespostaCasoEstudo): string {
-  const t = impactos(temperatura)
-  const s = impactos(sensacao)
-  const dias = temperatura.teste.dias
-  const nomeVariavel = { temperatura: 'na temperatura', sensacao: 'na sensação térmica' }
-  const par = (i: ImpactoMudanca) => s.find((x) => x.modelo === i.modelo)
-  const modelos = t.filter((i) => par(i)).map((i) => ({ nome: i.nome, t: i, s: par(i) as ImpactoMudanca }))
+export function textoCasoEstudoGeral(resposta: RespostaCasoEstudo): string {
+  const modelos = impactos(resposta) // do que mais piorou para o que menos piorou
+  const dias = resposta.teste.dias
   if (modelos.length === 0) return ''
 
-  const sofreram = modelos.filter((m) => m.t.vezes >= LIMITE_PIOROU && m.s.vezes >= LIMITE_PIOROU)
-  const quaseNada = modelos.filter((m) => m.t.vezes < LIMITE_PIOROU && m.s.vezes < LIMITE_PIOROU)
+  const sofreram = modelos.filter((m) => m.vezes >= LIMITE_PIOROU)
+  const quaseNada = modelos.filter((m) => m.vezes < LIMITE_PIOROU)
   const frases: string[] = []
 
   if (sofreram.length > 0) {
-    const vezes = sofreram.flatMap((m) => [m.t.vezes, m.s.vezes])
-    const pior = [...t, ...s].reduce((a, b) => (b.vezes > a.vezes ? b : a))
+    const vezes = sofreram.map((m) => m.vezes)
+    const pior = sofreram[0]
     frases.push(
       `Sem ver a mudança, ${sofreram.length} dos ${modelos.length} modelos tiveram um erro de ` +
         `${formatarNumero(Math.min(...vezes), 1)} a ${formatarNumero(Math.max(...vezes), 1)} vezes maior ` +
         'do que quando viram todos os dias.',
-      `O que mais sofreu foi o ${pior.nome} ${nomeVariavel[pior.variavel]} (${formatarNumero(pior.vezes, 1)} vezes).`,
+      `O que mais sofreu foi o ${pior.nome} (${formatarNumero(pior.vezes, 1)} vezes).`,
     )
   }
   if (quaseNada.length > 0) {
     const nomes = juntarNomes(quaseNada.map((m) => m.nome))
-    frases.push(`${quaseNada.length === 1 ? 'O' : 'Os modelos'} ${nomes} quase não ${quaseNada.length === 1 ? 'sentiu' : 'sentiram'} a mudança nas duas variáveis.`)
+    frases.push(`${quaseNada.length === 1 ? 'O' : 'Os modelos'} ${nomes} quase não ${quaseNada.length === 1 ? 'sentiu' : 'sentiram'} a mudança.`)
   }
 
-  const confiantes = sofreram.filter((m) => acertosSoAntes(m.t, dias) <= dias / 2 || acertosSoAntes(m.s, dias) <= dias / 2)
+  const confiantes = sofreram.filter((m) => acertosSoAntes(m, dias) <= dias / 2)
   if (confiantes.length > 0) {
     frases.push(
       `${juntarNomes(confiantes.map((m) => m.nome))} ${confiantes.length === 1 ? 'acertou' : 'acertaram'} a faixa em ` +
-        'metade dos dias ou menos em pelo menos uma variável: confiantes, mas no nível errado.',
+        'metade dos dias ou menos: confiantes, mas no nível errado.',
     )
   }
-  const largos = sofreram.filter((m) => acertosSoAntes(m.t, dias) > dias / 2 && acertosSoAntes(m.s, dias) > dias / 2)
+  const largos = sofreram.filter((m) => acertosSoAntes(m, dias) > dias / 2)
   if (largos.length > 0) {
     frases.push(
       `${juntarNomes(largos.map((m) => m.nome))} ${largos.length === 1 ? 'acertou' : 'acertaram'} a faixa na maioria ` +
@@ -271,17 +212,17 @@ const LIMITE_ANOMALIA = 0.3
 const LIMITE_SUBIDA = 0.2
 
 /**
- * Texto da aba "Anos anteriores" para UMA variável (D50). Regras:
+ * Texto da aba "Anos anteriores" (D50). Regras:
  * - nível: anomalia média ≥ 0,3 °C = acima do normal; ≤ −0,3 = abaixo; senão perto do normal;
  * - estação: se TODOS os anos subiram ≥ 0,2 °C no período, a subida é da estação do ano;
  * - degrau: a data em que a anomalia mudou de patamar (a mesma do caso de estudo).
  */
-export function textoAnosAnteriores(v: VariavelContexto, anosAnteriores: number[]): string {
+export function textoAnosAnteriores(v: RespostaContexto): string {
   const atual = v.anos.at(-1)
   if (!atual) return ''
   const nome = v.nome.toLowerCase()
   const anom = v.anomalia_media ?? 0
-  const normalDe = `a média de ${juntarNomes(anosAnteriores.map(String))} no mesmo dia`
+  const normalDe = `a média de ${juntarNomes(v.anos_anteriores.map(String))} no mesmo dia`
   const nivel =
     anom >= LIMITE_ANOMALIA
       ? `${erro(anom)} acima do normal (${normalDe})`
@@ -349,7 +290,7 @@ export function textoTeste(resposta: RespostaTeste): string {
   return texto
 }
 
-export function textoCasoEstudo(resposta: RespostaCasoEstudo, nomeVariavel: string): string {
+export function textoCasoEstudo(resposta: RespostaCasoEstudo): string {
   const resultado = (id: string) => resposta.resultados.find((r) => r.cenario === id)
   const cenario = (id: string) => resposta.cenarios.find((c) => c.id === id)
   const antes = resultado('so_antes')
@@ -357,7 +298,6 @@ export function textoCasoEstudo(resposta: RespostaCasoEstudo, nomeVariavel: stri
   if (!antes || !tudo) return ''
 
   const subiu = (cenario('so_depois')?.media_treino ?? 0) >= (cenario('so_antes')?.media_treino ?? 0)
-  const nome = nomeVariavel.toLowerCase()
   const maeAntes = antes.metricas.mae ?? 0
   const maeTudo = tudo.metricas.mae ?? 0
   const diasTeste = resposta.teste.dias
@@ -367,7 +307,7 @@ export function textoCasoEstudo(resposta: RespostaCasoEstudo, nomeVariavel: stri
   const soAntes = semTreino ? 'que só viu os dias anteriores' : 'treinado só com os dias anteriores'
   const comTudo = semTreino ? 'que viu todos os dias' : 'treinado com todos os dias'
 
-  let texto = `A partir de ${formatarData(resposta.data_mudanca)}, a ${nome} passou a ficar mais ${subiu ? 'alta' : 'baixa'} que antes. `
+  let texto = `A partir de ${formatarData(resposta.data_mudanca)}, a temperatura média passou a ficar mais ${subiu ? 'alta' : 'baixa'} que antes. `
   if (maeTudo > 0 && maeAntes > maeTudo * LIMITE_PIOROU) {
     const vies = antes.metricas.vies ?? 0
     texto +=

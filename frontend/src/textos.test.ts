@@ -26,7 +26,6 @@ function linha(modelo: LinhaMetricas['modelo'], mae: number, vsBase: number, cob
 }
 
 const previsao7: RespostaPrevisao = {
-  variavel: 'temperatura',
   modelo: 'sarima',
   nome_modelo: 'SARIMA',
   horizonte: 3,
@@ -44,7 +43,7 @@ describe('classificarTendencia (limites da D46)', () => {
   it('rótulo e número não se contradizem: +0,16 °C é "Estável" e aparece com 2 casas', () => {
     const quase = { ...previsao7, previsao: [{ data: '2026-11-26', previsao: 29.26, inferior: 28.6, superior: 29.9 }, previsao7.previsao[1]] }
     quase.previsao[1] = { ...quase.previsao[1], previsao: 29.26 }
-    const { cartoes } = resumoPrevisao(quase, 'Temperatura média')
+    const { cartoes } = resumoPrevisao(quase)
     expect(cartoes[2].valor).toBe('Estável')
     expect(cartoes[2].detalhe).toContain('+0,16 °C') // antes aparecia "+0,2", contradizendo "Estável"
   })
@@ -63,7 +62,7 @@ describe('classificarTendencia (limites da D46)', () => {
 
 describe('resumoPrevisao', () => {
   it('gera 3 cartões e um texto com datas DD-MM-AAAA e vírgula', () => {
-    const { cartoes, texto } = resumoPrevisao(previsao7, 'Temperatura média')
+    const { cartoes, texto } = resumoPrevisao(previsao7)
     expect(cartoes.map((c) => c.titulo)).toEqual(['Amanhã (26-11)', 'Em 28-11-2026', 'Tendência em 3 dias'])
     expect(cartoes[0].valor).toBe('29,1 °C')
     expect(cartoes[2].valor).toBe('Leve alta') // 29,4 - 29,1 = +0,3
@@ -76,7 +75,7 @@ describe('resumoPrevisao', () => {
 
   it('horizonte de 1 dia: frase própria e só 2 cartões', () => {
     const umDia = { ...previsao7, previsao: previsao7.previsao.slice(0, 1) }
-    const { cartoes, texto } = resumoPrevisao(umDia, 'Temperatura média')
+    const { cartoes, texto } = resumoPrevisao(umDia)
     expect(cartoes).toHaveLength(2)
     expect(texto).toBe(
       'Amanhã (26-11-2026), a temperatura média deve ficar em 29,1 °C, provavelmente entre 28,5 °C e 29,7 °C.',
@@ -111,7 +110,6 @@ describe('rotuloVsRegraSimples', () => {
 
 describe('textoComparacao', () => {
   const resposta = (metricas: LinhaMetricas[]): RespostaMetricas => ({
-    variavel: 'temperatura',
     teste: { inicio: '2026-11-16', fim: '2026-11-25', dias: 10 },
     metricas,
   })
@@ -139,7 +137,6 @@ describe('textoComparacao', () => {
 describe('textoTeste', () => {
   it('cita o maior erro, os dias fora da faixa e o viés', () => {
     const resposta: RespostaTeste = {
-      variavel: 'temperatura',
       modelo: 'sarima',
       nome_modelo: 'SARIMA',
       configuracao: null,
@@ -164,7 +161,6 @@ describe('textoCasoEstudo', () => {
     const m = (mae: number, vies: number, cobertura: number) => ({ mae, vies, cobertura, rmse: mae, mae_dias_1_7: mae })
     const periodo = { inicio: '2026-08-28', fim: '2026-10-14', dias: 48 }
     return {
-      variavel: 'temperatura',
       data_mudanca: '2026-10-15',
       teste: { inicio: '2026-11-16', fim: '2026-11-25', dias: 10 },
       cenarios: [
@@ -181,7 +177,7 @@ describe('textoCasoEstudo', () => {
   }
 
   it('modelo preso ao nível antigo: compara erros e avisa da faixa confiante', () => {
-    const texto = textoCasoEstudo(caso(1.11, -1.05, 10), 'Temperatura média')
+    const texto = textoCasoEstudo(caso(1.11, -1.05, 10))
     expect(texto).toContain('A partir de 15-10-2026, a temperatura média passou a ficar mais alta que antes.')
     expect(texto).toContain('errou em média 1,11 °C — 2,9 vezes o erro do modelo treinado com todos os dias (0,38 °C)')
     expect(texto).toContain('previu abaixo do real')
@@ -189,7 +185,7 @@ describe('textoCasoEstudo', () => {
   })
 
   it('nenhum acerto vira "não acertou nenhum" (não "acertou só 0")', () => {
-    const texto = textoCasoEstudo(caso(1.79, -1.79, 0), 'Sensação térmica média')
+    const texto = textoCasoEstudo(caso(1.79, -1.79, 0))
     expect(texto).toContain('não acertou nenhum dos 10 dias')
     expect(texto).not.toContain('só 0')
   })
@@ -201,7 +197,7 @@ describe('textoCasoEstudo', () => {
       r.nome_modelo = 'Chronos-2'
     })
     resposta.resultados[1].metricas.mae = 0.31
-    const texto = textoCasoEstudo(resposta, 'Temperatura média')
+    const texto = textoCasoEstudo(resposta)
     expect(texto).toContain('O modelo que só viu os dias anteriores errou em média 1,04 °C')
     expect(texto).toContain('o erro do modelo que viu todos os dias (0,31 °C)')
     expect(texto).toContain('cobriu 10 de 10 dias, mas só porque era larga')
@@ -210,7 +206,7 @@ describe('textoCasoEstudo', () => {
   })
 
   it('quando a mudança não atrapalhou, explica o porquê', () => {
-    const texto = textoCasoEstudo(caso(0.31, 0.3, 90), 'Temperatura média')
+    const texto = textoCasoEstudo(caso(0.31, 0.3, 90))
     expect(texto).toContain('quase não atrapalhou')
   })
 })

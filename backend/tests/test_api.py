@@ -37,16 +37,16 @@ def test_saude(cliente):
     assert corpo["dados"]["dias"] == 90
 
 
-def test_opcoes_lista_variaveis_e_modelos(cliente):
+def test_opcoes_lista_serie_e_modelos(cliente):
     corpo = cliente.get("/api/opcoes").get_json()
-    assert [v["id"] for v in corpo["variaveis"]] == ["temperatura", "sensacao"]
+    assert corpo["serie"] == {"nome": "Temperatura média", "unidade": "°C"}
     assert [m["id"] for m in corpo["modelos"]] == ["linha_base", "ets"]
     assert corpo["horizonte"] == {"padrao": 7, "minimo": 1, "maximo": 14}
 
 
 def test_serie_tem_90_dias_em_formato_iso(cliente):
-    corpo = cliente.get("/api/serie?variavel=sensacao").get_json()
-    assert corpo["variavel"] == "sensacao"
+    corpo = cliente.get("/api/serie").get_json()
+    assert corpo["nome"] == "Temperatura média"
     assert len(corpo["dados"]) == 90
     assert corpo["dados"][0]["data"] == corpo["periodo"]["inicio"]
     assert len(corpo["dados"][0]["data"]) == 10  # AAAA-MM-DD
@@ -54,7 +54,6 @@ def test_serie_tem_90_dias_em_formato_iso(cliente):
 
 def test_previsao_padrao_tem_7_dias_apos_o_historico(cliente):
     corpo = cliente.get("/api/previsao").get_json()  # tudo no padrão
-    assert corpo["variavel"] == "temperatura"
     assert corpo["horizonte"] == 7
     assert len(corpo["previsao"]) == 7
     assert corpo["previsao"][0]["data"] > corpo["historico"][-1]["data"]
@@ -63,13 +62,13 @@ def test_previsao_padrao_tem_7_dias_apos_o_historico(cliente):
 
 
 def test_previsao_com_horizonte_e_modelo_escolhidos(cliente):
-    corpo = cliente.get("/api/previsao?variavel=sensacao&modelo=linha_base&horizonte=3").get_json()
+    corpo = cliente.get("/api/previsao?modelo=linha_base&horizonte=3").get_json()
     assert corpo["modelo"] == "linha_base"
     assert len(corpo["previsao"]) == 3
 
 
 def test_metricas_tem_uma_linha_por_modelo(cliente):
-    corpo = cliente.get("/api/metricas?variavel=temperatura").get_json()
+    corpo = cliente.get("/api/metricas").get_json()
     assert corpo["teste"]["dias"] == 10
     por_modelo = {m["modelo"]: m for m in corpo["metricas"]}
     assert set(por_modelo) == {"linha_base", "ets"}
@@ -78,18 +77,18 @@ def test_metricas_tem_uma_linha_por_modelo(cliente):
 
 
 def test_teste_traz_10_dias_com_real_e_previsao(cliente):
-    corpo = cliente.get("/api/teste?variavel=temperatura&modelo=linha_base").get_json()
+    corpo = cliente.get("/api/teste?modelo=linha_base").get_json()
     assert len(corpo["dias"]) == 10
     assert len(corpo["treino_final"]) == 20
     assert isinstance(corpo["dias"][0]["dentro_da_faixa"], bool)
 
 
 def test_caso_estudo_tem_3_cenarios_e_filtra_modelo(cliente):
-    corpo = cliente.get("/api/caso-estudo?variavel=temperatura").get_json()
+    corpo = cliente.get("/api/caso-estudo").get_json()
     assert [c["id"] for c in corpo["cenarios"]] == ["so_antes", "tudo", "so_depois"]
     assert len(corpo["resultados"]) == 3 * 2  # 3 cenários x 2 modelos
 
-    filtrado = cliente.get("/api/caso-estudo?variavel=temperatura&modelo=ets").get_json()
+    filtrado = cliente.get("/api/caso-estudo?modelo=ets").get_json()
     assert {r["modelo"] for r in filtrado["resultados"]} == {"ets"}
 
 
@@ -105,7 +104,6 @@ def test_respostas_nao_tem_nan(cliente):
 @pytest.mark.parametrize(
     ("rota", "parametro"),
     [
-        ("/api/serie?variavel=chuva", "variavel"),
         ("/api/previsao?modelo=arima_magico", "modelo"),
         ("/api/previsao?horizonte=0", "horizonte"),
         ("/api/previsao?horizonte=15", "horizonte"),
@@ -120,9 +118,9 @@ def test_parametro_invalido_devolve_400_em_json(cliente, rota, parametro):
     assert corpo["erro"]
 
 
-def test_erro_de_variavel_lista_os_valores_aceitos(cliente):
-    corpo = cliente.get("/api/serie?variavel=chuva").get_json()
-    assert corpo["valores_aceitos"] == ["temperatura", "sensacao"]
+def test_erro_de_modelo_lista_os_valores_aceitos(cliente):
+    corpo = cliente.get("/api/previsao?modelo=arima_magico").get_json()
+    assert corpo["valores_aceitos"] == ["linha_base", "ets"]
 
 
 def test_rota_inexistente_devolve_404_em_json(cliente):
@@ -169,7 +167,7 @@ def test_pedidos_iguais_simultaneos_calculam_uma_vez_so(monkeypatch):
     monkeypatch.setattr(servico.avaliacao, "comparar_modelos", validacao_lenta)
     servico.limpar_cache()
 
-    threads = [threading.Thread(target=servico.metricas, args=("temperatura",)) for _ in range(3)]
+    threads = [threading.Thread(target=servico.metricas) for _ in range(3)]
     for t in threads:
         t.start()
     for t in threads:
@@ -188,9 +186,9 @@ def test_contexto_compara_o_mesmo_periodo_em_cada_ano(cliente):
     corpo = resposta.get_json()
     ano = corpo["ano_atual"]
     assert corpo["anos_anteriores"] == [ano - 2, ano - 1]
-    assert [v["id"] for v in corpo["variaveis"]] == ["temperatura", "sensacao"]
+    assert corpo["nome"] == "Temperatura média"
 
-    temperatura = corpo["variaveis"][0]
+    temperatura = corpo  # uma série só (D52): os campos vêm direto na resposta
     assert [a["ano"] for a in temperatura["anos"]] == [ano - 2, ano - 1, ano]
     # O ano atual é exatamente o período dos 90 dias da ferramenta.
     atual = temperatura["anos"][-1]

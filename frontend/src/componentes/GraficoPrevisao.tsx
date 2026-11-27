@@ -1,5 +1,5 @@
 // Gráfico principal: histórico (linha cheia) + previsão (tracejada) + faixa de 95% (sombra).
-// Opções: janela de 30 ou 90 dias e comparar com a outra variável (só o histórico dela).
+// Opção: janela de 30 ou 90 dias.
 import { useState } from 'react'
 import {
   Area,
@@ -12,8 +12,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import type { RespostaPrevisao, Serie, Variavel } from '../api'
-import { COR_GRADE, COR_VARIAVEL } from '../cores'
+import type { RespostaPrevisao } from '../api'
+import { COR_GRADE, COR_TEMPERATURA } from '../cores'
 import { formatarData, formatarGraus } from '../formatacao'
 import { DicaGrafico } from './DicaGrafico'
 import { MARGEM_GRAFICO, PROPS_EIXO_X, PROPS_EIXO_Y } from './eixos'
@@ -23,18 +23,12 @@ interface Linha {
   real?: number | null
   previsao?: number | null
   faixa?: [number | null, number | null]
-  outra?: number | null
 }
 
-/** Junta histórico, previsão e (opcional) a outra variável numa lista por data. */
-function montarLinhas(resposta: RespostaPrevisao, dias: number, outra?: Serie): Linha[] {
+/** Junta histórico e previsão numa lista por data. */
+function montarLinhas(resposta: RespostaPrevisao, dias: number): Linha[] {
   const historico = resposta.historico.slice(-dias)
-  const valoresOutra = new Map(outra?.dados.map((p) => [p.data, p.valor]))
-  const linhas: Linha[] = historico.map((p) => ({
-    data: p.data,
-    real: p.valor,
-    outra: valoresOutra.get(p.data),
-  }))
+  const linhas: Linha[] = historico.map((p) => ({ data: p.data, real: p.valor }))
   // Liga o último dia real ao primeiro previsto, para a linha tracejada não começar "solta".
   const ultima = linhas.at(-1)
   if (ultima) ultima.previsao = ultima.real
@@ -44,18 +38,11 @@ function montarLinhas(resposta: RespostaPrevisao, dias: number, outra?: Serie): 
   return linhas
 }
 
-export function GraficoPrevisao(props: {
-  resposta: RespostaPrevisao
-  outraVariavel: Variavel
-  nomeOutra: string
-  serieOutra?: Serie
-  comparar: boolean
-  aoMudarComparar: (valor: boolean) => void
-}) {
+export function GraficoPrevisao(props: { resposta: RespostaPrevisao }) {
   const [dias, setDias] = useState(30)
   const { resposta } = props
-  const cor = COR_VARIAVEL[resposta.variavel]
-  const linhas = montarLinhas(resposta, dias, props.comparar ? props.serieOutra : undefined)
+  const cor = COR_TEMPERATURA
+  const linhas = montarLinhas(resposta, dias)
 
   return (
     <div>
@@ -73,14 +60,6 @@ export function GraficoPrevisao(props: {
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-2 text-tinta-2">
-          <input
-            type="checkbox"
-            checked={props.comparar}
-            onChange={(e) => props.aoMudarComparar(e.target.checked)}
-          />
-          Comparar com {props.nomeOutra.toLowerCase()} (histórico)
-        </label>
       </div>
 
       <div
@@ -103,17 +82,6 @@ export function GraficoPrevisao(props: {
               stroke="none"
               isAnimationActive={false}
             />
-            {props.comparar && (
-              <Line
-                dataKey="outra"
-                name={`${props.nomeOutra} (real)`}
-                stroke={COR_VARIAVEL[props.outraVariavel]}
-                strokeWidth={1.5}
-                strokeOpacity={0.6}
-                dot={false}
-                isAnimationActive={false}
-              />
-            )}
             <Line
               dataKey="real"
               name="Real"

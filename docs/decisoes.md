@@ -18,6 +18,8 @@ durante o projeto e aprovadas.
   até ontem; o `past_days` ficou como reserva. Ver D21.
 
 ## D02 — Variáveis monitoradas _(usuário)_
+> **Substituída pela D52:** a sensação térmica foi removida; a POC prevê só a temperatura.
+
 - **Decisão:** quais séries prever.
 - **Opções consideradas:** (a) temperatura e sensação térmica como duas séries completas
   (mesmos modelos, métricas e caso de estudo); (b) sensação só exibida no gráfico, sem previsão;
@@ -594,6 +596,9 @@ durante o projeto e aprovadas.
   dias, o texto avisa que foi "só porque era larga".
 
 ## D48 — Card "Ranking geral" e largura da faixa como métrica oficial _(usuário)_
+> **Ranking removido na D52** (só existia para juntar as duas séries). A largura da faixa continua
+> como métrica oficial, agora nos detalhes da tabela "Comparação dos modelos".
+
 - **Decisão:** como mostrar na tela a comparação de **todos** os modelos nas **duas** variáveis
   juntas (antes, a tela só comparava os modelos numa variável por vez).
 - **Opções consideradas:** (a) um card no topo, independente dos seletores, com o ranking
@@ -664,3 +669,69 @@ durante o projeto e aprovadas.
 - **Limite:** são **2 anos anteriores**, não 3: o arquivo de contexto começa em 26-11-2023, antes
   do período de 2023. Incluir 2023 exige baixar mais 3 meses (e mudaria um pouco o "normal" e as
   datas do degrau).
+
+## D51 — Chronos-2 sem internet de verdade e com versão fixa _(usuário)_
+- **Decisão:** como carregar o Chronos-2 para que funcione sem internet sem espera e não mude de
+  versão sozinho.
+- **Contexto (teste de 26-11-2026, mesma previsão nos três casos):**
+
+  | Cenário | Tempo de carga (com a importação do PyTorch) |
+  |---|---|
+  | Com internet | 24,5 s |
+  | Sem internet | **56,1 s** — o Hugging Face tentou a rede 5 vezes (1+2+4+8+8 s) e só então usou o cache |
+  | Sem internet, com `HF_HUB_OFFLINE=1` | 13,6 s |
+
+  A cada carga, o Hugging Face perguntava à internet se havia versão nova do modelo — e, se
+  houvesse, passaria a usá-la sem aviso.
+- **Opções consideradas:** (a) `HF_HUB_OFFLINE=1` no ambiente (vale para o processo inteiro e
+  exige lembrar de configurar); (b) `local_files_only=True` no `from_pretrained` (não basta: o
+  Chronos procura um arquivo de "adaptador" antes e não repassa essa opção); (c) pedir a **pasta
+  local** do modelo, numa **versão fixa**, e carregar a partir dela.
+- **Escolha:** (c). `CHRONOS_VERSAO` = commit `29ec3766…` do `amazon/chronos-2`.
+  `_pasta_do_chronos()` tenta o cache sem rede (`snapshot_download(..., local_files_only=True)`);
+  se não houver, baixa essa versão. O Chronos é carregado pela pasta (só leitura de disco).
+  A versão aparece nos detalhes da previsão (`"versao": "29ec376"`).
+- **Resultado:** sem internet, a previsão do projeto carregou em **11,6 s**, sem nenhuma tentativa
+  de rede. Teste novo garante que, com o modelo no cache, não há tentativa de download.
+- **Por quê:** funciona offline de verdade, sobe mais rápido e os números só mudam quando alguém
+  troca a versão de propósito (e refaz as comparações).
+- **Custo:** atualizar o modelo vira uma ação manual: trocar `CHRONOS_VERSAO`, rodar os testes e
+  refazer a validação e o caso de estudo.
+
+## D52 — Só a temperatura: sensação térmica removida _(usuário)_
+- **Decisão:** manter ou não a sensação térmica como segunda série (D02).
+- **Contexto:** ao estudar a POC pronta, o usuário achou que ela ficou complexa demais. A sensação
+  dobrava quase tudo (10 combinações de modelo e série em vez de 5, um seletor a mais, abas com
+  dois painéis, todas as tabelas do relatório em dobro) e ficou "deslocada": não é usada para
+  prever a temperatura (D02, D19), tem o mesmo comportamento dela e não trazia uma lição nova.
+- **Opções consideradas:** (a) manter as duas séries; (b) remover a sensação, mas manter o
+  parâmetro `variavel` na API com um único valor, para facilitar pôr outra série no futuro;
+  (c) remover a sensação **e** o parâmetro `variavel`.
+- **Escolha:** (c). Tudo da sensação saiu:
+  - **Dados:** a coleta só pede `temperature_2m_mean`; os CSVs perderam a coluna `sensacao_media`.
+  - **Backend:** `coleta.COLUNA` / `VARIAVEL_API` no lugar do dicionário `VARIAVEIS`;
+    `climatologia` e `anomalia` devolvem uma série; `caso_estudo.data_da_mudanca` devolve uma
+    data; as rotas não leem mais `variavel`; `/api/opcoes` traz `serie: {nome, unidade}`;
+    `/api/contexto` traz os campos direto no topo (sem a lista `variaveis`). Scripts das etapas
+    1–5 e gráficos refeitos com um painel só.
+  - **Frontend:** saíram o seletor de variável, o "comparar com a outra variável" no gráfico, a
+    cor laranja e a aba **"Ranking"** da visão geral (D48) — ela só existia para juntar as duas
+    séries e, com uma só, repetia a tabela "Comparação dos modelos". A largura da faixa, que só
+    o ranking mostrava, foi para os detalhes técnicos dessa tabela.
+  - **Docs:** README, api.md, relatório final, guia técnico e glossário reescritos só com a
+    temperatura. `decisoes.md` e `diario.md` continuam com o histórico das duas séries.
+- **Por quê:** um parâmetro com um único valor possível é complexidade sem uso; o código atual
+  já serve de modelo para pôr outra série quando houver uma métrica real do cliente (relatório,
+  seção 11.4).
+- **Consequência — a recomendação mudou de SARIMA para Chronos-2 (escolha do usuário):** o
+  SARIMA era recomendado por ser o mais **regular** entre as duas séries (3º na temperatura e 1º
+  na sensação). Só com a temperatura, ele fica em 3º (0,38 °C) no teste de 16–25/11, atrás de
+  Prophet e Chronos-2 (0,31 °C, empate). Repetindo o teste um dia depois (17–26/11, dados
+  atualizados sozinhos), o Chronos-2 foi o melhor (0,38 °C) e o SARIMA ficou pior que a regra
+  simples (0,68 x 0,62 °C). Opções: Chronos-2, manter SARIMA, Prophet ou "sem vencedor fixo". O
+  Chronos-2 foi o único entre os melhores nos dois testes; o Prophet só acerta enquanto a
+  tendência continua. `MODELO_PADRAO` da API e o modelo inicial da tela passaram a ser
+  `chronos`.
+- **Custo:** a faixa do Chronos-2 é ~2x mais larga (2,14 x 1,14 °C do SARIMA). E dois testes de
+  10 dias ainda são pouco: antes de fixar um modelo em produção, repetir a comparação em várias
+  semanas.

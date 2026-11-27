@@ -11,8 +11,9 @@ pequena (90 dias), treinar modelos, prever os próximos 7 dias e mostrar tudo nu
 Além de construir, o objetivo é **aprender e documentar cada decisão**.
 
 ### Dados
-- **Variáveis (2 séries):** temperatura média diária (`temperature_2m_mean`) e sensação térmica
-  média diária (`apparent_temperature_mean`) de Fortaleza-CE.
+- **Variável (1 série):** temperatura média diária (`temperature_2m_mean`) de Fortaleza-CE.
+  **A sensação térmica foi removida (D52)** — não reintroduzir sem pedido do usuário. No código:
+  `coleta.COLUNA = "temperatura_media"`; a API não tem mais o parâmetro `variavel`.
 - Local: lat -3.72, lon -38.54, fuso `America/Fortaleza`.
 - Fonte: API histórica do Open-Meteo com `models=best_match` (gratuita, sem cadastro). Dias
   recentes faltando → reserva com `past_days` da API de previsão (coluna `fonte` indica a origem).
@@ -22,35 +23,39 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
   (fuso America/Fortaleza), grava de forma atômica e limpa o cache; falha → mantém dados e avisa
   em `/api/saude`. Testes NUNCA podem tocar nos CSVs reais nem depender do dia (congelar
   `servico.hoje_em_fortaleza`).
-- Sensação é prevista sozinha (não é apoio da temperatura); sem umidade/vento (D02, D19).
+- Sem umidade/vento/chuva como apoio (D19).
 - Contexto de 3 anos (`backend/data/fortaleza_contexto_3anos.csv`) só para entender, nunca para
-  treinar (D24). Achados da etapa 2: não estacionária em torno de nível fixo (mas a sensação é
-  estacionária em torno de uma reta — corrigido na etapa 3, D33), PACF só na defasagem 1, sem
-  sazonalidade semanal; anomalia de 2026 com mudança em 15/10 (temp.) e 23/10 (sensação) (D26).
-- Cores fixas: temperatura `#2a78d6` (azul), sensação `#eb6834` (laranja); um eixo por painel (D25).
+  treinar (D24). Achados da etapa 2: não estacionária em torno de nível fixo (o ADF com tendência
+  "ct" decide o d — D33), PACF só na defasagem 1, sem sazonalidade semanal; anomalia de 2026 com
+  mudança em 15/10 (D26).
+- Cor fixa: temperatura `#2a78d6` (azul) (D25).
 
 ### Modelagem
 - Horizonte: 7 dias. Validação: últimos 10 dias como teste.
 - Modelos: (1) linha de base = média dos últimos 7 dias; (2) ETS/Holt-Winters; (3) SARIMA;
   (4) Prophet (só comparação — feito para séries longas); (5) Chronos-2 (IA moderna, D47).
-- Os 5 modelos rodam para as 2 variáveis (10 combinações), com a mesma interface:
+- Os 5 modelos têm a mesma interface:
   `modelos.prever(nome, serie, horizonte, nivel) -> Previsao(tabela, detalhes)` (D27).
 - ETS/SARIMA escolhem configuração pelo menor AICc, refeito a cada treino (D28). SARIMA: d pelo
   ADF com tendência ("ct"), não fixo (D33). Prophet sem sazonalidades (D32).
 - Métricas: MAE, RMSE, cobertura do intervalo de 95% (+ auxiliares: MAE dias 1–7, viés, MAE vs
   linha de base — D34; largura média da faixa `largura_faixa` — D48). `avaliacao.comparar_modelos(serie)`.
-- Resultado da etapa 4 (teste 16/11–25/11): temperatura — Prophet 0,31 °C (−33% vs base), SARIMA
-  0,38; sensação — SARIMA 0,29 (−15%), Prophet 0,38 (+13%, pior). SARIMA = mais consistente.
+- Resultado da etapa 4 (teste 16/11–25/11): Prophet 0,31 °C (−33% vs base), Chronos-2 0,31,
+  SARIMA 0,38, ETS 0,43, base 0,46. Teste um dia depois (17–26/11): Chronos-2 0,38 (o melhor),
+  Prophet 0,47, base 0,62, ETS 0,63, SARIMA 0,68. **Recomendado: Chronos-2 (D52)**; padrão da API
+  (`MODELO_PADRAO`) e da tela = `chronos`.
 - Caso de estudo: quebra estrutural — modelo treinado só antes da mudança recente x treinado com tudo
   (+ "só depois"), todos avaliados na mesma janela de teste (D35). `caso_estudo.avaliar_cenarios`.
-  Resultado: "só antes" erra 2–6x mais (viés negativo; SARIMA cobertura 0–10%); Prophet sobrevive
+  Resultado: "só antes" erra 2–3,4x mais (viés negativo; SARIMA cobertura 10%); Prophet sobrevive
   por prolongar a tendência sazonal. Conclusão: retreinar com frequência.
 - **Chronos-2 (evolução 11.2, D47):** `amazon/chronos-2` na CPU (torch +cpu), zero-shot, modelo
   carregado 1x por processo; previsão = mediana, faixa = quantis 2,5%/97,5% (interpolados).
-  Resultado: temp. 0,31 (empata com Prophet), sens. 0,33 (empata com a base); faixa ~2x mais
-  larga que os outros. Caso de estudo "só antes": erra como o SARIMA, mas cobre 10/10 (faixa
-  larga). Conclusão: empata, não ganha — SARIMA segue recomendado. Testes usam o modelo real
-  (baixado 1x para `~/.cache/huggingface`).
+  Resultado: 0,31 (empata com Prophet); faixa ~2x mais larga que os outros. Caso de estudo
+  "só antes": erra como o SARIMA, mas cobre 10/10 (faixa larga). Era "empata, não ganha" com duas
+  séries; só com a temperatura virou o recomendado (D52). Testes usam o modelo real
+  (baixado 1x para `~/.cache/huggingface`). **D51:** versão fixa `CHRONOS_VERSAO` (commit do Hub) e
+  carga pela pasta local (`_pasta_do_chronos`: cache com `local_files_only=True`, senão baixa) —
+  sem internet carrega em ~12 s (antes ~56 s: 5 tentativas de rede).
 
 ### Tecnologias
 - Backend: Python 3.12 (venv em `backend/.venv`), pandas, statsmodels, prophet, chronos-forecasting
@@ -59,23 +64,24 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 - Qualidade: Git (commit por etapa), pytest + ruff (backend), Vitest + tsc + oxlint (frontend).
 - Monorepo: `/backend`, `/frontend`, `/docs`.
 
-## Estado atual e como retomar (atualizado em 26-11-2026)
-- **Todas as etapas (0–8) concluídas + evolução 11.2 (Chronos-2) concluída.** Relatório final em
-  `docs/relatorio-final.md`: recomendação = **SARIMA** (mais consistente); seção 5.6 e 11.2 = Chronos.
+## Estado atual e como retomar (atualizado em 27-11-2026)
+- **Todas as etapas (0–8) concluídas + evolução 11.2 (Chronos-2) + simplificação D52 (só
+  temperatura).** Relatório final em `docs/relatorio-final.md`: recomendação = **Chronos-2**
+  (seção 7); seção 5.6 e 11.2 = Chronos.
 - NÃO propor roteiro de ML/DL próprio (LightGBM, redes treinadas do zero) — decisão do usuário.
   Melhorias ainda registradas no relatório: textos por IA (Gemma/Gemini), outras métricas
   (cliente ainda sem métrica real — exemplo genérico: vendas diárias), publicação online,
   repetir a comparação em várias semanas.
-- **Card "Visão geral dos modelos" com abas (D49) ✅** — no topo da tela, todos os modelos e as duas
-  variáveis, sem depender dos seletores; só a aba aberta busca dados. Abas: Ranking (D48,
-  `ranking.ts`), Caso de estudo (`casoGeral.ts`), Anos anteriores (D50, `/api/contexto`;
+- **Card "Visão geral dos modelos" com abas (D49) ✅** — no topo da tela, todos os modelos, sem
+  depender dos seletores; só a aba aberta busca dados. Abas: Caso de estudo (`casoGeral.ts`),
+  Anos anteriores (D50, `/api/contexto`;
   relatório seção 3 "Comparação com os anos anteriores"). Compara com 2 anos anteriores (2024,
   2025): o CSV de contexto começa em 26-11-2023.
-- **Última decisão registrada: D50** — a próxima é D51 (`docs/decisoes.md`).
+- **Última decisão registrada: D52** — a próxima é D53 (`docs/decisoes.md`).
 - **Para retomar:** leia o fim de `docs/diario.md` (inclui as dúvidas discutidas). Para ver a tela:
   suba `backend` e `frontend` pelo `.claude/launch.json`. Os números da documentação são um retrato
   de 26-11-2026; a ferramenta atualiza os dados sozinha todo dia (D44).
-- **Qualidade atual:** backend 69 testes (pytest) + ruff limpo; frontend 42 testes (Vitest) +
+- **Qualidade atual:** backend 69 testes (pytest) + ruff limpo; frontend 35 testes (Vitest) +
   tsc + oxlint + build limpos.
 
 ## Etapas (ordem fixa)
@@ -90,7 +96,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
    linguagem simples D46)
 8. Relatório final ✅
 
-Evoluções depois da POC: 11.2 Chronos-2 ✅ (D47).
+Evoluções depois da POC: 11.2 Chronos-2 ✅ (D47); simplificação só temperatura ✅ (D52).
 
 Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 
@@ -123,7 +129,7 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 - `backend/app.py` (rotas, erros, CORS) + `backend/previsao/servico.py` (respostas + cache).
 - 8 rotas GET em `/api`: saude, opcoes, serie, previsao, metricas, teste, caso-estudo, contexto (D50,
   sem parâmetros; cálculo leve com trava própria `_calculo_leve`, fora da fila dos modelos). Parâmetros
-  `variavel` (temperatura|sensacao), `modelo`, `horizonte` (1–14). Detalhes em `docs/api.md`.
+  `modelo` (padrão `chronos`) e `horizonte` (1–14); sem `variavel` (D52). Detalhes em `docs/api.md`.
 - Cache em memória, calcula no 1º pedido, em fila única com RLock (D37 + atualização). CORS só
   `http://localhost:5173` (D39).
 

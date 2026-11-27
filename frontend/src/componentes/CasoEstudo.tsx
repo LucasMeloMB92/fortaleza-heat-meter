@@ -40,9 +40,8 @@ function montarLinhas(resposta: RespostaCasoEstudo): Linha[] {
   return [...porData.values()].sort((a, b) => a.data.localeCompare(b.data))
 }
 
-export function CasoEstudo(props: { resposta: RespostaCasoEstudo; nomeVariavel: string }) {
+export function CasoEstudo(props: { resposta: RespostaCasoEstudo }) {
   const { resposta } = props
-  const variavel = resposta.variavel
   const metricasPorCenario = new Map(resposta.resultados.map((r) => [r.cenario, r.metricas]))
   const estilo: Record<Cenario, { tracejado: string; faixa: boolean }> = {
     so_antes: { tracejado: '6 4', faixa: true },
@@ -54,7 +53,7 @@ export function CasoEstudo(props: { resposta: RespostaCasoEstudo; nomeVariavel: 
     <div>
       {/* "O que isso significa", com os números reais (D46) — antes do gráfico, para ler primeiro. */}
       <p className="mb-4 rounded-md bg-plano p-3 text-sm leading-relaxed">
-        <strong>O que isso significa:</strong> {textoCasoEstudo(resposta, props.nomeVariavel)}
+        <strong>O que isso significa:</strong> {textoCasoEstudo(resposta)}
       </p>
       <div className="h-80" role="img" aria-label="Previsões treinadas antes, com tudo e depois da mudança">
         <ResponsiveContainer width="100%" height="100%">
@@ -90,7 +89,7 @@ export function CasoEstudo(props: { resposta: RespostaCasoEstudo; nomeVariavel: 
                     dataKey={`faixa_${c.id}`}
                     name={`Faixa 95% — ${c.nome.toLowerCase()}`}
                     legendType="none"
-                    fill={corCenario(c.id, variavel)}
+                    fill={corCenario(c.id)}
                     fillOpacity={0.12}
                     stroke="none"
                     isAnimationActive={false}
@@ -103,7 +102,7 @@ export function CasoEstudo(props: { resposta: RespostaCasoEstudo; nomeVariavel: 
                 key={c.id}
                 dataKey={c.id}
                 name={c.nome}
-                stroke={corCenario(c.id, variavel)}
+                stroke={corCenario(c.id)}
                 strokeWidth={2}
                 strokeDasharray={estilo[c.id].tracejado}
                 dot={false}
@@ -148,7 +147,7 @@ export function CasoEstudo(props: { resposta: RespostaCasoEstudo; nomeVariavel: 
                 <td className="py-1">
                   <span
                     className="mr-2 inline-block h-2 w-2 rounded-full"
-                    style={{ background: corCenario(c.id, variavel) }}
+                    style={{ background: corCenario(c.id) }}
                   />
                   {c.nome}
                 </td>

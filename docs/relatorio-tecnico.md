@@ -33,7 +33,7 @@ cadastro e sem chave de API**: basta montar uma URL e ele devolve JSON (D01).
 | **Previsão** (*forecast*) | `api.open-meteo.com/v1/forecast` | Só reserva: com `past_days=30` devolve os dias recentes, se a histórica atrasar. |
 
 Parâmetros usados: `latitude`/`longitude` (o ponto), `timezone=America/Fortaleza` (onde o dia
-começa e termina), `daily=temperature_2m_mean,apparent_temperature_mean` (as médias diárias) e
+começa e termina), `daily=temperature_2m_mean` (a temperatura média diária) e
 `models=best_match` (o próprio serviço escolhe o melhor modelo meteorológico para o local — D21).
 **Descartados:** INMET (formato mais trabalhoso), APIs pagas (OpenWeather, Visual Crossing).
 
@@ -95,7 +95,7 @@ stack da ferramenta web era React.
 ### A API própria (Flask)
 
 O backend expõe **8 rotas `GET`** em `/api` — uma para cada parte da tela: `saude` (situação dos
-dados), `opcoes` (listas de modelos e variáveis), `serie` (histórico), `previsao`, `metricas`,
+dados), `opcoes` (lista de modelos e limites), `serie` (histórico), `previsao`, `metricas`,
 `teste`, `caso-estudo` e `contexto` (anos anteriores). Tudo é `GET` porque nada é alterado; as
 respostas são JSON em português. Detalhes de cada rota em [api.md](api.md).
 
@@ -118,9 +118,9 @@ app.py                (web: rotas HTTP)  ──►  previsao/servico.py (respost
 ```
 
 **Dois formatos de dados aparecem em quase todo lugar:**
-- **tabela** (`pd.DataFrame`): uma linha por dia, colunas `data`, `temperatura_media`,
-  `sensacao_media` e `fonte` (de onde veio o dia). É o conteúdo do CSV.
-- **série** (`pd.Series`): uma variável só, com as **datas como índice** — por exemplo
+- **tabela** (`pd.DataFrame`): uma linha por dia, colunas `data`, `temperatura_media` e `fonte`
+  (de onde veio o dia). É o conteúdo do CSV.
+- **série** (`pd.Series`): só a coluna da temperatura, com as **datas como índice** — por exemplo
   `tabela.set_index("data")["temperatura_media"]`. É o que os modelos recebem.
 
 ### Pacote `previsao/` — a lógica (não depende do Flask)
@@ -150,8 +150,8 @@ app.py                (web: rotas HTTP)  ──►  previsao/servico.py (respost
 | `detectar_mudanca(serie, minimo=10)` | série (de preferência a anomalia) | `{"data", "dias_depois", "media_antes", "media_depois"}` |
 | `baixar_contexto(fim, anos=3)` | último dia | tabela de 3 anos (mesma coleta da etapa 1) |
 | `mesmo_periodo_por_ano(contexto, inicio, fim)` | contexto + período | o mesmo trecho do calendário em cada ano, com colunas `ano` e `data_ref` |
-| `climatologia(periodos, ano_atual)` | saída anterior + ano atual | o "normal" de cada dia (média dos anos anteriores, suavizada) |
-| `anomalia(periodos, ano_atual)` | saída anterior + ano atual | ano atual − normal (positivo = mais quente que o normal) |
+| `climatologia(periodos, ano_atual)` | saída anterior + ano atual | série com o "normal" de cada dia (média dos anos anteriores, suavizada) |
+| `anomalia(periodos, ano_atual)` | saída anterior + ano atual | série: ano atual − normal (positivo = mais quente que o normal) |
 
 **`modelos.py`** — os 5 modelos com a mesma interface (etapa 3).
 
@@ -182,7 +182,7 @@ escolheu: configuração, AICc, parâmetros, ranking dos candidatos). Os dicion�
 
 | Função | Recebe | Devolve |
 |---|---|---|
-| `datas_de_mudanca(tabela, contexto)` | os 90 dias + os 3 anos | `{variável: data da mudança}` |
+| `data_da_mudanca(tabela, contexto)` | os 90 dias + os 3 anos | a data da mudança |
 | `montar_cenarios(serie, data_mudanca)` | série + data | `({"so_antes", "tudo", "so_depois": série de treino}, teste)` |
 | `avaliar_cenarios(serie, data_mudanca, nomes_modelos=None)` | série, data, (opcional) quais modelos | `(tabela de métricas por cenário e modelo, resultados completos)` |
 
@@ -192,15 +192,15 @@ casas, `None` no lugar de NaN).
 
 | Função | Recebe | Devolve |
 |---|---|---|
-| `validar_variavel`, `validar_modelo`, `validar_horizonte` | o texto vindo da URL | o valor validado, ou levanta `ErroParametro` (vira erro 400) |
+| `validar_modelo`, `validar_horizonte` | o texto vindo da URL | o valor validado, ou levanta `ErroParametro` (vira erro 400) |
 | `saude()` | — | situação do servidor, período dos dados e se a atualização deu certo |
-| `opcoes()` | — | variáveis, modelos, padrões e limites do horizonte |
-| `serie(variavel)` | `temperatura` ou `sensacao` | o histórico de 90 dias |
-| `previsao(variavel, modelo, horizonte)` | variável, modelo, 1–14 | histórico + previsão + faixa + detalhes do modelo |
-| `metricas(variavel)` | variável | métricas de todos os modelos no teste |
-| `teste(variavel, modelo)` | variável + modelo | previsão x real dia a dia no teste |
-| `caso(variavel, modelo=None)` | variável, (opcional) modelo | os três cenários do caso de estudo |
-| `contexto()` | — | comparação com os anos anteriores (as duas variáveis) |
+| `opcoes()` | — | nome da série, modelos, modelo padrão e limites do horizonte |
+| `serie()` | — | o histórico de 90 dias |
+| `previsao(modelo, horizonte)` | modelo, 1–14 | histórico + previsão + faixa + detalhes do modelo |
+| `metricas()` | — | métricas de todos os modelos no teste |
+| `teste(modelo)` | modelo | previsão x real dia a dia no teste |
+| `caso(modelo=None)` | (opcional) modelo | os três cenários do caso de estudo |
+| `contexto()` | — | comparação com os anos anteriores |
 | `garantir_dados_atualizados()` | — | nada; baixa os dados de novo se não forem até ontem (nunca levanta erro) |
 | `limpar_cache()` | — | nada; esquece os resultados guardados |
 
@@ -223,8 +223,8 @@ argumentos; **imprimem os números no terminal e salvam gráficos** em `docs/img
 | `etapa1_coleta` | Open-Meteo | `coleta.coletar()` e mostra um resumo e a comparação das fontes | `data/fortaleza_diario.csv` |
 | `etapa2_exploracao` | o CSV + Open-Meteo (3 anos) | estatísticas, ADF, força semanal, anomalia, ponto de mudança | `data/fortaleza_contexto_3anos.csv`; `etapa2_series.png`, `etapa2_autocorrelacao.png`, `etapa2_contexto.png`, `etapa2_anomalia.png` |
 | `etapa3_modelagem` | o CSV | roda todos os modelos de `MODELOS` nos 90 dias e mostra o que cada um escolheu | `etapa3_previsoes.png` |
-| `etapa4_validacao` | o CSV | `comparar_modelos` para as duas variáveis e a tabela de erros dia a dia | `etapa4_teste.png` |
-| `etapa5_caso_estudo` | os dois CSVs | `datas_de_mudanca` + `avaliar_cenarios` | `etapa5_caso_estudo.png` |
+| `etapa4_validacao` | o CSV | `comparar_modelos` e a tabela de erros dia a dia | `etapa4_teste.png` |
+| `etapa5_caso_estudo` | os dois CSVs | `data_da_mudanca` + `avaliar_cenarios` | `etapa5_caso_estudo.png` |
 
 Ordem obrigatória na primeira vez: 1 → 2 (cria o contexto) → 3 → 4 → 5.
 
@@ -274,7 +274,7 @@ Ordem obrigatória na primeira vez: 1 → 2 (cria o contexto) → 3 → 4 → 5.
 
 **O que fazer** (em [coleta.py](../backend/previsao/coleta.py)):
 1. Definir as constantes do problema num lugar só: `LATITUDE`, `LONGITUDE`, `FUSO`, `DIAS = 90`
-   e o mapa `VARIAVEIS` (nome no CSV → nome na API).
+   e a coluna `COLUNA` com a variável correspondente na API, `VARIAVEL_API`.
 2. `calcular_periodo(hoje)` → os 90 dias que terminam **ontem** (D20: o dia de hoje ainda está
    incompleto).
 3. `buscar_historico(inicio, fim)` → API histórica do Open-Meteo com `models=best_match` e
@@ -313,11 +313,11 @@ origem e gravação atômica.
 | Análise | Função / ferramenta | O que responde | Nosso achado → consequência |
 |---|---|---|---|
 | Estatísticas + média móvel | `media_movel` | Nível e oscilação | Desvio 0,5 °C: pouca variação |
-| Autocorrelação (ACF/PACF) | `statsmodels.graphics.tsaplots` | A série tem memória? | ACF(1) = 0,75 / 0,87; PACF só no lag 1 → ordens baixas no SARIMA |
+| Autocorrelação (ACF/PACF) | `statsmodels.graphics.tsaplots` | A série tem memória? | ACF(1) = 0,75; PACF só no lag 1 → ordens baixas no SARIMA |
 | Estacionariedade (ADF) | `teste_adf(serie, regressao)` | Precisa diferenciar? | Testar `"c"` **e** `"ct"` (com tendência) — ver Passo 3 |
 | Sazonalidade semanal | `forca_sazonal(serie, 7)` | Há ciclo de 7 dias? | Força ~0,1 → modelos **sem** sazonalidade |
 | Anos anteriores | `baixar_contexto`, `mesmo_periodo_por_ano`, `climatologia`, `anomalia` | É estação ou é anomalia? | 2026 acima do "normal" |
-| Ponto de mudança | `detectar_mudanca(anomalia)` | Quando o nível mudou? | 15/10 (temp.) e 23/10 (sensação) |
+| Ponto de mudança | `detectar_mudanca(anomalia)` | Quando o nível mudou? | 15/10 |
 
 Detector de mudança (simples, sem biblioteca — D26): testa cada corte e fica com o que melhor
 divide a série em dois trechos de médias diferentes.
@@ -365,7 +365,7 @@ semanal provavelmente **existirá** — e aí os modelos devem incluí-la.
 | 2 | **ETS** (`prever_ets`) | `ETSModel(error="add")`; testa sem tendência / tendência / amortecida e fica com o menor **AICc** (D28, D30). |
 | 3 | **SARIMA** (`prever_sarima`) | `d` por teste ADF com tendência (`escolher_d`); depois 72 candidatos (p, q 0–2; P, Q 0–1 com período 7; com/sem tendência) e o menor AICc vence (D31, D33). |
 | 4 | **Prophet** (`prever_prophet`) | Sazonalidades desligadas (série curta, sem ciclo semanal), `interval_width=0.95`, semente fixa (D32). |
-| 5 | **Chronos-2** (`prever_chronos`) | Modelo pré-treinado `amazon/chronos-2` na CPU, sem treino; previsão = mediana, faixa = quantis 2,5%/97,5%; carregado 1x por processo (D47). |
+| 5 | **Chronos-2** (`prever_chronos`) | Modelo pré-treinado `amazon/chronos-2` na CPU, sem treino; previsão = mediana, faixa = quantis 2,5%/97,5%; carregado 1x por processo (D47); versão fixa (`CHRONOS_VERSAO`) e carga pela pasta local do cache, sem consultar a internet (D51). |
 
 Escolha automática pelo menor AICc (padrão para ETS e SARIMA):
 
@@ -418,9 +418,10 @@ uma função ao dicionário `MODELOS` — avaliação, caso de estudo e API pass
 **Confira:** teste **anti-vazamento** — alterar os valores do período de teste não pode mudar a
 previsão (`tests/test_avaliacao.py`). A escolha de configuração (AICc) acontece dentro do treino.
 
-**Nosso resultado (teste 16/11–25/11, erro médio):** temperatura — Prophet e Chronos-2 0,31 °C,
-SARIMA 0,38; sensação — SARIMA 0,29 °C (−15% vs base), Prophet 0,38 (pior que a base).
-**Escolhido: SARIMA**, o mais consistente nas duas séries.
+**Nosso resultado (teste 16/11–25/11, erro médio):** Prophet e Chronos-2 0,31 °C (−33% e −32% vs
+base), SARIMA 0,38, ETS 0,43, linha de base 0,46. **Escolhido: Chronos-2** (D52) — empatou no
+menor erro e, na janela seguinte (17/11–26/11), foi o melhor sozinho; o Prophet só acerta enquanto
+a tendência continua. Ponto fraco do Chronos-2: faixa ~2x mais larga.
 
 **Como adaptar:** com séries mais longas, troque o teste único por várias janelas
 (*rolling origin*) — 10 dias de teste são pouco para separar sorte de mérito.
@@ -432,7 +433,7 @@ SARIMA 0,38; sensação — SARIMA 0,29 °C (−15% vs base), Prophet 0,38 (pior
 **Objetivo:** mostrar o efeito de treinar com dados de antes de uma mudança.
 
 **O que fazer** (em [caso_estudo.py](../backend/previsao/caso_estudo.py)):
-1. `datas_de_mudanca(...)` → data da mudança por variável (do Passo 2, recalculada dos dados).
+1. `data_da_mudanca(...)` → data da mudança (do Passo 2, recalculada dos dados).
 2. `montar_cenarios(...)` → três treinos: **só antes** da mudança, **tudo**, **só depois**.
 3. `avaliar_cenarios(...)` → todos avaliados na **mesma janela de teste** (os números ficam
    comparáveis com o Passo 4 — D35).
@@ -458,7 +459,7 @@ teste com a data do evento para saber quanto tempo o modelo leva para "se recupe
    números com 2 casas, `null` no lugar de NaN); [app.py](../backend/app.py) só tem as rotas.
 2. **8 rotas `GET`** em `/api`, uma por elemento da tela (D38): `saude`, `opcoes`, `serie`,
    `previsao`, `metricas`, `teste`, `caso-estudo`, `contexto`. Parâmetros na URL com padrão
-   (`variavel=temperatura`, `modelo=sarima`, `horizonte=7`, limitado a 1–14). Documente cada uma
+   (`modelo=chronos`, `horizonte=7`, limitado a 1–14). Documente cada uma
    em [api.md](api.md).
 3. **Cache + fila única** (D37): treina no 1º pedido e guarda na memória; cálculos novos rodam um
    de cada vez (o GIL do Python impede ganho real com threads):
@@ -511,13 +512,12 @@ completo. Testes (`tests/test_atualizacao.py`) usam cópias em pasta temporária
    npm run dev
    ```
 2. Proxy do Vite `/api` → `http://127.0.0.1:5000`: o código chama `/api/...` sem URL fixa.
-3. Centralizar: cores ([cores.ts](../frontend/src/cores.ts) — temperatura azul `#2a78d6`, sensação
-   laranja `#eb6834`, D25), eixos (`componentes/eixos.ts`) e formatação
+3. Centralizar: cores ([cores.ts](../frontend/src/cores.ts) — temperatura azul `#2a78d6`, D25), eixos (`componentes/eixos.ts`) e formatação
    ([formatacao.ts](../frontend/src/formatacao.ts)).
 4. Datas: API em `AAAA-MM-DD`, tela em `DD-MM-AAAA` via `formatarData`, convertendo o **texto**
    — `new Date("2027-01-01")` no fuso UTC−3 vira 31/12 (D41).
 5. Seções: previsão (histórico + tracejado + faixa), comparação dos modelos, previsão x real no
-   teste (● dentro, ✕ fora), caso de estudo; no topo, card "Visão geral" com abas (D43, D48–D50).
+   teste (● dentro, ✕ fora), caso de estudo; no topo, card "Visão geral" com as abas "Caso de estudo" e "Anos anteriores" (D43, D49, D50, D52).
 6. Nunca tela branca (D45): limite de erro por seção, esqueletos com contador de segundos,
    gráficos com `lazy` + `Suspense`, faixa de aviso quando a API cai.
 7. Textos em linguagem simples **gerados por regras** a partir dos números

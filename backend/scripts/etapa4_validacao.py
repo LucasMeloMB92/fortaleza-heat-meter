@@ -21,9 +21,9 @@ sys.stdout.reconfigure(encoding="utf-8")
 PASTA_IMG = Path(__file__).resolve().parents[2] / "docs" / "img"
 DIAS_TREINO_GRAFICO = 20  # fim do treino mostrado antes do teste
 
-# Mesmas cores e nomes das etapas anteriores (D25).
-CORES = {"temperatura_media": "#2a78d6", "sensacao_media": "#eb6834"}
-NOMES = {"temperatura_media": "Temperatura média", "sensacao_media": "Sensação térmica média"}
+# Mesma cor e nome das etapas anteriores (D25).
+COR = "#2a78d6"
+NOME = "Temperatura média"
 TINTA = "#52514e"
 REAL = "#0b0b0b"  # valores reais do teste em preto, para não confundir com a previsão
 
@@ -43,55 +43,50 @@ plt.rcParams.update(
 )
 
 
-def grafico_teste(series, resultados) -> None:
-    """Linhas = variáveis, colunas = modelos. Treino (cor), previsão (tracejada + faixa) e real.
+def grafico_teste(serie, resultados) -> None:
+    """Uma coluna por modelo. Treino (cor), previsão (tracejada + faixa) e real (preto).
 
     Real dentro da faixa = círculo preenchido; fora da faixa = "x".
     """
-    # Uma coluna por modelo (eram 4; o Chronos-2 é o 5º — D47).
     n = len(modelos.MODELOS)
-    figura, eixos = plt.subplots(2, n, figsize=(3.75 * n, 6.5), sharey="row")
-    for linha, variavel in enumerate(coleta.VARIAVEIS):
-        treino, _ = avaliacao.separar_treino_teste(series[variavel])
-        treino = treino.iloc[-DIAS_TREINO_GRAFICO:]
-        cor = CORES[variavel]
-        for coluna, nome in enumerate(modelos.MODELOS):
-            eixo = eixos[linha, coluna]
-            comp = resultados[variavel][nome]["comparacao"]
-            metricas = resultados[variavel][nome]["metricas"]
+    figura, eixos = plt.subplots(1, n, figsize=(3.75 * n, 3.6), sharey=True)
+    treino, teste = avaliacao.separar_treino_teste(serie)
+    treino = treino.iloc[-DIAS_TREINO_GRAFICO:]
+    for coluna, nome in enumerate(modelos.MODELOS):
+        eixo = eixos[coluna]
+        comp = resultados[nome]["comparacao"]
+        metricas = resultados[nome]["metricas"]
 
-            eixo.plot(treino.index, treino, color=cor, lw=1.5)
-            eixo.plot(
-                [treino.index[-1], *comp.index],
-                [treino.iloc[-1], *comp["previsao"]],
-                color=cor,
-                lw=1.8,
-                ls="--",
-            )
-            eixo.fill_between(
-                comp.index, comp["inferior"], comp["superior"], color=cor, alpha=0.18, lw=0
-            )
-            eixo.plot(comp.index, comp["real"], color=REAL, lw=1, alpha=0.6)
-            dentro, fora = comp[comp["dentro_da_faixa"]], comp[~comp["dentro_da_faixa"]]
-            eixo.scatter(dentro.index, dentro["real"], color=REAL, s=18, zorder=4)
-            eixo.scatter(fora.index, fora["real"], color=REAL, marker="x", s=36, zorder=4)
-            eixo.axvline(treino.index[-1], color="#898781", lw=0.8, ls=":")
+        eixo.plot(treino.index, treino, color=COR, lw=1.5)
+        eixo.plot(
+            [treino.index[-1], *comp.index],
+            [treino.iloc[-1], *comp["previsao"]],
+            color=COR,
+            lw=1.8,
+            ls="--",
+        )
+        eixo.fill_between(
+            comp.index, comp["inferior"], comp["superior"], color=COR, alpha=0.18, lw=0
+        )
+        eixo.plot(comp.index, comp["real"], color=REAL, lw=1, alpha=0.6)
+        dentro, fora = comp[comp["dentro_da_faixa"]], comp[~comp["dentro_da_faixa"]]
+        eixo.scatter(dentro.index, dentro["real"], color=REAL, s=18, zorder=4)
+        eixo.scatter(fora.index, fora["real"], color=REAL, marker="x", s=36, zorder=4)
+        eixo.axvline(treino.index[-1], color="#898781", lw=0.8, ls=":")
 
-            texto = (
-                f"MAE {metricas['mae']:.2f} °C\nRMSE {metricas['rmse']:.2f} °C\n"
-                f"cobertura {metricas['cobertura']:.0f}%"
-            )
-            eixo.text(
-                0.02, 0.03, texto, transform=eixo.transAxes, fontsize=8, color=TINTA, va="bottom"
-            )
-            if linha == 0:
-                eixo.set_title(modelos.NOMES_MODELOS[nome], loc="left", fontsize=10)
-            if coluna == 0:
-                eixo.set_ylabel(f"{NOMES[variavel]}\n°C")
-            eixo.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=0))
-            eixo.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m"))
+        texto = (
+            f"MAE {metricas['mae']:.2f} °C\nRMSE {metricas['rmse']:.2f} °C\n"
+            f"cobertura {metricas['cobertura']:.0f}%"
+        )
+        eixo.text(0.02, 0.03, texto, transform=eixo.transAxes, fontsize=8, color=TINTA, va="bottom")
+        eixo.set_title(modelos.NOMES_MODELOS[nome], loc="left", fontsize=10)
+        if coluna == 0:
+            eixo.set_ylabel(f"{NOME}\n°C")
+        eixo.xaxis.set_major_locator(mdates.WeekdayLocator(byweekday=0))
+        eixo.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m"))
     figura.suptitle(
-        "Teste (16/11–25/11): previsão tracejada + faixa de 95% x real em preto (● dentro, ✕ fora)",
+        f"Teste ({teste.index[0]:%d/%m}–{teste.index[-1]:%d/%m}): previsão tracejada + faixa "
+        "de 95% x real em preto (● dentro, ✕ fora)",
         x=0.01,
         ha="left",
         fontsize=12,
@@ -104,32 +99,28 @@ def grafico_teste(series, resultados) -> None:
 
 
 def main() -> None:
-    tabela = coleta.carregar_csv().set_index("data")
-    series = {variavel: tabela[variavel] for variavel in coleta.VARIAVEIS}
-    treino, teste = avaliacao.separar_treino_teste(tabela)
+    serie = coleta.carregar_csv().set_index("data")[coleta.COLUNA]
+    treino, teste = avaliacao.separar_treino_teste(serie)
     print(f"Treino: {treino.index[0].date()} a {treino.index[-1].date()} ({len(treino)} dias)")
     print(f"Teste:  {teste.index[0].date()} a {teste.index[-1].date()} ({len(teste)} dias)")
 
-    resultados = {}
-    for variavel, serie in series.items():
-        print(f"\n==================== {NOMES[variavel]} ====================")
-        metricas, resultados[variavel] = avaliacao.comparar_modelos(serie)
+    metricas, resultados = avaliacao.comparar_modelos(serie)
 
-        print("\nConfiguração escolhida no treino de 80 dias:")
-        for nome, r in resultados[variavel].items():
-            print(f"  {modelos.NOMES_MODELOS[nome]:30s} {r['detalhes']['configuracao']}")
+    print(f"\nConfiguração escolhida no treino de {len(treino)} dias:")
+    for nome, r in resultados.items():
+        print(f"  {modelos.NOMES_MODELOS[nome]:30s} {r['detalhes']['configuracao']}")
 
-        print("\nMétricas no teste (°C; cobertura em %; mae_vs_linha_base em %):")
-        print(metricas.round(2).to_string())
+    print("\nMétricas no teste (°C; cobertura em %; mae_vs_linha_base em %):")
+    print(metricas.round(2).to_string())
 
-        print("\nErro dia a dia (previsão - real, °C):")
-        erros = {nome: r["comparacao"]["erro"] for nome, r in resultados[variavel].items()}
-        reais = resultados[variavel]["linha_base"]["comparacao"][["real"]]
-        quadro = reais.join(pd.DataFrame(erros)).round(2)
-        quadro.index = quadro.index.strftime("%d/%m")
-        print(quadro.to_string())
+    print("\nErro dia a dia (previsão - real, °C):")
+    erros = {nome: r["comparacao"]["erro"] for nome, r in resultados.items()}
+    reais = resultados["linha_base"]["comparacao"][["real"]]
+    quadro = reais.join(pd.DataFrame(erros)).round(2)
+    quadro.index = quadro.index.strftime("%d/%m")
+    print(quadro.to_string())
 
-    grafico_teste(series, resultados)
+    grafico_teste(serie, resultados)
 
 
 if __name__ == "__main__":

@@ -6,11 +6,10 @@ import { Ajuda } from './Ajuda'
 
 export function ResumoPrevisao(props: {
   resposta: RespostaPrevisao
-  nomeVariavel: string
   metricasDoModelo?: LinhaMetricas
   diasTeste?: number
 }) {
-  const { cartoes, texto } = resumoPrevisao(props.resposta, props.nomeVariavel)
+  const { cartoes, texto } = resumoPrevisao(props.resposta)
 
   return (
     <div className="mb-5 space-y-3">
