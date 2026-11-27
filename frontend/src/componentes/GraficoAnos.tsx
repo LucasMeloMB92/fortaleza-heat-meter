@@ -1,4 +1,4 @@
-// Gráfico da aba "Anos anteriores" (D50): o mesmo período do calendário em cada ano, no mesmo
+// Gráfico do card "Comparação com os anos anteriores" (D50): o mesmo período do calendário em cada ano, no mesmo
 // eixo. Padrão D25: anos anteriores em cinza, só o ano atual na cor da temperatura; o "normal"
 // (média dos anos anteriores) tracejado; linha vertical na data do degrau.
 import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'

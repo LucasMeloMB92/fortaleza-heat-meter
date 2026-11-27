@@ -6,7 +6,6 @@ Como rodar (a partir da pasta backend/):
 Endpoints (todos GET, respostas em JSON) — documentação completa em docs/api.md:
     /api/saude        o servidor está no ar? até quando vão os dados?
     /api/opcoes       série, modelos e limites aceitos (para montar os seletores da tela)
-    /api/serie        histórico de 90 dias
     /api/previsao     histórico + previsão + faixa de 95%
     /api/metricas     tabela comparativa dos modelos no período de teste
     /api/teste        previsão x real, dia a dia, no período de teste
@@ -56,10 +55,6 @@ def create_app() -> Flask:
     def rota_opcoes():
         return jsonify(servico.opcoes())
 
-    @app.get("/api/serie")
-    def rota_serie():
-        return jsonify(servico.serie())
-
     @app.get("/api/previsao")
     def rota_previsao():
         modelo = servico.validar_modelo(request.args.get("modelo"))
@@ -77,8 +72,8 @@ def create_app() -> Flask:
 
     @app.get("/api/caso-estudo")
     def rota_caso_estudo():
-        modelo = servico.validar_modelo(request.args.get("modelo"), obrigatorio=False)
-        return jsonify(servico.caso(modelo))
+        # Sem parâmetros: devolve todos os modelos; a tela filtra o escolhido (D53).
+        return jsonify(servico.caso())
 
     @app.get("/api/contexto")
     def rota_contexto():

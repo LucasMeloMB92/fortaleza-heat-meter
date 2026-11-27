@@ -48,9 +48,9 @@ class ErroParametro(ValueError):
 # ---------------------------------------------------------------------------
 
 
-def validar_modelo(valor: str | None, obrigatorio: bool = True) -> str | None:
+def validar_modelo(valor: str | None) -> str:
     if not valor:
-        return MODELO_PADRAO if obrigatorio else None
+        return MODELO_PADRAO
     if valor not in modelos.MODELOS:
         raise ErroParametro(
             "modelo", f"Modelo inválido: {valor!r}.", valores_aceitos=list(modelos.MODELOS)
@@ -293,23 +293,12 @@ def opcoes() -> dict:
     return {
         "serie": {"nome": NOME_SERIE, "unidade": "°C"},
         "modelos": [{"id": m, "nome": modelos.NOMES_MODELOS[m]} for m in modelos.MODELOS],
-        "padroes": {"modelo": MODELO_PADRAO},
         "horizonte": {
             "padrao": HORIZONTE_PADRAO,
             "minimo": HORIZONTE_MINIMO,
             "maximo": HORIZONTE_MAXIMO,
         },
         "nivel_intervalo": modelos.NIVEL,
-    }
-
-
-def serie() -> dict:
-    dados = _serie()
-    return {
-        "nome": NOME_SERIE,
-        "unidade": "°C",
-        "periodo": _periodo(dados),
-        "dados": _pontos(dados),
     }
 
 
@@ -370,10 +359,11 @@ def teste(modelo: str) -> dict:
     }
 
 
-def caso(modelo: str | None = None) -> dict:
+def caso() -> dict:
+    """Os 3 cenários de TODOS os modelos (D53): o backend calcula tudo de uma vez mesmo, e a tela
+    filtra o modelo escolhido para o gráfico — uma consulta só em vez de uma por modelo."""
     data, tabela, resultados = _caso_estudo()
     cenarios, teste_ = caso_estudo.montar_cenarios(_serie(), data)
-    nomes = [modelo] if modelo else list(modelos.MODELOS)
     return {
         "data_mudanca": _data(data),
         "teste": _periodo(teste_),
@@ -397,7 +387,7 @@ def caso(modelo: str | None = None) -> dict:
                 "previsao": _faixa(resultados[(cenario, nome)]["previsao"]),
             }
             for cenario in caso_estudo.CENARIOS
-            for nome in nomes
+            for nome in modelos.MODELOS
         ],
     }
 

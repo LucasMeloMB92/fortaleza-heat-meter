@@ -16,45 +16,51 @@ export function Seletores(props: {
     (_, i) => opcoes.horizonte.minimo + i,
   )
 
+  const rotulo = 'mb-1 text-xs font-medium uppercase tracking-wide text-tinta-2'
   return (
-    // items-start: os rótulos e os controles ficam na mesma linha no topo; a descrição do
-    // modelo cresce para baixo sem empurrar os vizinhos (com items-end, ficavam desalinhados).
-    <div className="flex flex-wrap items-start gap-6">
-      <label className="flex flex-col">
-        <span className="mb-1 text-xs font-medium uppercase tracking-wide text-tinta-2">Modelo</span>
-        <select
-          value={props.modelo}
-          onChange={(e) => props.aoMudarModelo(e.target.value as Modelo)}
-          className="rounded-lg border border-borda bg-white px-3 py-2 text-sm"
-        >
-          {opcoes.modelos.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.nome}
-            </option>
-          ))}
-        </select>
-        {/* O que o modelo escolhido faz, em uma frase (D46). */}
-        <span className="mt-1 max-w-xs text-xs leading-snug text-tinta-2">
-          {DESCRICAO_MODELO[props.modelo]}
-        </span>
-      </label>
+    // Duas colunas: à esquerda os controles (modelo e horizonte lado a lado); à direita, o que o
+    // modelo escolhido faz, ocupando o espaço que sobrava. Em tela estreita, a descrição desce.
+    <div className="grid items-start gap-4 md:grid-cols-[auto_1fr] md:gap-6">
+      <div className="flex flex-wrap gap-4">
+        <label className="flex flex-col">
+          <span className={rotulo}>Modelo</span>
+          <select
+            value={props.modelo}
+            onChange={(e) => props.aoMudarModelo(e.target.value as Modelo)}
+            className="min-w-56 rounded-lg border border-borda bg-white px-3 py-2 text-sm"
+          >
+            {opcoes.modelos.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.nome}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <label className="flex flex-col">
-        <span className="mb-1 text-xs font-medium uppercase tracking-wide text-tinta-2">
-          Horizonte
-        </span>
-        <select
-          value={props.horizonte}
-          onChange={(e) => props.aoMudarHorizonte(Number(e.target.value))}
-          className="rounded-lg border border-borda bg-white px-3 py-2 text-sm"
-        >
-          {horizontes.map((h) => (
-            <option key={h} value={h}>
-              {h} {h === 1 ? 'dia' : 'dias'}
-            </option>
-          ))}
-        </select>
-      </label>
+        <label className="flex flex-col">
+          <span className={rotulo}>Horizonte</span>
+          <select
+            value={props.horizonte}
+            onChange={(e) => props.aoMudarHorizonte(Number(e.target.value))}
+            className="rounded-lg border border-borda bg-white px-3 py-2 text-sm"
+          >
+            {horizontes.map((h) => (
+              <option key={h} value={h}>
+                {h} {h === 1 ? 'dia' : 'dias'}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {/* O que o modelo escolhido faz, em uma frase (D46). aria-live: o leitor de tela lê a
+          frase nova quando o modelo muda. */}
+      <div className="flex flex-col">
+        <span className={rotulo}>Sobre o modelo</span>
+        <p aria-live="polite" className="rounded-lg bg-plano px-3 py-2 text-sm leading-snug text-tinta-2">
+          {DESCRICAO_MODELO[props.modelo]}
+        </p>
+      </div>
     </div>
   )
 }

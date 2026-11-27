@@ -10,7 +10,7 @@ import {
   textoTeste,
 } from './textos'
 
-const metricasVazias = { rmse: 0.5, mae_dias_1_7: 0.3 }
+const metricasVazias = { rmse: 0.5, mae_dias_1_7: 0.3, largura_faixa: 2 }
 
 function linha(modelo: LinhaMetricas['modelo'], mae: number, vsBase: number, cobertura = 90): LinhaMetricas {
   return {
@@ -141,7 +141,7 @@ describe('textoTeste', () => {
       nome_modelo: 'SARIMA',
       configuracao: null,
       teste: { inicio: '2026-11-16', fim: '2026-11-17', dias: 2 },
-      metricas: { mae: 0.7, rmse: 0.9, cobertura: 50, mae_dias_1_7: 0.7, vies: -0.5 },
+      metricas: { mae: 0.7, rmse: 0.9, cobertura: 50, mae_dias_1_7: 0.7, vies: -0.5, largura_faixa: 2 },
       treino_final: [],
       dias: [
         { data: '2026-11-16', real: 27.5, previsao: 28.77, inferior: 28.25, superior: 29.29, erro: 1.27, dentro_da_faixa: false },
@@ -158,7 +158,7 @@ describe('textoTeste', () => {
 
 describe('textoCasoEstudo', () => {
   function caso(maeAntes: number, viesAntes: number, coberturaAntes: number): RespostaCasoEstudo {
-    const m = (mae: number, vies: number, cobertura: number) => ({ mae, vies, cobertura, rmse: mae, mae_dias_1_7: mae })
+    const m = (mae: number, vies: number, cobertura: number) => ({ mae, vies, cobertura, rmse: mae, mae_dias_1_7: mae, largura_faixa: 2 })
     const periodo = { inicio: '2026-08-28', fim: '2026-10-14', dias: 48 }
     return {
       data_mudanca: '2026-10-15',

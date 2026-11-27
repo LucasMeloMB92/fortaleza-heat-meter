@@ -147,8 +147,8 @@ dias com **o mesmo período do calendário (28/08 a 25/11) em 2024 e 2025**. Os 
    série em dois trechos com médias diferentes (D26).
 
 *Os dados dos anos anteriores servem só para **entender** a série; os modelos continuam usando só
-os últimos 90 dias (D24). Na ferramenta web, esta comparação está na aba **"Anos anteriores"** do
-card **"Visão geral dos modelos"**, recalculada todo dia.*
+os últimos 90 dias (D24). Na ferramenta web, esta comparação está no card **"Comparação com os anos
+anteriores"**, recalculada todo dia.*
 
 ---
 
@@ -475,8 +475,8 @@ o dobro) e a faixa do modelo "só antes" (dias em que o real caiu dentro / largu
 estreita (SARIMA, linha de base) ficaram **confiantes no nível errado**, e o de faixa larga
 (Chronos-2) "acertou" a faixa só porque ela era larga. Só o Prophet passou ileso.
 
-Na ferramenta web, esta comparação está na aba **"Caso de estudo"** do card **"Visão geral dos
-modelos"**, no topo da tela; o card de baixo continua mostrando o gráfico de um modelo por vez.
+Na ferramenta web, esta comparação está no card **"Caso de estudo"**: em cima, a tabela com todos os
+modelos; embaixo, o gráfico do modelo escolhido (clique num modelo da tabela para trocar).
 
 **O que aprendemos:**
 1. **O modelo desatualizado erra muito e sempre para o mesmo lado.** Linha de base, ETS e SARIMA

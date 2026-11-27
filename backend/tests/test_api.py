@@ -42,14 +42,14 @@ def test_opcoes_lista_serie_e_modelos(cliente):
     assert corpo["serie"] == {"nome": "Temperatura média", "unidade": "°C"}
     assert [m["id"] for m in corpo["modelos"]] == ["linha_base", "ets"]
     assert corpo["horizonte"] == {"padrao": 7, "minimo": 1, "maximo": 14}
+    assert "padroes" not in corpo  # a tela decide o modelo inicial (D55)
 
 
-def test_serie_tem_90_dias_em_formato_iso(cliente):
-    corpo = cliente.get("/api/serie").get_json()
-    assert corpo["nome"] == "Temperatura média"
-    assert len(corpo["dados"]) == 90
-    assert corpo["dados"][0]["data"] == corpo["periodo"]["inicio"]
-    assert len(corpo["dados"][0]["data"]) == 10  # AAAA-MM-DD
+def test_previsao_traz_90_dias_de_historico_em_formato_iso(cliente):
+    # O histórico vem junto com a previsão (a rota /api/serie saiu — D54).
+    corpo = cliente.get("/api/previsao").get_json()
+    assert len(corpo["historico"]) == 90
+    assert len(corpo["historico"][0]["data"]) == 10  # AAAA-MM-DD
 
 
 def test_previsao_padrao_tem_7_dias_apos_o_historico(cliente):
@@ -83,13 +83,10 @@ def test_teste_traz_10_dias_com_real_e_previsao(cliente):
     assert isinstance(corpo["dias"][0]["dentro_da_faixa"], bool)
 
 
-def test_caso_estudo_tem_3_cenarios_e_filtra_modelo(cliente):
+def test_caso_estudo_tem_3_cenarios_de_todos_os_modelos(cliente):
     corpo = cliente.get("/api/caso-estudo").get_json()
     assert [c["id"] for c in corpo["cenarios"]] == ["so_antes", "tudo", "so_depois"]
     assert len(corpo["resultados"]) == 3 * 2  # 3 cenários x 2 modelos
-
-    filtrado = cliente.get("/api/caso-estudo?modelo=ets").get_json()
-    assert {r["modelo"] for r in filtrado["resultados"]} == {"ets"}
 
 
 def test_respostas_nao_tem_nan(cliente):
@@ -130,7 +127,7 @@ def test_rota_inexistente_devolve_404_em_json(cliente):
 
 
 def test_metodo_errado_devolve_405(cliente):
-    assert cliente.post("/api/serie").status_code == 405
+    assert cliente.post("/api/saude").status_code == 405
 
 
 # --- CORS ----------------------------------------------------------------------
@@ -146,7 +143,7 @@ def test_cors_libera_so_o_frontend(cliente):
 
 def test_mensagens_de_erro_http_em_portugues(cliente):
     assert "Rota não encontrada" in cliente.get("/api/nao-existe").get_json()["erro"]
-    assert "só aceita GET" in cliente.post("/api/serie").get_json()["erro"]
+    assert "só aceita GET" in cliente.post("/api/saude").get_json()["erro"]
 
 
 def test_pedidos_iguais_simultaneos_calculam_uma_vez_so(monkeypatch):

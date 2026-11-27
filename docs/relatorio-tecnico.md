@@ -94,8 +94,8 @@ stack da ferramenta web era React.
 
 ### A API própria (Flask)
 
-O backend expõe **8 rotas `GET`** em `/api` — uma para cada parte da tela: `saude` (situação dos
-dados), `opcoes` (lista de modelos e limites), `serie` (histórico), `previsao`, `metricas`,
+O backend expõe **7 rotas `GET`** em `/api` — uma para cada parte da tela: `saude` (situação dos
+dados), `opcoes` (lista de modelos e limites), `previsao` (histórico + previsão), `metricas`,
 `teste`, `caso-estudo` e `contexto` (anos anteriores). Tudo é `GET` porque nada é alterado; as
 respostas são JSON em português. Detalhes de cada rota em [api.md](api.md).
 
@@ -194,12 +194,11 @@ casas, `None` no lugar de NaN).
 |---|---|---|
 | `validar_modelo`, `validar_horizonte` | o texto vindo da URL | o valor validado, ou levanta `ErroParametro` (vira erro 400) |
 | `saude()` | — | situação do servidor, período dos dados e se a atualização deu certo |
-| `opcoes()` | — | nome da série, modelos, modelo padrão e limites do horizonte |
-| `serie()` | — | o histórico de 90 dias |
+| `opcoes()` | — | nome da série, modelos e limites do horizonte |
 | `previsao(modelo, horizonte)` | modelo, 1–14 | histórico + previsão + faixa + detalhes do modelo |
 | `metricas()` | — | métricas de todos os modelos no teste |
 | `teste(modelo)` | modelo | previsão x real dia a dia no teste |
-| `caso(modelo=None)` | (opcional) modelo | os três cenários do caso de estudo |
+| `caso()` | — | os três cenários do caso de estudo, para todos os modelos |
 | `contexto()` | — | comparação com os anos anteriores |
 | `garantir_dados_atualizados()` | — | nada; baixa os dados de novo se não forem até ontem (nunca levanta erro) |
 | `limpar_cache()` | — | nada; esquece os resultados guardados |
@@ -209,7 +208,7 @@ fila; `_calculo_leve` faz o mesmo com uma fila própria para contas rápidas.
 
 ### `app.py` — a parte web
 
-`create_app()` cria o Flask, liga o CORS, registra as 8 rotas e os tratadores de erro. Cada rota só
+`create_app()` cria o Flask, liga o CORS, registra as 7 rotas e os tratadores de erro. Cada rota só
 **lê os parâmetros da URL → chama a função de `servico.py` → devolve JSON**. Antes de todo pedido,
 `@app.before_request` chama `servico.garantir_dados_atualizados()`.
 
@@ -517,7 +516,8 @@ completo. Testes (`tests/test_atualizacao.py`) usam cópias em pasta temporária
 4. Datas: API em `AAAA-MM-DD`, tela em `DD-MM-AAAA` via `formatarData`, convertendo o **texto**
    — `new Date("2027-01-01")` no fuso UTC−3 vira 31/12 (D41).
 5. Seções: previsão (histórico + tracejado + faixa), comparação dos modelos, previsão x real no
-   teste (● dentro, ✕ fora), caso de estudo; no topo, card "Visão geral" com as abas "Caso de estudo" e "Anos anteriores" (D43, D49, D50, D52).
+   teste (● dentro, ✕ fora), comparação com os anos anteriores e caso de estudo (tabela com todos
+   os modelos + gráfico do modelo escolhido, de uma consulta só) (D43, D50, D52, D53).
 6. Nunca tela branca (D45): limite de erro por seção, esqueletos com contador de segundos,
    gráficos com `lazy` + `Suspense`, faixa de aviso quando a API cai.
 7. Textos em linguagem simples **gerados por regras** a partir dos números

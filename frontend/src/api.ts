@@ -29,14 +29,12 @@ export interface Metricas {
   cobertura: number | null
   mae_dias_1_7: number | null
   vies: number | null
-  // Largura média da faixa, em °C (D48). Opcional: versões antigas da API não mandam.
-  largura_faixa?: number | null
+  largura_faixa: number | null // largura média da faixa, em °C (D48)
 }
 
 export interface Opcoes {
   serie: { nome: string; unidade: string } // uma série só: a temperatura média (D52)
   modelos: { id: Modelo; nome: string }[]
-  padroes: { modelo: Modelo }
   horizonte: { padrao: number; minimo: number; maximo: number }
   nivel_intervalo: number
 }
@@ -45,8 +43,8 @@ export interface Saude {
   status: string
   dados: Periodo
   // Atualização automática (D44): os dados vão até ontem? Se não, o motivo.
-  // Opcional: versões antigas da API não mandam este campo.
-  atualizacao?: {
+  // Obrigatório (D56): frontend e backend andam juntos no mesmo repositório.
+  atualizacao: {
     em_dia: boolean
     ultimo_dia_esperado: string
     atualizado_em: string | null
@@ -182,6 +180,6 @@ export const api = {
   metricas: () => buscar<RespostaMetricas>('metricas'),
   teste: (modelo: Modelo) => buscar<RespostaTeste>('teste', { modelo }),
   contexto: () => buscar<RespostaContexto>('contexto'),
-  // Sem `modelo`, a API devolve os resultados de TODOS os modelos (aba "Caso de estudo" da visão geral).
-  casoEstudo: (modelo?: Modelo) => buscar<RespostaCasoEstudo>('caso-estudo', modelo ? { modelo } : {}),
+  // Sempre TODOS os modelos; a tela filtra o escolhido (D53).
+  casoEstudo: () => buscar<RespostaCasoEstudo>('caso-estudo'),
 }
