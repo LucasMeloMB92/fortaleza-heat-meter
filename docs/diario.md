@@ -837,3 +837,68 @@ Pedido: deixar em `docs/decisoes.md` só as decisões que fazem sentido no proje
 - **Um registro de decisões que acumula "atualizações" vira um diário.** Separar os dois deixa
   cada arquivo com uma função: `decisoes.md` diz o que vale; `diario.md` e o Git contam como
   chegamos lá.
+
+---
+
+## Relatórios revisados e roteiro de apresentação — 27-11-2026
+
+### O que foi feito
+Pedido: revisar os relatórios final e técnico, criar um roteiro de apresentação de 15 a 20 minutos
+e tirar o termo "POC" do README.
+- **Relatório final:** cabeçalho reescrito como a versão atual (sem a pilha de "Atualização…");
+  nova **seção 2.1 "Como a ferramenta funciona"** (backend e frontend para leigos); nova **seção
+  11.7 "Como levar estes modelos para soluções com IA"** (previsão como ferramenta de um
+  assistente, alertas, muitas séries, pessoa no meio, cuidados). Numeração das outras seções
+  mantida, porque outros documentos citam "seção 7", "5.6" e "11.2".
+- **Guia técnico:** corrigidos trechos desatualizados — SARIMA ainda aparecia como recomendado e
+  o Chronos-2 como "empata, não ganha"; a API ainda tinha 8 rotas com `/api/serie`; o caso de
+  estudo dizia "2 a 6 vezes" (hoje 2,0 a 3,4). Entrou um resumo de **como cada modelo aprende** e
+  um **Passo 10** (próximo): ligar a API a um assistente de IA por *function calling*.
+- **Roteiro de apresentação** (`docs/roteiro-apresentacao.md`): 15 slides em 4 blocos (como roda,
+  modelos, resultados, IA), tempo por slide, o que mostrar, o que falar, checklist antes de
+  apresentar, versão de 15 minutos e perguntas prováveis.
+- **"POC" saiu** do README e dos dois relatórios ("estudo", "ferramenta", "projeto"). O diário e
+  as decisões mantêm o termo onde contam a história.
+- **README:** seções novas "Novidades", "Os modelos" e "Como funciona".
+
+### O que aprendi
+- **Documento que acumula avisos de versão fica difícil de ler.** Melhor descrever o estado atual
+  e deixar a história no diário.
+- **Revisar por busca de termos antigos** (`serie`, "8 rotas", "recomendado") acha o que a
+  leitura corrida deixa passar.
+
+---
+
+## Relatório e tela mais simples; seção "com muito mais dados" — 27-11-2026
+
+### O que foi feito
+Pedido: deixar as seções 3, 4, 7 e 8 do relatório final mais simples e didáticas, tirar a seção 10
+(limites) e as 11.1–11.6, manter "como levar para soluções com IA" e explicar o que muda com
+centenas ou milhares de séries; depois revisar o roteiro, o README e o frontend.
+- **Relatório final:** seções 3 (dados), 4 (previsão), 7 (vencedor) e 8 (caso de estudo)
+  reescritas com uma tabela curta cada e a conclusão primeiro. A seção 10 antiga (limites) saiu: os
+  dois limites essenciais (teste curto; a meteorologia ganha para o tempo) foram para a seção 7.
+  As 11.1–11.6 saíram. **Nova seção 10:** como levar os modelos para soluções com IA. **Nova seção
+  11:** com muito mais dados — o que muda, como os 5 modelos se sairiam, técnicas melhores (modelo
+  global: gradient boosting, redes neurais para séries, modelos fundacionais com ajuste,
+  reconciliação hierárquica), como avaliar e como levar isso para IA em escala. É referência, nada
+  foi implementado.
+- **Roteiro:** 16 slides em 18 min; novo slide 15 "E com muito mais dados?"; tabelas iguais às do
+  relatório.
+- **Frontend:** cada card mostra primeiro a conclusão em uma frase ("Em resumo") e recolhe os
+  números de apoio num botão "Ver…" (componente novo `Detalhes`).
+  - Previsão: linha "Como ler" o gráfico; tabela dia a dia recolhida.
+  - Comparação dos modelos: "acertou a faixa" foi para os detalhes técnicos; selo "recomendado" no
+    Chronos-2 e o porquê em uma frase (`RECOMENDACAO`, `MODELO_RECOMENDADO`).
+  - Anos anteriores: conclusão em duas frases (`conclusaoAnosAnteriores`); tabela só com a média;
+    subida e anomalia nos detalhes.
+  - Caso de estudo: colunas "Atualizado / Desatualizado / Quanto piorou" (as mesmas do relatório);
+    o que a faixa mostrou e os números dos 3 cenários ficam recolhidos. `textoCasoEstudoGeral`
+    agora devolve `{ conclusao, detalhe }`.
+- Frontend: 38 testes, tsc, oxlint e build limpos; tela conferida no navegador.
+
+### O que aprendi
+- **Conclusão primeiro, números depois.** Quem não é técnico lê a primeira frase; quem quer
+  conferir abre os detalhes. Os mesmos números continuam na tela, só mudam de lugar.
+- **Usar as mesmas palavras no relatório e na tela** ("atualizado", "desatualizado", "quanto
+  piorou") evita que o leitor ache que são coisas diferentes.

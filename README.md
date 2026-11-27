@@ -1,30 +1,76 @@
-# Fortaleza Heat Meter — POC de previsão de temperatura
+# Fortaleza Heat Meter — previsão de séries temporais
 
-Prova de conceito que demonstra o ciclo completo de previsão de séries temporais:
+Ferramenta web e estudo que demonstram o ciclo completo de previsão de séries temporais:
 
-**dados → modelo → previsão → gráfico**
+**dados → modelos → validação → previsão → tela**
 
 Usamos 90 dias de **temperatura média** diária de Fortaleza-CE (fonte:
-[Open-Meteo](https://open-meteo.com/), gratuita e sem cadastro), comparamos 5 modelos (linha de
-base, ETS, SARIMA, Prophet e Chronos-2, um modelo de IA moderna) e prevemos os próximos 7 dias com
-faixa de incerteza. (A sensação térmica, que era uma segunda série, foi retirada para simplificar a
-POC — decisão D52.)
+[Open-Meteo](https://open-meteo.com/), gratuita e sem cadastro), comparamos 5 modelos e prevemos
+os próximos 7 dias (até 14) com faixa de incerteza de 95%. A temperatura é o campo de testes: o
+método vale para qualquer número medido por dia (vendas, demanda, acessos).
 
-> Status: **POC concluída** (etapas 0 a 8). Resultados e recomendação no
-> [relatório final](docs/relatorio-final.md); andamento detalhado em [docs/diario.md](docs/diario.md).
+> Status: **estudo concluído** (etapas 0 a 8) + Chronos-2 (D47) + simplificações (D52–D56).
+> Resultados e recomendação no [relatório final](docs/relatorio-final.md); roteiro para
+> apresentar o trabalho em [docs/roteiro-apresentacao.md](docs/roteiro-apresentacao.md).
+
+## Novidades
+
+- **Chronos-2 é o modelo recomendado e o padrão da tela e da API** (D52): uma IA moderna da
+  Amazon, já treinada com milhões de séries, que prevê sem treino próprio. Empatou com o melhor
+  modelo no teste principal e foi o melhor sozinho no teste seguinte. Roda sem internet depois do
+  primeiro download, com versão fixa (D51).
+- **Uma série só:** a sensação térmica saiu (D52); a ferramenta prevê só a temperatura média.
+- **Menos peças** (D53–D56): o caso de estudo virou um card só (tabela de todos os modelos +
+  gráfico do escolhido, de uma consulta), a comparação com os anos anteriores ganhou card
+  próprio, e saíram a rota `/api/serie` e o campo `padroes` de `/api/opcoes`. A API tem 7 rotas.
+- **Relatório final mais simples e didático:** dados, previsão, modelo vencedor e caso de estudo
+  reescritos com menos números; novas seções sobre **como levar os modelos para soluções com IA**
+  (seção 10) e **o que muda com muito mais dados** — centenas ou milhares de séries, modelos
+  globais como gradient boosting, modelos fundacionais com ajuste (seção 11).
+- **Tela mais simples:** os cards de previsão, comparação dos modelos, anos anteriores e caso de
+  estudo mostram primeiro a conclusão em uma frase e deixam os números de apoio em "detalhes".
+- **Roteiro de apresentação** de 15 a 20 minutos, em 16 slides.
+
+## Os modelos
+
+| Modelo | O que faz | Como aprende |
+|---|---|---|
+| Linha de base | Média dos últimos 7 dias (a régua) | Não aprende |
+| ETS | Média ponderada, dias recentes pesam mais | Testa 3 versões, fica com o menor AICc |
+| SARIMA | Usa os dias e erros anteriores | Teste ADF + 72 combinações, menor AICc |
+| Prophet (Meta) | Tendência que muda de inclinação | Ajusta a tendência (sem ciclos aqui) |
+| **Chronos-2** (Amazon) | Rede neural pré-treinada (*zero-shot*) | Não treina: recebe a série como contexto |
+
+Todos têm a mesma interface (`modelos.prever(nome, serie, horizonte, nivel)`) e devolvem previsão
++ faixa de 95%. Detalhes no [relatório final, seção 5](docs/relatorio-final.md).
+
+## Como funciona
+
+```
+Open-Meteo ──► backend (Python + Flask, :5000) ──JSON──► frontend (React, :5173) ──► navegador
+               coleta, atualiza todo dia, treina,         gráficos, tabelas e textos
+               avalia, guarda em cache                    em linguagem simples
+```
+
+- **Backend:** baixa os 90 dias até ontem, grava em CSV, roda os 5 modelos, mede o erro em 10
+  dias escondidos e responde em 7 rotas `GET /api/...` ([docs/api.md](docs/api.md)). No primeiro
+  acesso de cada dia, atualiza os dados e retreina sozinho.
+- **Frontend:** pede os dados prontos e mostra cinco cards: previsão, comparação dos modelos,
+  previsão × real no teste, comparação com os anos anteriores e caso de estudo.
 
 ## Estrutura
 
 ```
 backend/    Python: coleta, modelos e API Flask
-  previsao/   lógica da POC (independente da web)
+  previsao/   lógica (coleta, exploração, modelos, avaliação, caso de estudo, serviço) — independente da web
   scripts/    um script por etapa (gera números e gráficos)
   data/       dados em CSV
   tests/      testes (pytest)
-frontend/   React + Vite + TypeScript: a tela da POC
+frontend/   React + Vite + TypeScript: a tela
   src/componentes/  gráficos, tabelas e seletores
   src/formatacao.ts datas (DD-MM-AAAA) e números para exibição
-docs/       documentação: decisões, diário, glossário, API, relatório final
+  src/textos.ts     frases da tela, geradas por regras a partir dos números
+docs/       documentação: decisões, diário, glossário, API, relatórios e roteiro de apresentação
 ```
 
 ## Pré-requisitos
@@ -160,4 +206,5 @@ npm run build
 - [Glossário](docs/glossario.md) — termos explicados de forma simples
 - [API](docs/api.md) — endpoints do backend
 - [Relatório final](docs/relatorio-final.md) — resumo para o cliente
-- [Guia técnico](docs/relatorio-tecnico.md) — passo a passo para reproduzir a POC ou aplicar o método em outra série
+- [Guia técnico](docs/relatorio-tecnico.md) — passo a passo para reproduzir o estudo ou aplicar o método em outra série
+- [Roteiro de apresentação](docs/roteiro-apresentacao.md) — 15 a 20 minutos: o que foi feito, como roda, modelos, resultados, uso com IA e com muito mais dados

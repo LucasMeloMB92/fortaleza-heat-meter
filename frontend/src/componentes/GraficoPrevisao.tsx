@@ -15,6 +15,7 @@ import {
 import type { RespostaPrevisao } from '../api'
 import { COR_GRADE, COR_TEMPERATURA } from '../cores'
 import { formatarData, formatarGraus } from '../formatacao'
+import { Detalhes } from './Detalhes'
 import { DicaGrafico } from './DicaGrafico'
 import { MARGEM_GRAFICO, PROPS_EIXO_X, PROPS_EIXO_Y } from './eixos'
 
@@ -103,30 +104,37 @@ export function GraficoPrevisao(props: { resposta: RespostaPrevisao }) {
         </ResponsiveContainer>
       </div>
 
-      {/* A mesma previsão em tabela: para ler os números com precisão. */}
-      <table className="mt-4 w-full text-sm">
-        <caption className="mb-1 text-left text-xs text-tinta-2">
-          Valores previstos — faixa de 95%: o valor real deve cair entre o mínimo e o máximo.
-        </caption>
-        <thead>
-          <tr className="border-b border-borda text-left text-xs uppercase text-tinta-2">
-            <th className="py-1 font-medium">Data</th>
-            <th className="py-1 text-right font-medium">Previsão</th>
-            <th className="py-1 text-right font-medium">Mínimo</th>
-            <th className="py-1 text-right font-medium">Máximo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {resposta.previsao.map((p) => (
-            <tr key={p.data} className="border-b border-borda/60 tabular-nums">
-              <td className="py-1">{formatarData(p.data)}</td>
-              <td className="py-1 text-right font-medium">{formatarGraus(p.previsao)}</td>
-              <td className="py-1 text-right text-tinta-2">{formatarGraus(p.inferior)}</td>
-              <td className="py-1 text-right text-tinta-2">{formatarGraus(p.superior)}</td>
+      <p className="mt-2 text-xs text-tinta-2">
+        Como ler: linha contínua = o que aconteceu; tracejado = a previsão; área clara = a faixa de 95%, onde o
+        valor real deve cair. Quanto mais longe o dia, mais larga a faixa.
+      </p>
+
+      {/* A mesma previsão em tabela, recolhida: para quem quer ler os números com precisão. */}
+      <Detalhes rotulo="Ver os valores previstos dia a dia">
+        <table className="w-full text-sm">
+          <caption className="mb-1 text-left text-xs text-tinta-2">
+            Valores previstos — faixa de 95%: o valor real deve cair entre o mínimo e o máximo.
+          </caption>
+          <thead>
+            <tr className="border-b border-borda text-left text-xs uppercase text-tinta-2">
+              <th className="py-1 font-medium">Data</th>
+              <th className="py-1 text-right font-medium">Previsão</th>
+              <th className="py-1 text-right font-medium">Mínimo</th>
+              <th className="py-1 text-right font-medium">Máximo</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {resposta.previsao.map((p) => (
+              <tr key={p.data} className="border-b border-borda/60 tabular-nums">
+                <td className="py-1">{formatarData(p.data)}</td>
+                <td className="py-1 text-right font-medium">{formatarGraus(p.previsao)}</td>
+                <td className="py-1 text-right text-tinta-2">{formatarGraus(p.inferior)}</td>
+                <td className="py-1 text-right text-tinta-2">{formatarGraus(p.superior)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Detalhes>
     </div>
   )
 }

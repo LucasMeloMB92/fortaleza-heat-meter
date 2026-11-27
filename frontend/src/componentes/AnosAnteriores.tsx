@@ -4,8 +4,9 @@
 import { lazy } from 'react'
 import type { RespostaContexto } from '../api'
 import { formatarComSinal, formatarData, formatarGraus } from '../formatacao'
-import { AJUDA, textoAnosAnteriores } from '../textos'
+import { AJUDA, conclusaoAnosAnteriores, textoAnosAnteriores } from '../textos'
 import { Ajuda } from './Ajuda'
+import { Detalhes } from './Detalhes'
 
 // Gráfico sob demanda (D45): o Suspense do Cartao mostra o esqueleto enquanto o código chega.
 const GraficoAnos = lazy(() => import('./GraficoAnos').then((m) => ({ default: m.GraficoAnos })))
@@ -17,7 +18,10 @@ export function AnosAnteriores(props: { resposta: RespostaContexto }) {
   return (
     <div>
       <h3 className="text-sm font-semibold">{resposta.nome}</h3>
-      <p className="mb-2 mt-1 text-sm leading-relaxed">{textoAnosAnteriores(resposta)}</p>
+      {/* Primeiro a conclusão em duas frases; os números de cada ano ficam em "Ver os números". */}
+      <p className="mb-2 mt-1 rounded-md bg-plano p-3 text-sm leading-relaxed">
+        <strong>Em resumo:</strong> {conclusaoAnosAnteriores(resposta)}
+      </p>
       <GraficoAnos resposta={resposta} />
       <div className="overflow-x-auto">
         <table className="mt-2 w-full text-sm">
@@ -25,11 +29,7 @@ export function AnosAnteriores(props: { resposta: RespostaContexto }) {
             <tr className="border-b border-borda text-left text-xs uppercase text-tinta-2">
               <th className="py-2 font-medium">Ano</th>
               <th className={th}>Período</th>
-              <th className={th}>Média</th>
-              <th className={th}>
-                Subida no período
-                <Ajuda rotulo="subida no período" texto={AJUDA.subidaPeriodo} />
-              </th>
+              <th className={th}>Temperatura média</th>
             </tr>
           </thead>
           <tbody>
@@ -42,26 +42,29 @@ export function AnosAnteriores(props: { resposta: RespostaContexto }) {
                     {formatarData(a.inicio).slice(0, 5)} a {formatarData(a.fim).slice(0, 5)}
                   </td>
                   <td className={num}>{formatarGraus(a.media)}</td>
-                  <td className={num}>{formatarComSinal(a.subida)}</td>
                 </tr>
               )
             })}
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-sm tabular-nums">
-        <span className="text-tinta-2">
-          Diferença para o normal
-          <Ajuda rotulo="diferença para o normal (anomalia)" texto={AJUDA.anomalia} />:
-        </span>{' '}
-        {formatarComSinal(resposta.anomalia_media)} no período · {formatarComSinal(resposta.anomalia_recente)} nos
-        últimos {resposta.dias_anomalia_recente} dias
-      </p>
-      <p className="mt-3 text-xs text-tinta-3">
-        Mesmo período do calendário em cada ano. "Normal" = média de {resposta.anos_anteriores.join(' e ')} no mesmo
-        dia (suavizada em 7 dias). Estes dados servem só para entender a série: os modelos continuam usando só os
-        últimos 90 dias. A data do degrau é a mesma usada no caso de estudo.
-      </p>
+      <Detalhes rotulo="Ver os números (subida em cada ano e diferença para o normal)">
+        <p className="text-sm leading-relaxed">{textoAnosAnteriores(resposta)}</p>
+        <p className="mt-2 text-sm tabular-nums">
+          <span className="text-tinta-2">
+            Diferença para o normal
+            <Ajuda rotulo="diferença para o normal (anomalia)" texto={AJUDA.anomalia} />:
+          </span>{' '}
+          {formatarComSinal(resposta.anomalia_media)} no período · {formatarComSinal(resposta.anomalia_recente)} nos
+          últimos {resposta.dias_anomalia_recente} dias
+        </p>
+        <p className="mt-2 text-xs text-tinta-3">
+          "Normal" = média de {resposta.anos_anteriores.join(' e ')} no mesmo dia do calendário (suavizada em 7 dias).
+          "Subida" = média dos últimos {resposta.dias_subida} dias do período menos a dos primeiros
+          <Ajuda rotulo="subida no período" texto={AJUDA.subidaPeriodo} />. Estes dados servem só para entender a
+          série: os modelos continuam usando só os últimos 90 dias.
+        </p>
+      </Detalhes>
     </div>
   )
 }

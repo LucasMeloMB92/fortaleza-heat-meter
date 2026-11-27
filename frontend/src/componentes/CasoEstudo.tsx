@@ -21,6 +21,7 @@ import { formatarComSinal, formatarData, formatarGraus } from '../formatacao'
 import { AJUDA, textoCasoEstudo } from '../textos'
 import { Ajuda } from './Ajuda'
 import { CasoEstudoGeral } from './CasoEstudoGeral'
+import { Detalhes } from './Detalhes'
 import { DicaGrafico } from './DicaGrafico'
 import { PROPS_EIXO_X, PROPS_EIXO_Y } from './eixos'
 
@@ -125,60 +126,62 @@ export function CasoEstudo(props: {
         </ResponsiveContainer>
       </div>
 
-      <table className="mt-4 w-full text-sm">
-        <caption className="mb-1 text-left text-xs text-tinta-2">
-          Erro de cada cenário no período de teste ({formatarData(resposta.teste.inicio)} a{' '}
-          {formatarData(resposta.teste.fim)}).
-        </caption>
-        <thead>
-          <tr className="border-b border-borda text-left text-xs uppercase text-tinta-2">
-            <th className="py-1 font-medium">Cenário de treino</th>
-            <th className="py-1 font-medium">Treinou com</th>
-            <th className="py-1 text-right font-medium">Nível médio no treino</th>
-            <th className="py-1 text-right font-medium">
-              Erro médio
-              <Ajuda rotulo="erro médio" texto={AJUDA.erroMedio} />
-            </th>
-            <th className="py-1 text-right font-medium">
-              Errou para
-              <Ajuda rotulo="viés" texto={AJUDA.vies} />
-            </th>
-            <th className="py-1 text-right font-medium">
-              Acertou a faixa
-              <Ajuda rotulo="acertou a faixa" texto={AJUDA.acertouFaixa} />
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {resposta.cenarios.map((c) => {
-            const m = metricasPorCenario.get(c.id)
-            const vies = m?.vies ?? 0
-            const acertos = Math.round(((m?.cobertura ?? 0) / 100) * resposta.teste.dias)
-            return (
-              <tr key={c.id} className="border-b border-borda/60 tabular-nums">
-                <td className="py-1">
-                  <span
-                    className="mr-2 inline-block h-2 w-2 rounded-full"
-                    style={{ background: corCenario(c.id) }}
-                  />
-                  {c.nome}
-                </td>
-                <td className="py-1 text-tinta-2">
-                  {formatarData(c.inicio)} a {formatarData(c.fim)} ({c.dias} dias)
-                </td>
-                <td className="py-1 text-right">{formatarGraus(c.media_treino)}</td>
-                <td className="py-1 text-right font-medium">{formatarGraus(m?.mae)}</td>
-                <td className="py-1 text-right">
-                  {Math.abs(vies) < 0.1 ? 'quase nada' : `${vies < 0 ? 'baixo' : 'cima'} (${formatarComSinal(vies, ' °C', 1)})`}
-                </td>
-                <td className="py-1 text-right">
-                  {acertos} de {resposta.teste.dias} dias
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+      <Detalhes rotulo={`Ver os números dos 3 cenários do ${nomeModelo}`}>
+        <table className="w-full text-sm">
+          <caption className="mb-1 text-left text-xs text-tinta-2">
+            Erro de cada cenário no período de teste ({formatarData(resposta.teste.inicio)} a{' '}
+            {formatarData(resposta.teste.fim)}).
+          </caption>
+          <thead>
+            <tr className="border-b border-borda text-left text-xs uppercase text-tinta-2">
+              <th className="py-1 font-medium">Cenário de treino</th>
+              <th className="py-1 font-medium">Treinou com</th>
+              <th className="py-1 text-right font-medium">Nível médio no treino</th>
+              <th className="py-1 text-right font-medium">
+                Erro médio
+                <Ajuda rotulo="erro médio" texto={AJUDA.erroMedio} />
+              </th>
+              <th className="py-1 text-right font-medium">
+                Errou para
+                <Ajuda rotulo="viés" texto={AJUDA.vies} />
+              </th>
+              <th className="py-1 text-right font-medium">
+                Acertou a faixa
+                <Ajuda rotulo="acertou a faixa" texto={AJUDA.acertouFaixa} />
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {resposta.cenarios.map((c) => {
+              const m = metricasPorCenario.get(c.id)
+              const vies = m?.vies ?? 0
+              const acertos = Math.round(((m?.cobertura ?? 0) / 100) * resposta.teste.dias)
+              return (
+                <tr key={c.id} className="border-b border-borda/60 tabular-nums">
+                  <td className="py-1">
+                    <span
+                      className="mr-2 inline-block h-2 w-2 rounded-full"
+                      style={{ background: corCenario(c.id) }}
+                    />
+                    {c.nome}
+                  </td>
+                  <td className="py-1 text-tinta-2">
+                    {formatarData(c.inicio)} a {formatarData(c.fim)} ({c.dias} dias)
+                  </td>
+                  <td className="py-1 text-right">{formatarGraus(c.media_treino)}</td>
+                  <td className="py-1 text-right font-medium">{formatarGraus(m?.mae)}</td>
+                  <td className="py-1 text-right">
+                    {Math.abs(vies) < 0.1 ? 'quase nada' : `${vies < 0 ? 'baixo' : 'cima'} (${formatarComSinal(vies, ' °C', 1)})`}
+                  </td>
+                  <td className="py-1 text-right">
+                    {acertos} de {resposta.teste.dias} dias
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </Detalhes>
     </div>
   )
 }

@@ -3,7 +3,7 @@
 // componentes. Uma série só: a temperatura média (D52).
 import { useQueryClient } from '@tanstack/react-query'
 import { lazy, useEffect, useRef, useState } from 'react'
-import type { Modelo } from './api'
+import { MODELO_RECOMENDADO, type Modelo } from './api'
 import { AvisoTopo } from './componentes/AvisoTopo'
 import { Cartao, EstadoConsulta } from './componentes/Cartao'
 import { LimiteDeErro } from './componentes/LimiteDeErro'
@@ -54,7 +54,7 @@ export default function App() {
   const clienteConsultas = useQueryClient()
   const opcoes = useOpcoes()
   const saude = useSaude()
-  const [modelo, setModelo] = useState<Modelo>('chronos') // recomendado (D52)
+  const [modelo, setModelo] = useState<Modelo>(MODELO_RECOMENDADO)
   const [horizonte, setHorizonte] = useState(7)
 
   useRecarregarQuandoODiaVirar(saude.data?.dados.fim)
@@ -200,7 +200,7 @@ export default function App() {
         titulo="Comparação com os anos anteriores"
         atualizando={contexto.isFetching && !contexto.isPending}
         alturaEsqueleto="h-64"
-        subtitulo="O período de agora comparado com o mesmo período do calendário nos anos anteriores: o que é estação do ano e o que é anomalia."
+        subtitulo="A temperatura subiu nos últimos meses. É normal para a época ou é algo diferente? Comparamos com o mesmo período dos anos anteriores."
       >
         <EstadoConsulta
           carregando={contexto.isPending}
@@ -217,7 +217,7 @@ export default function App() {
       <Cartao
         titulo="Caso de estudo: mudança forte de temperatura"
         atualizando={caso.isFetching && !caso.isPending}
-        subtitulo="E se o modelo só conhecesse os dias antes da mudança? Três formas de treinar, todas avaliadas no mesmo período de teste. Clique num modelo para ver o gráfico dele."
+        subtitulo="E se o modelo não tivesse visto a mudança? Comparamos cada modelo atualizado com uma versão desatualizada, no mesmo período de teste. Clique num modelo para ver o gráfico dele."
       >
         <EstadoConsulta
           carregando={caso.isPending}

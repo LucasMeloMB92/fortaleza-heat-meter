@@ -57,17 +57,22 @@ describe('impactos', () => {
 })
 
 describe('textoCasoEstudoGeral', () => {
-  it('resume quem sofreu, o pior caso, quem não sentiu e o que a faixa mostrou', () => {
-    expect(textoCasoEstudoGeral(temperatura)).toBe(
-      'Sem ver a mudança, 4 dos 5 modelos tiveram um erro de 2,0 a 3,4 vezes maior do que quando ' +
-        'viram todos os dias. O que mais sofreu foi o Chronos-2 (3,4 vezes). ' +
+  it('conclusão curta: quem sofreu, quem não sentiu e a lição', () => {
+    expect(textoCasoEstudoGeral(temperatura).conclusao).toBe(
+      'Sem ver a mudança, 4 dos 5 modelos erraram de 2,0 a 3,4 vezes mais. ' +
         'O Prophet quase não sentiu a mudança. ' +
+        'Lição: quando o comportamento muda, os modelos precisam dos dados recentes — por isso esta ' +
+        'ferramenta atualiza os dados e refaz os modelos todo dia.',
+    )
+  })
+
+  it('detalhe: o pior caso e o que a faixa mostrou', () => {
+    expect(textoCasoEstudoGeral(temperatura).detalhe).toBe(
+      'O que mais sofreu foi o Chronos-2 (3,4 vezes). ' +
         'SARIMA, ETS e Linha de base acertaram a faixa em metade dos dias ou menos: ' +
         'confiantes, mas no nível errado. ' +
         'Chronos-2 acertou a faixa na maioria dos dias mesmo errando o nível — só porque a faixa ' +
-        'era larga. ' +
-        'Lição: quando o comportamento muda, os modelos precisam dos dados recentes — por isso esta ' +
-        'ferramenta atualiza os dados e refaz os modelos todo dia.',
+        'era larga.',
     )
   })
 })

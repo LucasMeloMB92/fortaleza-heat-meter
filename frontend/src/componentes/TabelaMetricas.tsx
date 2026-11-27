@@ -1,9 +1,9 @@
 // Tabela comparando os 5 modelos no período de teste, em linguagem simples (D46): resumo em
 // texto, colunas com nomes do dia a dia e detalhes técnicos recolhidos. Clicar seleciona o modelo.
 import { useState } from 'react'
-import type { Modelo, RespostaMetricas } from '../api'
+import { MODELO_RECOMENDADO, type Modelo, type RespostaMetricas } from '../api'
 import { formatarComSinal, formatarGraus } from '../formatacao'
-import { AJUDA, rotuloVsRegraSimples, textoComparacao } from '../textos'
+import { AJUDA, RECOMENDACAO, rotuloVsRegraSimples, textoComparacao } from '../textos'
 import { Ajuda } from './Ajuda'
 
 export function TabelaMetricas(props: {
@@ -31,15 +31,15 @@ export function TabelaMetricas(props: {
                 <Ajuda rotulo="erro médio" texto={AJUDA.erroMedio} />
               </th>
               <th className={`${th} whitespace-nowrap pl-4 text-right`}>
-                Acertou a faixa
-                <Ajuda rotulo="acertou a faixa" texto={AJUDA.acertouFaixa} />
-              </th>
-              <th className={`${th} whitespace-nowrap pl-4 text-right`}>
                 vs regra simples
                 <Ajuda rotulo="comparação com a regra simples" texto={AJUDA.regraSimples} />
               </th>
               {detalhes && (
                 <>
+                  <th className={`${th} whitespace-nowrap pl-4 text-right`}>
+                    Acertou a faixa
+                    <Ajuda rotulo="acertou a faixa" texto={AJUDA.acertouFaixa} />
+                  </th>
                   <th className={`${th} whitespace-nowrap pl-4 text-right`}>
                     RMSE
                     <Ajuda rotulo="RMSE" texto={AJUDA.rmse} />
@@ -77,6 +77,11 @@ export function TabelaMetricas(props: {
                       <span className={selecionado ? 'font-semibold' : 'underline decoration-dotted'}>
                         {l.nome_modelo}
                       </span>
+                      {l.modelo === MODELO_RECOMENDADO && (
+                        <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-800">
+                          recomendado
+                        </span>
+                      )}
                       {melhor && (
                         <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-xs text-emerald-800">
                           menor erro
@@ -86,14 +91,14 @@ export function TabelaMetricas(props: {
                     </button>
                   </td>
                   <td className={`${num} ${melhor ? 'font-semibold' : ''}`}>{formatarGraus(l.mae)}</td>
-                  <td className={num}>
-                    {acertos} de {diasTeste} dias
-                  </td>
                   <td className={`${num} ${pct <= -3 ? 'text-emerald-700' : pct >= 3 ? 'text-red-700' : ''}`}>
                     {rotuloVsRegraSimples(l)}
                   </td>
                   {detalhes && (
                     <>
+                      <td className={num}>
+                        {acertos} de {diasTeste} dias
+                      </td>
                       <td className={num}>{formatarGraus(l.rmse)}</td>
                       <td className={num}>{formatarComSinal(l.vies)}</td>
                       <td className={num}>{formatarGraus(l.largura_faixa)}</td>
@@ -105,13 +110,14 @@ export function TabelaMetricas(props: {
           </tbody>
         </table>
       </div>
+      <p className="mt-3 text-xs text-tinta-2">{RECOMENDACAO}</p>
       <button
         type="button"
         onClick={() => setDetalhes((d) => !d)}
         aria-expanded={detalhes}
         className="mt-3 text-xs text-tinta-2 underline decoration-dotted hover:text-tinta"
       >
-        {detalhes ? 'Esconder detalhes técnicos' : 'Mostrar detalhes técnicos (RMSE, viés, largura da faixa, configuração)'}
+        {detalhes ? 'Esconder detalhes técnicos' : 'Mostrar detalhes técnicos (acertos da faixa, RMSE, viés, largura da faixa, configuração)'}
       </button>
     </div>
   )
