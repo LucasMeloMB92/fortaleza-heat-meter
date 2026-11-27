@@ -586,7 +586,8 @@ previsão **sem inventar números**. Ainda não implementado; o desenho abaixo u
 
 **Como adaptar:** a mesma API, sem mudanças, serve de ferramenta para qualquer série. Outros usos
 (alertas quando o real sai da faixa, muitas séries de uma vez, decisão com pessoa no meio) estão
-no [relatório final, seção 11.7](relatorio-final.md#117-como-levar-estes-modelos-para-soluções-com-ia).
+no [relatório final, seção 10](relatorio-final.md#10-como-levar-estes-modelos-para-soluções-com-ia);
+com centenas ou milhares de séries, outros modelos passam a ser melhores (seção 11).
 
 ---
 

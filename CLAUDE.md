@@ -68,10 +68,10 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 - **Todas as etapas (0–8) concluídas + evolução 11.2 (Chronos-2) + simplificação D52 (só
   temperatura).** Relatório final em `docs/relatorio-final.md`: recomendação = **Chronos-2**
   (seção 7); seção 5.6 e 11.2 = Chronos.
-- NÃO propor roteiro de ML/DL próprio (LightGBM, redes treinadas do zero) — decisão do usuário.
-  Melhorias ainda registradas no relatório: textos por IA (Gemma/Gemini), outras métricas
-  (cliente ainda sem métrica real — exemplo genérico: vendas diárias), publicação online,
-  repetir a comparação em várias semanas.
+- NÃO implementar ML/DL próprio (LightGBM, redes treinadas do zero) — decisão do usuário. A
+  pedido dele, o relatório só **explica** essas técnicas na seção 11 ("E com muito mais dados?"),
+  como referência. Seção 10 = como levar os modelos para soluções com IA. As antigas seção 10
+  (limites) e 11.1–11.6 (próximos passos) saíram a pedido do usuário.
 - **Menos peças (D53–D56) ✅** — as abas da "Visão geral" (D49) saíram. Caso de estudo = um card só:
   tabela de todos os modelos (`casoGeral.ts`) + gráfico do modelo escolhido, de UMA consulta
   (`/api/caso-estudo` sem parâmetros; a tela filtra). Card próprio "Comparação com os anos
@@ -82,7 +82,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 - **Para retomar:** leia o fim de `docs/diario.md` (inclui as dúvidas discutidas). Para ver a tela:
   suba `backend` e `frontend` pelo `.claude/launch.json`. Os números da documentação são um retrato
   de 26-11-2026; a ferramenta atualiza os dados sozinha todo dia (D44).
-- **Qualidade atual:** backend 69 testes (pytest) + ruff limpo; frontend 35 testes (Vitest) +
+- **Qualidade atual:** backend 69 testes (pytest) + ruff limpo; frontend 38 testes (Vitest) +
   tsc + oxlint + build limpos.
 
 ## Etapas (ordem fixa)
@@ -98,9 +98,10 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
 8. Relatório final ✅
 
 Evoluções depois da POC: 11.2 Chronos-2 ✅ (D47); simplificação só temperatura ✅ (D52); menos peças ✅ (D53–D56);
-relatórios revisados + roteiro de apresentação ✅ (`docs/roteiro-apresentacao.md`; relatório final
-ganhou seções 2.1 "Como a ferramenta funciona" e 11.7 "soluções com IA"; README/relatórios sem o
-termo "POC").
+relatórios revisados + roteiro de apresentação ✅ (`docs/roteiro-apresentacao.md`, 16 slides;
+relatório final com 2.1 "Como a ferramenta funciona", 10 "soluções com IA" e 11 "muito mais dados";
+seções 3, 4, 7 e 8 simplificadas; README/relatórios sem o termo "POC"); tela "conclusão primeiro"
+(cada card: "Em resumo" + números recolhidos no componente `Detalhes`).
 
 Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 

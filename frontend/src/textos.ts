@@ -36,6 +36,16 @@ export const DESCRICAO_MODELO: Record<Modelo, string> = {
     'IA moderna (criada pela Amazon): uma rede neural que já aprendeu com milhões de séries. Não é treinada com estes dados — só lê o histórico e projeta. Costuma dar uma faixa mais larga.',
 }
 
+/**
+ * Por que o Chronos-2 é o recomendado (D52). É uma decisão do estudo, tomada com dois testes
+ * (relatório final, seção 7) — por isso é um texto fixo, e não calculado dos números do dia.
+ */
+export const RECOMENDACAO =
+  'Recomendado: Chronos-2. Quando o teste foi repetido em dias diferentes, foi o único que ficou ' +
+  'sempre entre os melhores, sem precisar de nenhum ajuste. Ponto fraco: a faixa dele é mais larga ' +
+  '(diz menos sobre o dia). O "menor erro" de hoje pode ser outro modelo: com poucos dias de teste, ' +
+  'o vencedor muda de um dia para o outro.'
+
 export const AJUDA = {
   faixa:
     'Faixa de 95%: o intervalo onde o valor real deve cair em 95 de cada 100 dias. Faixa larga = mais incerteza.',
@@ -156,54 +166,57 @@ export function rotuloVsRegraSimples(linha: LinhaMetricas): string {
 }
 
 /**
- * Texto do caso de estudo com todos os modelos (topo do card — D53). Regras:
+ * Texto do caso de estudo com todos os modelos (topo do card — D53), em duas partes:
+ * - conclusao (sempre à vista): quantos modelos sofreram, quem não sentiu e a lição;
+ * - detalhe (em "Ver detalhes"): o pior caso e o que a faixa mostrou.
+ * Regras:
  * - "sofreu" = erro "só antes" ≥ 1,3x o erro com todos os dias;
  * - "quase não sentiu" = abaixo de 1,3x;
  * - faixa "confiante no nível errado" = dos que sofreram, acertou a faixa em metade dos dias ou
  *   menos; "só porque era larga" = acertou mais da metade.
  */
-export function textoCasoEstudoGeral(resposta: RespostaCasoEstudo): string {
+export function textoCasoEstudoGeral(resposta: RespostaCasoEstudo): { conclusao: string; detalhe: string } {
   const modelos = impactos(resposta) // do que mais piorou para o que menos piorou
   const dias = resposta.teste.dias
-  if (modelos.length === 0) return ''
+  if (modelos.length === 0) return { conclusao: '', detalhe: '' }
 
   const sofreram = modelos.filter((m) => m.vezes >= LIMITE_PIOROU)
   const quaseNada = modelos.filter((m) => m.vezes < LIMITE_PIOROU)
-  const frases: string[] = []
+  const conclusao: string[] = []
+  const detalhe: string[] = []
 
   if (sofreram.length > 0) {
     const vezes = sofreram.map((m) => m.vezes)
     const pior = sofreram[0]
-    frases.push(
-      `Sem ver a mudança, ${sofreram.length} dos ${modelos.length} modelos tiveram um erro de ` +
-        `${formatarNumero(Math.min(...vezes), 1)} a ${formatarNumero(Math.max(...vezes), 1)} vezes maior ` +
-        'do que quando viram todos os dias.',
-      `O que mais sofreu foi o ${pior.nome} (${formatarNumero(pior.vezes, 1)} vezes).`,
+    conclusao.push(
+      `Sem ver a mudança, ${sofreram.length} dos ${modelos.length} modelos erraram de ` +
+        `${formatarNumero(Math.min(...vezes), 1)} a ${formatarNumero(Math.max(...vezes), 1)} vezes mais.`,
     )
+    detalhe.push(`O que mais sofreu foi o ${pior.nome} (${formatarNumero(pior.vezes, 1)} vezes).`)
   }
   if (quaseNada.length > 0) {
     const nomes = juntarNomes(quaseNada.map((m) => m.nome))
-    frases.push(`${quaseNada.length === 1 ? 'O' : 'Os modelos'} ${nomes} quase não ${quaseNada.length === 1 ? 'sentiu' : 'sentiram'} a mudança.`)
+    conclusao.push(`${quaseNada.length === 1 ? 'O' : 'Os modelos'} ${nomes} quase não ${quaseNada.length === 1 ? 'sentiu' : 'sentiram'} a mudança.`)
   }
+  conclusao.push(
+    'Lição: quando o comportamento muda, os modelos precisam dos dados recentes — por isso esta ferramenta atualiza os dados e refaz os modelos todo dia.',
+  )
 
   const confiantes = sofreram.filter((m) => acertosSoAntes(m, dias) <= dias / 2)
   if (confiantes.length > 0) {
-    frases.push(
+    detalhe.push(
       `${juntarNomes(confiantes.map((m) => m.nome))} ${confiantes.length === 1 ? 'acertou' : 'acertaram'} a faixa em ` +
         'metade dos dias ou menos: confiantes, mas no nível errado.',
     )
   }
   const largos = sofreram.filter((m) => acertosSoAntes(m, dias) > dias / 2)
   if (largos.length > 0) {
-    frases.push(
+    detalhe.push(
       `${juntarNomes(largos.map((m) => m.nome))} ${largos.length === 1 ? 'acertou' : 'acertaram'} a faixa na maioria ` +
         'dos dias mesmo errando o nível — só porque a faixa era larga.',
     )
   }
-  frases.push(
-    'Lição: quando o comportamento muda, os modelos precisam dos dados recentes — por isso esta ferramenta atualiza os dados e refaz os modelos todo dia.',
-  )
-  return frases.join(' ')
+  return { conclusao: conclusao.join(' '), detalhe: detalhe.join(' ') }
 }
 
 /** Anomalia "perto do normal" abaixo de 0,3 °C (a variação típica da temperatura é ~0,5 °C). */
@@ -216,7 +229,28 @@ const LIMITE_SUBIDA = 0.2
  * - nível: anomalia média ≥ 0,3 °C = acima do normal; ≤ −0,3 = abaixo; senão perto do normal;
  * - estação: se TODOS os anos subiram ≥ 0,2 °C no período, a subida é da estação do ano;
  * - degrau: a data em que a anomalia mudou de patamar (a mesma do caso de estudo).
+ *
+ * Conclusão curta (topo do card): as mesmas regras, em duas frases e com um número só.
  */
+export function conclusaoAnosAnteriores(v: RespostaContexto): string {
+  const atual = v.anos.at(-1)
+  if (!atual) return ''
+  const anom = v.anomalia_media ?? 0
+  const todosSobem = v.anos.every((a) => (a.subida ?? 0) >= LIMITE_SUBIDA)
+  let texto = todosSobem
+    ? 'Parte da subida destes meses é a estação do ano: todo ano a temperatura sobe nesse período.'
+    : 'A subida destes meses não se repete todo ano.'
+  if (anom >= LIMITE_ANOMALIA || anom <= -LIMITE_ANOMALIA) {
+    texto +=
+      ` Além disso, ${atual.ano} está ${erro(Math.abs(anom))} ${anom > 0 ? 'acima' : 'abaixo'} dos anos anteriores` +
+      ` e, a partir de ${formatarData(v.mudanca.data)}, essa diferença deu mais um degrau — é a mudança usada no caso de estudo.`
+  } else {
+    texto += ` O nível de ${atual.ano} está perto do normal dos anos anteriores.`
+  }
+  return texto
+}
+
+/** Versão detalhada, com os números de cada ano (fica em "Ver os números"). */
 export function textoAnosAnteriores(v: RespostaContexto): string {
   const atual = v.anos.at(-1)
   if (!atual) return ''

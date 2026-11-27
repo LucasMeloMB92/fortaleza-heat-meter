@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RespostaContexto } from './api'
-import { textoAnosAnteriores } from './textos'
+import { conclusaoAnosAnteriores, textoAnosAnteriores } from './textos'
 
 // Números reais de 26-11-2026 (etapa 2 e /api/contexto).
 function contexto(medias: number[], subidas: number[], anomalia: number): RespostaContexto {
@@ -41,5 +41,22 @@ describe('textoAnosAnteriores', () => {
     expect(texto).toContain('perto do normal')
     expect(texto).toContain('A subida dentro do período variou entre os anos')
     expect(texto).not.toContain('patamar')
+  })
+})
+
+describe('conclusaoAnosAnteriores', () => {
+  it('duas frases: a estação e a diferença para o normal, com o degrau', () => {
+    expect(conclusaoAnosAnteriores(contexto([27.34, 27.63, 28.15], [0.95, 0.55, 0.94], 0.66))).toBe(
+      'Parte da subida destes meses é a estação do ano: todo ano a temperatura sobe nesse período. ' +
+        'Além disso, 2026 está 0,66 °C acima dos anos anteriores e, a partir de 15-10-2026, essa diferença ' +
+        'deu mais um degrau — é a mudança usada no caso de estudo.',
+    )
+  })
+
+  it('perto do normal e sem subida todo ano', () => {
+    const texto = conclusaoAnosAnteriores(contexto([27.3, 27.6, 27.5], [0.9, 0.5, 0.1], 0.1))
+    expect(texto).toBe(
+      'A subida destes meses não se repete todo ano. O nível de 2026 está perto do normal dos anos anteriores.',
+    )
   })
 })

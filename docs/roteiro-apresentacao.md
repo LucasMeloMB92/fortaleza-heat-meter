@@ -17,25 +17,26 @@
 | 2 | O problema e por que temperatura | 0:45 | 1:30 |
 | **Bloco 1 — O que foi feito e como roda** | | | |
 | 3 | O caminho completo (dados → tela) | 1:00 | 2:30 |
-| 4 | Passo a passo: o que acontece quando alguém abre a tela | 2:00 | 4:30 |
-| 5 | Backend: o motor | 1:30 | 6:00 |
-| 6 | Frontend: a vitrine (com demonstração) | 2:00 | 8:00 |
+| 4 | Passo a passo: o que acontece quando alguém abre a tela | 1:45 | 4:15 |
+| 5 | Backend: o motor | 1:15 | 5:30 |
+| 6 | Frontend: a vitrine (com demonstração) | 1:45 | 7:15 |
 | **Bloco 2 — Os modelos** | | | |
-| 7 | Mapa dos 5 modelos | 0:45 | 8:45 |
-| 8 | Linha de base e ETS | 1:15 | 10:00 |
-| 9 | SARIMA e Prophet | 1:15 | 11:15 |
-| 10 | Chronos-2: a IA moderna | 1:30 | 12:45 |
+| 7 | Mapa dos 5 modelos | 0:45 | 8:00 |
+| 8 | Linha de base e ETS | 1:00 | 9:00 |
+| 9 | SARIMA e Prophet | 1:00 | 10:00 |
+| 10 | Chronos-2: a IA moderna | 1:15 | 11:15 |
 | **Bloco 3 — Resultados** | | | |
-| 11 | Como avaliamos sem "espiar a prova" | 1:00 | 13:45 |
-| 12 | Resultados finais e recomendação | 1:15 | 15:00 |
-| 13 | A lição mais importante: o modelo só conhece o que viu | 0:45 | 15:45 |
+| 11 | Como avaliamos sem "espiar a prova" | 0:45 | 12:00 |
+| 12 | Resultados finais e recomendação | 1:00 | 13:00 |
+| 13 | A lição mais importante: o modelo só conhece o que viu | 0:45 | 13:45 |
 | **Bloco 4 — Daqui para frente** | | | |
-| 14 | Como levar isso para soluções com IA | 2:00 | 17:45 |
-| 15 | Fechamento | 0:45 | 18:30 |
+| 14 | Como levar isso para soluções com IA | 1:45 | 15:30 |
+| 15 | E com muito mais dados? | 1:45 | 17:15 |
+| 16 | Fechamento | 0:45 | 18:00 |
 | | Perguntas | — | até 20:00 |
 
-**Versão de 15 minutos:** juntar os slides 8 e 9 num só (1:30), trocar a demonstração ao vivo do
-slide 6 por duas capturas de tela (1:15) e falar o slide 13 como uma frase no fim do 12.
+**Versão de 15 minutos:** juntar os slides 8 e 9 num só (1:15), trocar a demonstração ao vivo do
+slide 6 por duas capturas de tela (1:00) e falar o slide 13 como uma frase no fim do 12.
 
 ---
 
@@ -101,7 +102,7 @@ estudo, API, frontend, relatório.
 - Depois do estudo principal, duas evoluções: entrou o **Chronos-2** (IA moderna) e a ferramenta
   foi **simplificada** (uma série só, menos telas e menos rotas).
 
-### Slide 4 — Passo a passo: o que acontece quando alguém abre a tela (2:00)
+### Slide 4 — Passo a passo: o que acontece quando alguém abre a tela (1:45)
 
 **Na tela:** diagrama de sequência numerado:
 
@@ -126,7 +127,7 @@ estudo, API, frontend, relatório.
 - Cálculos pesados entram numa **fila**, um de cada vez, para o servidor não travar com vários
   acessos.
 
-### Slide 5 — Backend: o motor (1:30)
+### Slide 5 — Backend: o motor (1:15)
 
 **Na tela:** três camadas empilhadas:
 
@@ -149,7 +150,7 @@ Ao lado: as 7 rotas `GET /api/...` — `saude`, `opcoes`, `previsao`, `metricas`
   o arquivo antigo fica inteiro.
 - 69 testes automáticos, que **nunca** usam a internet nem os dados reais.
 
-### Slide 6 — Frontend: a vitrine (2:00, com demonstração)
+### Slide 6 — Frontend: a vitrine (1:45, com demonstração)
 
 **Na tela:** a ferramenta aberta no navegador (ou capturas de tela).
 
@@ -191,7 +192,7 @@ Ao lado: as 7 rotas `GET /api/...` — `saude`, `opcoes`, `previsao`, `metricas`
 - Machine learning próprio e redes neurais treinadas do zero ficaram de fora: com 90 pontos,
   decoram o ruído.
 
-### Slide 8 — Linha de base e ETS (1:15)
+### Slide 8 — Linha de base e ETS (1:00)
 
 **Na tela:** dois quadros.
 
@@ -207,7 +208,7 @@ Ao lado: as 7 rotas `GET /api/...` — `saude`, `opcoes`, `previsao`, `metricas`
   uma multa por complexidade.
 - *Resultado aqui:* sem tendência, α = 0,29 → previsão quase plana, parecida com a régua.
 
-### Slide 9 — SARIMA e Prophet (1:15)
+### Slide 9 — SARIMA e Prophet (1:00)
 
 **SARIMA** — o clássico mais completo
 - *O que faz:* explica cada dia pelos dias anteriores (AR), pelos erros anteriores (MA) e
@@ -224,7 +225,7 @@ Ao lado: as 7 rotas `GET /api/...` — `saude`, `opcoes`, `previsao`, `metricas`
 - *Por que está aqui:* foi feito para séries **longas**; serve de contraponto. **Não olha o último
   dia** — acerta quando a tendência continua e erra quando ela vira.
 
-### Slide 10 — Chronos-2: a IA moderna (1:30)
+### Slide 10 — Chronos-2: a IA moderna (1:15)
 
 **Na tela:** "Treinado pela Amazon com milhões de séries → recebe os nossos 90 números → devolve
 quantis".
@@ -244,7 +245,7 @@ quantis".
 
 ## Bloco 3 — Resultados
 
-### Slide 11 — Como avaliamos sem "espiar a prova" (1:00)
+### Slide 11 — Como avaliamos sem "espiar a prova" (0:45)
 
 **Na tela:** linha do tempo com 80 dias de treino e 10 dias de teste escondidos;
 imagem `docs/img/etapa4_teste.png`.
@@ -256,17 +257,18 @@ imagem `docs/img/etapa4_teste.png`.
   **largura da faixa** (faixa larga acerta fácil, mas diz pouco); e **comparação com a regra
   simples**.
 
-### Slide 12 — Resultados finais e recomendação (1:15)
+### Slide 12 — Resultados finais e recomendação (1:00)
 
-**Na tela:** tabela (retrato de 26-11-2026):
+**Na tela:** uma frase grande — *"Recomendado: Chronos-2, o único entre os melhores nos dois
+testes"* — e a tabela do relatório (seção 7), retrato de 26-11-2026:
 
-| Modelo | Erro médio, teste 1 | vs regra simples | Erro médio, teste 2 (um dia depois) |
+| Modelo | Teste 1 (16 a 25/11) | Teste 2 (17 a 26/11) | Resumo |
 |---|---|---|---|
-| **Chronos-2** | **0,31** | −32% | **0,38 (1º)** |
-| Prophet | 0,31 | −33% | 0,47 |
-| SARIMA | 0,38 | −18% | 0,68 |
-| ETS | 0,43 | −6% | 0,63 |
-| Linha de base | 0,46 | — | 0,62 |
+| **Chronos-2** | 0,31 °C — 1º (empate) | 0,38 °C — **1º** | Entre os melhores nos dois |
+| Prophet | 0,31 °C — 1º (empate) | 0,47 °C — 2º | Bom só enquanto a tendência continua |
+| SARIMA | 0,38 °C — 3º | 0,68 °C — 5º | Caiu muito no segundo teste |
+| ETS | 0,43 °C — 4º | 0,63 °C — 4º | Quase igual à regra simples |
+| Linha de base | 0,46 °C — 5º | 0,62 °C — 3º | A régua |
 
 **Falar:**
 - Dá para prever melhor que a regra simples: os melhores erram **até um terço menos**.
@@ -281,6 +283,9 @@ imagem `docs/img/etapa4_teste.png`.
 **Na tela:** imagem `docs/img/etapa5_caso_estudo.png` + frase:
 > "Sem ver a mudança, 4 de 5 modelos erraram de 2 a 3,4 vezes mais."
 
+Se couber, a tabela curta do relatório (seção 8): erro **atualizado** × **desatualizado** e
+"quanto piorou" (2,0× a 3,4×; Prophet 1,0×).
+
 **Falar:**
 - Em outubro a série mudou de patamar. Treinamos cada modelo **só com os dias antes** da mudança.
 - Erraram muito, sempre para o mesmo lado — e alguns com **falsa confiança** (faixa estreita no
@@ -291,7 +296,7 @@ imagem `docs/img/etapa4_teste.png`.
 
 ## Bloco 4 — Daqui para frente
 
-### Slide 14 — Como levar isso para soluções com IA (2:00)
+### Slide 14 — Como levar isso para soluções com IA (1:45)
 
 **Na tela:** três papéis lado a lado:
 
@@ -310,22 +315,42 @@ Modelo de previsão          Validação                 Modelo de linguagem
      histórico e responde em português, citando os números.
   2. **Alertas automáticos:** quando o valor real sai da faixa (sinal de mudança) ou a previsão
      passa de um limite, o sistema gera e envia um aviso explicado.
-  3. **Muitas séries de uma vez:** como o Chronos-2 não precisa de treino, a mesma ferramenta
-     atende centenas de produtos ou lojas no primeiro dia.
+  3. **Explicações na tela:** os textos de hoje são gerados por regras; um modelo de linguagem
+     pode escrevê-los de forma mais natural, sempre conferido contra os números.
   4. **Pessoa no meio:** a previsão vira sugestão ("pedir 20% a mais"); a decisão fica com alguém.
 - O que já está pronto para isso: API em JSON, atualização diária, validação automática e modelo
   rodando localmente (dados não saem).
-- O que falta: fonte de dados do cliente (CSV, banco ou API), cadastro de métricas (unidade,
-  ciclo semanal, feriados), publicar online.
 
-### Slide 15 — Fechamento (0:45)
+### Slide 15 — E com muito mais dados? (1:45)
+
+**Na tela:** à esquerda, "este estudo: 1 série × 90 dias"; à direita, "empresa: 2.000 produtos ×
+3 anos + preço, promoção, feriado". Embaixo, o fluxo:
+
+```
+Dados da empresa → previsão em lote (toda noite) → banco de previsões → ferramentas (API) → assistente de IA
+```
+
+**Falar** (relatório, seção 11):
+- **Os 5 modelos com mais dados:** a regra simples continua sendo a régua; ETS e SARIMA funcionam,
+  mas fazem um modelo por série (2.000 séries levariam horas); o Prophet melhora muito com anos de
+  dados; o Chronos-2 continua útil e pode ser **ajustado** aos dados da empresa.
+- **O que passa a ser melhor:** o **modelo global** — um só modelo aprende com todas as séries.
+  Exemplos: **gradient boosting** (LightGBM, vencedor da competição M5 de vendas do Walmart),
+  redes neurais para séries (DeepAR, TFT) e modelos fundacionais com ajuste (Chronos-2, TimesFM).
+- **A avaliação muda:** testar em dezenas de semanas e medir o erro em porcentagem.
+- **Para IA nessa escala:** prever em lote toda noite e guardar; o assistente usa **ferramentas
+  que resumem** ("quais produtos podem faltar?"), explica o porquê (peso da promoção, do preço) e
+  avisa quando o erro sobe. Quem aprova continua sendo uma pessoa.
+
+### Slide 16 — Fechamento (0:45)
 
 **Na tela:** três frases:
 1. **Construímos o ciclo completo:** dados que se atualizam sozinhos → 5 modelos → validação
    honesta → API → tela para não técnicos.
 2. **A IA moderna (Chronos-2) foi a mais estável entre os melhores**, sem treino — mas sempre
    comparada a uma regra simples e lida junto com a largura da faixa.
-3. **O método está pronto para outra série:** troca-se a fonte de dados, não a ferramenta.
+3. **O método está pronto para crescer:** com outra série, troca-se a fonte de dados; com
+   milhares de séries, troca-se o modelo — a validação e o papel da IA continuam os mesmos.
 
 Abrir para perguntas.
 
@@ -336,7 +361,7 @@ Abrir para perguntas.
 | Pergunta | Resposta |
 |---|---|
 | "Por que não usar a previsão do tempo do Google?" | Para o tempo, a meteorologia ganha: ela simula a atmosfera. O estudo vale para números do negócio, onde não existe esse "simulador". |
-| "Por que não treinar uma rede neural própria?" | Com 90 pontos ela decora o ruído. O Chronos-2 contorna isso porque já vem treinado com milhões de séries. |
+| "Por que não treinar uma rede neural própria?" | Com 90 pontos ela decora o ruído. O Chronos-2 contorna isso porque já vem treinado com milhões de séries. Com milhares de séries, aí sim vale (slide 15). |
 | "0,3 °C é bom?" | É até um terço menos que a regra simples. Mas Fortaleza varia pouco; o número importante é o **ganho sobre a régua**, não o °C. |
 | "Por que o Chronos-2 e não o Prophet, que empatou?" | O Prophet só acerta enquanto a tendência continua; no segundo teste caiu. O Chronos-2 ficou entre os melhores nos dois. |
 | "A faixa larga do Chronos-2 é um problema?" | É o preço: ela quase sempre acerta, mas diz menos. Por isso a ferramenta mostra a largura junto com a cobertura. |

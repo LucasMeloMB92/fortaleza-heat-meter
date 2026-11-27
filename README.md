@@ -23,8 +23,13 @@ método vale para qualquer número medido por dia (vendas, demanda, acessos).
 - **Menos peças** (D53–D56): o caso de estudo virou um card só (tabela de todos os modelos +
   gráfico do escolhido, de uma consulta), a comparação com os anos anteriores ganhou card
   próprio, e saíram a rota `/api/serie` e o campo `padroes` de `/api/opcoes`. A API tem 7 rotas.
-- **Documentação revisada:** relatórios atualizados (como a ferramenta funciona, como levar os
-  modelos para soluções com IA) e um **roteiro de apresentação** de 15 a 20 minutos.
+- **Relatório final mais simples e didático:** dados, previsão, modelo vencedor e caso de estudo
+  reescritos com menos números; novas seções sobre **como levar os modelos para soluções com IA**
+  (seção 10) e **o que muda com muito mais dados** — centenas ou milhares de séries, modelos
+  globais como gradient boosting, modelos fundacionais com ajuste (seção 11).
+- **Tela mais simples:** os cards de previsão, comparação dos modelos, anos anteriores e caso de
+  estudo mostram primeiro a conclusão em uma frase e deixam os números de apoio em "detalhes".
+- **Roteiro de apresentação** de 15 a 20 minutos, em 16 slides.
 
 ## Os modelos
 
@@ -202,4 +207,4 @@ npm run build
 - [API](docs/api.md) — endpoints do backend
 - [Relatório final](docs/relatorio-final.md) — resumo para o cliente
 - [Guia técnico](docs/relatorio-tecnico.md) — passo a passo para reproduzir o estudo ou aplicar o método em outra série
-- [Roteiro de apresentação](docs/roteiro-apresentacao.md) — 15 a 20 minutos: o que foi feito, como roda, modelos, resultados e uso com IA
+- [Roteiro de apresentação](docs/roteiro-apresentacao.md) — 15 a 20 minutos: o que foi feito, como roda, modelos, resultados, uso com IA e com muito mais dados

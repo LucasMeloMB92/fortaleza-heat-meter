@@ -3,6 +3,9 @@
 // (formatacao.ts — decisão D41).
 
 export type Modelo = 'linha_base' | 'ets' | 'sarima' | 'prophet' | 'chronos'
+
+/** Modelo recomendado (D52): a tela abre nele e a comparação o destaca. */
+export const MODELO_RECOMENDADO: Modelo = 'chronos'
 export type Cenario = 'so_antes' | 'tudo' | 'so_depois'
 
 export interface Ponto {

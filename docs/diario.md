@@ -866,3 +866,39 @@ e tirar o termo "POC" do README.
   e deixar a história no diário.
 - **Revisar por busca de termos antigos** (`serie`, "8 rotas", "recomendado") acha o que a
   leitura corrida deixa passar.
+
+---
+
+## Relatório e tela mais simples; seção "com muito mais dados" — 27-11-2026
+
+### O que foi feito
+Pedido: deixar as seções 3, 4, 7 e 8 do relatório final mais simples e didáticas, tirar a seção 10
+(limites) e as 11.1–11.6, manter "como levar para soluções com IA" e explicar o que muda com
+centenas ou milhares de séries; depois revisar o roteiro, o README e o frontend.
+- **Relatório final:** seções 3 (dados), 4 (previsão), 7 (vencedor) e 8 (caso de estudo)
+  reescritas com uma tabela curta cada e a conclusão primeiro. A seção 10 antiga (limites) saiu: os
+  dois limites essenciais (teste curto; a meteorologia ganha para o tempo) foram para a seção 7.
+  As 11.1–11.6 saíram. **Nova seção 10:** como levar os modelos para soluções com IA. **Nova seção
+  11:** com muito mais dados — o que muda, como os 5 modelos se sairiam, técnicas melhores (modelo
+  global: gradient boosting, redes neurais para séries, modelos fundacionais com ajuste,
+  reconciliação hierárquica), como avaliar e como levar isso para IA em escala. É referência, nada
+  foi implementado.
+- **Roteiro:** 16 slides em 18 min; novo slide 15 "E com muito mais dados?"; tabelas iguais às do
+  relatório.
+- **Frontend:** cada card mostra primeiro a conclusão em uma frase ("Em resumo") e recolhe os
+  números de apoio num botão "Ver…" (componente novo `Detalhes`).
+  - Previsão: linha "Como ler" o gráfico; tabela dia a dia recolhida.
+  - Comparação dos modelos: "acertou a faixa" foi para os detalhes técnicos; selo "recomendado" no
+    Chronos-2 e o porquê em uma frase (`RECOMENDACAO`, `MODELO_RECOMENDADO`).
+  - Anos anteriores: conclusão em duas frases (`conclusaoAnosAnteriores`); tabela só com a média;
+    subida e anomalia nos detalhes.
+  - Caso de estudo: colunas "Atualizado / Desatualizado / Quanto piorou" (as mesmas do relatório);
+    o que a faixa mostrou e os números dos 3 cenários ficam recolhidos. `textoCasoEstudoGeral`
+    agora devolve `{ conclusao, detalhe }`.
+- Frontend: 38 testes, tsc, oxlint e build limpos; tela conferida no navegador.
+
+### O que aprendi
+- **Conclusão primeiro, números depois.** Quem não é técnico lê a primeira frase; quem quer
+  conferir abre os detalhes. Os mesmos números continuam na tela, só mudam de lugar.
+- **Usar as mesmas palavras no relatório e na tela** ("atualizado", "desatualizado", "quanto
+  piorou") evita que o leitor ache que são coisas diferentes.
