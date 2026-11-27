@@ -1,14 +1,13 @@
-// Aba "Caso de estudo" da visão geral: TODOS os modelos, nas duas variáveis — quanto o erro
-// piorou quando o modelo só conhecia os dias antes da mudança (D35, D49). Contas em casoGeral.ts;
-// frase em textos.ts (D46). O gráfico de um modelo de cada vez continua no card de baixo.
+// Aba "Caso de estudo" da visão geral: TODOS os modelos — quanto o erro piorou quando o modelo só
+// conhecia os dias antes da mudança (D35, D49). Contas em casoGeral.ts; frase em textos.ts (D46).
+// O gráfico de um modelo de cada vez continua no card de baixo.
 import type { Modelo, RespostaCasoEstudo } from '../api'
 import { acertosSoAntes, impactos, LIMITE_PIOROU } from '../casoGeral'
 import { formatarData, formatarGraus, formatarNumero } from '../formatacao'
 import { AJUDA, textoCasoEstudoGeral } from '../textos'
 import { Ajuda } from './Ajuda'
 
-function TabelaVariavel(props: {
-  titulo: string
+export function CasoEstudoGeral(props: {
   resposta: RespostaCasoEstudo
   modeloSelecionado: Modelo
   aoSelecionar: (m: Modelo) => void
@@ -17,9 +16,10 @@ function TabelaVariavel(props: {
   const th = 'whitespace-nowrap py-2 pl-3 text-right font-medium'
   const num = 'whitespace-nowrap py-2 pl-3 text-right'
   return (
-    <div className="min-w-0 flex-1">
+    <div>
+      <p className="mb-4 text-sm leading-relaxed">{textoCasoEstudoGeral(props.resposta)}</p>
       <h3 className="text-sm font-semibold">
-        {props.titulo}
+        Temperatura média
         <span className="font-normal text-tinta-2"> · mudança em {formatarData(props.resposta.data_mudanca)}</span>
       </h3>
       <div className="overflow-x-auto">
@@ -70,37 +70,10 @@ function TabelaVariavel(props: {
           </tbody>
         </table>
       </div>
-    </div>
-  )
-}
-
-export function CasoEstudoGeral(props: {
-  temperatura: RespostaCasoEstudo
-  sensacao: RespostaCasoEstudo
-  modeloSelecionado: Modelo
-  aoSelecionar: (m: Modelo) => void
-}) {
-  return (
-    <div>
-      <p className="mb-4 text-sm leading-relaxed">{textoCasoEstudoGeral(props.temperatura, props.sensacao)}</p>
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <TabelaVariavel
-          titulo="Temperatura média"
-          resposta={props.temperatura}
-          modeloSelecionado={props.modeloSelecionado}
-          aoSelecionar={props.aoSelecionar}
-        />
-        <TabelaVariavel
-          titulo="Sensação térmica média"
-          resposta={props.sensacao}
-          modeloSelecionado={props.modeloSelecionado}
-          aoSelecionar={props.aoSelecionar}
-        />
-      </div>
       <p className="mt-3 text-xs text-tinta-3">
         "Só antes" = o modelo só conhecia os dias anteriores à mudança; "com tudo" = conhecia todos os dias até a véspera
-        do teste. Os dois foram avaliados nos mesmos {props.temperatura.teste.dias} dias de teste. Em vermelho: o erro
-        ficou pelo menos {formatarNumero(LIMITE_PIOROU, 1)} vez maior.
+        do teste. Os dois foram avaliados nos mesmos {dias} dias de teste. Em vermelho: o erro ficou pelo menos{' '}
+        {formatarNumero(LIMITE_PIOROU, 1)} vez maior.
       </p>
     </div>
   )

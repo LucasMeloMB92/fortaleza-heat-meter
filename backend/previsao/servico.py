@@ -25,12 +25,10 @@ import pandas as pd
 
 from previsao import avaliacao, caso_estudo, coleta, exploracao, modelos
 
-# Identificadores usados na API -> coluna do CSV (decisão D38).
-VARIAVEIS_API = {"temperatura": "temperatura_media", "sensacao": "sensacao_media"}
-NOMES_VARIAVEIS = {"temperatura": "Temperatura média", "sensacao": "Sensação térmica média"}
+# A POC prevê uma série só: a temperatura média diária (decisão D52).
+NOME_SERIE = "Temperatura média"
 
-VARIAVEL_PADRAO = "temperatura"
-MODELO_PADRAO = "sarima"  # o mais consistente na validação (etapa 4)
+MODELO_PADRAO = "chronos"  # recomendado na D52 (só temperatura): melhor ou empatado no melhor
 HORIZONTE_PADRAO, HORIZONTE_MINIMO, HORIZONTE_MAXIMO = 7, 1, 14
 DIAS_TREINO_NO_TESTE = 20  # quantos dias do fim do treino acompanham o gráfico de teste
 
@@ -48,15 +46,6 @@ class ErroParametro(ValueError):
 # ---------------------------------------------------------------------------
 # Validação dos parâmetros
 # ---------------------------------------------------------------------------
-
-
-def validar_variavel(valor: str | None) -> str:
-    valor = valor or VARIAVEL_PADRAO
-    if valor not in VARIAVEIS_API:
-        raise ErroParametro(
-            "variavel", f"Variável inválida: {valor!r}.", valores_aceitos=list(VARIAVEIS_API)
-        )
-    return valor
 
 
 def validar_modelo(valor: str | None, obrigatorio: bool = True) -> str | None:
@@ -171,24 +160,24 @@ def _tabela() -> pd.DataFrame:
     return coleta.carregar_csv(coleta.CAMINHO_CSV).set_index("data")
 
 
-def _serie(variavel: str) -> pd.Series:
-    return _tabela()[VARIAVEIS_API[variavel]]
+def _serie() -> pd.Series:
+    return _tabela()[coleta.COLUNA]
 
 
 @_calculo_unico
-def _prever(variavel: str, modelo: str, horizonte: int) -> modelos.Previsao:
-    return modelos.prever(modelo, _serie(variavel), horizonte)
+def _prever(modelo: str, horizonte: int) -> modelos.Previsao:
+    return modelos.prever(modelo, _serie(), horizonte)
 
 
 @_calculo_unico
-def _validacao(variavel: str):
-    return avaliacao.comparar_modelos(_serie(variavel))
+def _validacao():
+    return avaliacao.comparar_modelos(_serie())
 
 
 @_calculo_unico
-def _datas_de_mudanca() -> dict:
+def _data_da_mudanca() -> pd.Timestamp:
     contexto = pd.read_csv(exploracao.CAMINHO_CONTEXTO, parse_dates=["data"])
-    return caso_estudo.datas_de_mudanca(_tabela().reset_index(), contexto)
+    return caso_estudo.data_da_mudanca(_tabela().reset_index(), contexto)
 
 
 DIAS_SUBIDA = 15  # subida no período = média dos últimos 15 dias - média dos primeiros 15 (etapa 2)
@@ -208,9 +197,9 @@ def _contexto():
 
 
 @_calculo_unico
-def _caso_estudo(variavel: str):
-    data = _datas_de_mudanca()[VARIAVEIS_API[variavel]]
-    metricas, resultados = caso_estudo.avaliar_cenarios(_serie(variavel), data)
+def _caso_estudo():
+    data = _data_da_mudanca()
+    metricas, resultados = caso_estudo.avaliar_cenarios(_serie(), data)
     return data, metricas, resultados
 
 
@@ -286,7 +275,7 @@ def situacao_atualizacao() -> dict:
 
 def limpar_cache() -> None:
     """Esquece todos os resultados guardados (usado nos testes)."""
-    for funcao in (_tabela, _prever, _validacao, _datas_de_mudanca, _caso_estudo, _contexto):
+    for funcao in (_tabela, _prever, _validacao, _data_da_mudanca, _caso_estudo, _contexto):
         funcao.cache_clear()
 
 
@@ -296,17 +285,15 @@ def limpar_cache() -> None:
 
 
 def saude() -> dict:
-    serie = _serie(VARIAVEL_PADRAO)
+    serie = _serie()
     return {"status": "ok", "dados": _periodo(serie), "atualizacao": situacao_atualizacao()}
 
 
 def opcoes() -> dict:
     return {
-        "variaveis": [
-            {"id": v, "nome": NOMES_VARIAVEIS[v], "unidade": "°C"} for v in VARIAVEIS_API
-        ],
+        "serie": {"nome": NOME_SERIE, "unidade": "°C"},
         "modelos": [{"id": m, "nome": modelos.NOMES_MODELOS[m]} for m in modelos.MODELOS],
-        "padroes": {"variavel": VARIAVEL_PADRAO, "modelo": MODELO_PADRAO},
+        "padroes": {"modelo": MODELO_PADRAO},
         "horizonte": {
             "padrao": HORIZONTE_PADRAO,
             "minimo": HORIZONTE_MINIMO,
@@ -316,36 +303,33 @@ def opcoes() -> dict:
     }
 
 
-def serie(variavel: str) -> dict:
-    dados = _serie(variavel)
+def serie() -> dict:
+    dados = _serie()
     return {
-        "variavel": variavel,
-        "nome": NOMES_VARIAVEIS[variavel],
+        "nome": NOME_SERIE,
         "unidade": "°C",
         "periodo": _periodo(dados),
         "dados": _pontos(dados),
     }
 
 
-def previsao(variavel: str, modelo: str, horizonte: int) -> dict:
-    resultado = _prever(variavel, modelo, horizonte)
+def previsao(modelo: str, horizonte: int) -> dict:
+    resultado = _prever(modelo, horizonte)
     return {
-        "variavel": variavel,
         "modelo": modelo,
         "nome_modelo": modelos.NOMES_MODELOS[modelo],
         "horizonte": horizonte,
         "nivel_intervalo": modelos.NIVEL,
         "configuracao": resultado.detalhes.get("configuracao"),
-        "historico": _pontos(_serie(variavel)),
+        "historico": _pontos(_serie()),
         "previsao": _faixa(resultado.tabela),
     }
 
 
-def metricas(variavel: str) -> dict:
-    tabela, resultados = _validacao(variavel)
-    _, teste = avaliacao.separar_treino_teste(_serie(variavel))
+def metricas() -> dict:
+    tabela, resultados = _validacao()
+    _, teste = avaliacao.separar_treino_teste(_serie())
     return {
-        "variavel": variavel,
         "teste": _periodo(teste),
         "metricas": [
             {
@@ -359,10 +343,10 @@ def metricas(variavel: str) -> dict:
     }
 
 
-def teste(variavel: str, modelo: str) -> dict:
-    _, resultados = _validacao(variavel)
+def teste(modelo: str) -> dict:
+    _, resultados = _validacao()
     resultado = resultados[modelo]
-    treino, teste_ = avaliacao.separar_treino_teste(_serie(variavel))
+    treino, teste_ = avaliacao.separar_treino_teste(_serie())
     dias = [
         {
             "data": _data(d),
@@ -376,7 +360,6 @@ def teste(variavel: str, modelo: str) -> dict:
         for d, linha in resultado["comparacao"].iterrows()
     ]
     return {
-        "variavel": variavel,
         "modelo": modelo,
         "nome_modelo": modelos.NOMES_MODELOS[modelo],
         "configuracao": resultado["detalhes"].get("configuracao"),
@@ -387,12 +370,11 @@ def teste(variavel: str, modelo: str) -> dict:
     }
 
 
-def caso(variavel: str, modelo: str | None = None) -> dict:
-    data, tabela, resultados = _caso_estudo(variavel)
-    cenarios, teste_ = caso_estudo.montar_cenarios(_serie(variavel), data)
+def caso(modelo: str | None = None) -> dict:
+    data, tabela, resultados = _caso_estudo()
+    cenarios, teste_ = caso_estudo.montar_cenarios(_serie(), data)
     nomes = [modelo] if modelo else list(modelos.MODELOS)
     return {
-        "variavel": variavel,
         "data_mudanca": _data(data),
         "teste": _periodo(teste_),
         "cenarios": [
@@ -404,7 +386,7 @@ def caso(variavel: str, modelo: str | None = None) -> dict:
             }
             for cenario, treino in cenarios.items()
         ],
-        "real": _pontos(_serie(variavel)),
+        "real": _pontos(_serie()),
         "resultados": [
             {
                 "cenario": cenario,
@@ -428,53 +410,46 @@ def contexto() -> dict:
     atual = periodos[periodos["ano"] == ano_atual]
     anos = sorted(int(a) for a in periodos["ano"].unique())
 
-    variaveis = []
-    for variavel, coluna in VARIAVEIS_API.items():
-        por_ano = []
-        for ano in anos:
-            trecho = periodos[periodos["ano"] == ano].sort_values("data")[coluna]
-            por_ano.append(
-                {
-                    "ano": ano,
-                    "inicio": _data(periodos.loc[periodos["ano"] == ano, "data"].min()),
-                    "fim": _data(periodos.loc[periodos["ano"] == ano, "data"].max()),
-                    "dias": int(trecho.count()),
-                    "media": _numero(trecho.mean()),
-                    "subida": _numero(
-                        trecho.iloc[-DIAS_SUBIDA:].mean() - trecho.iloc[:DIAS_SUBIDA].mean()
-                    ),
-                }
-            )
-        mudanca = exploracao.detectar_mudanca(anom[coluna].dropna())
-        # Um ponto por dia do período atual: o valor de cada ano no mesmo dia do calendário.
-        largo = periodos.pivot_table(index="data_ref", columns="ano", values=coluna)
-        variaveis.append(
+    coluna = coleta.COLUNA
+    por_ano = []
+    for ano in anos:
+        trecho = periodos[periodos["ano"] == ano].sort_values("data")[coluna]
+        por_ano.append(
             {
-                "id": variavel,
-                "nome": NOMES_VARIAVEIS[variavel],
-                "anos": por_ano,
-                "anomalia_media": _numero(anom[coluna].mean()),
-                "anomalia_recente": _numero(anom[coluna].iloc[-DIAS_ANOMALIA_RECENTE:].mean()),
-                "mudanca": {
-                    "data": _data(mudanca["data"]),
-                    "anomalia_antes": mudanca["media_antes"],
-                    "anomalia_depois": mudanca["media_depois"],
-                },
-                "dias": [
-                    {
-                        "data": _data(data),
-                        "valores": {str(ano): _numero(largo.at[data, ano]) for ano in anos},
-                        "normal": _numero(normal.at[data, coluna]),
-                        "anomalia": _numero(anom.at[data, coluna]),
-                    }
-                    for data in atual.sort_values("data")["data_ref"]
-                ],
+                "ano": ano,
+                "inicio": _data(periodos.loc[periodos["ano"] == ano, "data"].min()),
+                "fim": _data(periodos.loc[periodos["ano"] == ano, "data"].max()),
+                "dias": int(trecho.count()),
+                "media": _numero(trecho.mean()),
+                "subida": _numero(
+                    trecho.iloc[-DIAS_SUBIDA:].mean() - trecho.iloc[:DIAS_SUBIDA].mean()
+                ),
             }
         )
+    mudanca = exploracao.detectar_mudanca(anom.dropna())
+    # Um ponto por dia do período atual: o valor de cada ano no mesmo dia do calendário.
+    largo = periodos.pivot_table(index="data_ref", columns="ano", values=coluna)
     return {
+        "nome": NOME_SERIE,
         "ano_atual": ano_atual,
         "anos_anteriores": [a for a in anos if a != ano_atual],
         "dias_subida": DIAS_SUBIDA,
         "dias_anomalia_recente": DIAS_ANOMALIA_RECENTE,
-        "variaveis": variaveis,
+        "anos": por_ano,
+        "anomalia_media": _numero(anom.mean()),
+        "anomalia_recente": _numero(anom.iloc[-DIAS_ANOMALIA_RECENTE:].mean()),
+        "mudanca": {
+            "data": _data(mudanca["data"]),
+            "anomalia_antes": mudanca["media_antes"],
+            "anomalia_depois": mudanca["media_depois"],
+        },
+        "dias": [
+            {
+                "data": _data(data),
+                "valores": {str(ano): _numero(largo.at[data, ano]) for ano in anos},
+                "normal": _numero(normal.at[data]),
+                "anomalia": _numero(anom.at[data]),
+            }
+            for data in atual.sort_values("data")["data_ref"]
+        ],
     }

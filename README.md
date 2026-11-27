@@ -4,9 +4,11 @@ Prova de conceito que demonstra o ciclo completo de previsão de séries tempora
 
 **dados → modelo → previsão → gráfico**
 
-Usamos 90 dias de **temperatura média** e **sensação térmica média** diárias de Fortaleza-CE
-(fonte: [Open-Meteo](https://open-meteo.com/), gratuita e sem cadastro), comparamos 5 modelos
-(linha de base, ETS, SARIMA, Prophet e Chronos-2, um modelo de IA moderna) e prevemos os próximos 7 dias com faixa de incerteza.
+Usamos 90 dias de **temperatura média** diária de Fortaleza-CE (fonte:
+[Open-Meteo](https://open-meteo.com/), gratuita e sem cadastro), comparamos 5 modelos (linha de
+base, ETS, SARIMA, Prophet e Chronos-2, um modelo de IA moderna) e prevemos os próximos 7 dias com
+faixa de incerteza. (A sensação térmica, que era uma segunda série, foi retirada para simplificar a
+POC — decisão D52.)
 
 > Status: **POC concluída** (etapas 0 a 8). Resultados e recomendação no
 > [relatório final](docs/relatorio-final.md); andamento detalhado em [docs/diario.md](docs/diario.md).

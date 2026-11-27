@@ -8,6 +8,10 @@
 > como 5º modelo, com os mesmos dados e o mesmo teste (D47). Os resultados dele estão nas seções
 > 4 a 9 e o resumo da evolução está na 11.2.
 >
+> **Simplificação (27-11-2026, D52):** a POC passou a prever **só a temperatura média**. A
+> sensação térmica, que era uma segunda série, foi retirada: dobrava telas, tabelas e números sem
+> trazer uma lição nova. Sem ela, a recomendação mudou de SARIMA para **Chronos-2** (seção 7).
+>
 > Os códigos entre parênteses (D07, D33...) apontam para as decisões detalhadas em
 > [`decisoes.md`](decisoes.md). Este relatório se explica sozinho: não é preciso abrir outros
 > arquivos para entendê-lo.
@@ -16,8 +20,8 @@
 
 ## Em poucas palavras
 
-**O que fizemos.** Construímos uma ferramenta que olha os últimos 90 dias de temperatura e de
-sensação térmica de Fortaleza e tenta adivinhar a próxima semana. Ela não dá só um número: dá
+**O que fizemos.** Construímos uma ferramenta que olha os últimos 90 dias de temperatura de
+Fortaleza e tenta adivinhar a próxima semana. Ela não dá só um número: dá
 também uma **faixa** onde o valor real deve cair ("29,2 °C, provavelmente entre 28,1 e 29,6").
 Comparamos cinco formas de prever — de uma regra simples ("repetir a média da última semana") até
 uma IA moderna da Amazon — e, para saber qual funciona, escondemos os últimos 10 dias, pedimos a
@@ -27,13 +31,14 @@ previsão e conferimos com o que aconteceu de verdade.
 1. **Dá para prever melhor que a regra simples, mas o ganho é modesto.** Os melhores modelos
    erraram em média 0,3 °C por dia — até um terço menos que a regra simples. Fortaleza varia
    pouco, então todos erram pouco.
-2. **O mais confiável é o SARIMA.** Ele não ganhou em tudo, mas foi bem nas duas variáveis. Um
-   modelo que só às vezes é o melhor é arriscado para usar todo dia.
-3. **A IA moderna empatou, não ganhou.** O Chronos-2 previu tão bem quanto os melhores sem
-   aprender nada com os nossos dados — mas com uma faixa duas vezes mais larga, ou seja, menos
-   útil. Com uma série curta e calma, a estatística clássica basta.
+2. **O recomendado é o Chronos-2, a IA moderna.** Sem aprender nada com os nossos dados, ele
+   empatou com o melhor modelo no teste e foi o melhor sozinho quando repetimos o teste um dia
+   depois. O ponto fraco: a faixa dele é quase duas vezes mais larga, ou seja, diz menos.
+3. **Os vencedores mudam de um teste para outro.** As diferenças entre os modelos são de décimos
+   de grau; com só 10 dias de teste, parte disso é sorte. Antes de fixar um modelo em produção, o
+   teste deve ser repetido em várias semanas.
 4. **Um modelo só conhece o passado que viu.** Quando o clima mudou de patamar em outubro, os
-   modelos que não viram a mudança erraram de 2 a 6 vezes mais — e com falsa confiança. Por isso
+   modelos que não viram a mudança erraram de 2 a 3 vezes mais — e com falsa confiança. Por isso
    a ferramenta atualiza os dados e refaz os modelos sozinha, todo dia.
 5. **Para o tempo em si, a meteorologia ganha.** Sites como o do Google simulam a atmosfera
    inteira; nossos modelos só olham o histórico. O valor deste trabalho está no **método**, que
@@ -44,23 +49,20 @@ previsão e conferimos com o que aconteceu de verdade.
 
 ## 1. Resumo executivo
 
-- **O que foi feito:** uma ferramenta web que baixa os últimos 90 dias de temperatura média e
-  sensação térmica média de Fortaleza, roda cinco modelos de previsão, prevê os próximos 7
-  dias com uma faixa de incerteza e mostra tudo em gráficos e textos simples.
+- **O que foi feito:** uma ferramenta web que baixa os últimos 90 dias de temperatura média de
+  Fortaleza, roda cinco modelos de previsão, prevê os próximos 7 dias com uma faixa de incerteza e
+  mostra tudo em gráficos e textos simples.
 - **Quanto erra:** testados em 10 dias que não conheciam, os melhores modelos erraram em média
-  **0,3 a 0,4 °C** por dia — de 15% a 33% menos que a regra simples "repetir a média da semana".
-- **Modelo recomendado: SARIMA.** Não foi o melhor em tudo, mas foi o **mais consistente**: 3º
-  lugar na temperatura (erro de 0,38 °C) e 1º na sensação térmica (0,29 °C), sempre melhor que a
-  regra simples. O Prophet ganhou na temperatura (0,31 °C), mas foi o pior na sensação. Ranking
-  completo dos cinco modelos na seção 7.
+  **~0,3 °C** por dia — um terço menos que a regra simples "repetir a média da semana" (0,46 °C).
+- **Modelo recomendado: Chronos-2** (D52). Uma rede neural da Amazon, já treinada com milhões de
+  séries, que **empatou com o melhor** no teste (0,31 °C, junto com o Prophet) sem nenhum ajuste.
+  Repetindo o teste um dia depois, foi o **melhor sozinho** (0,38 °C), enquanto o SARIMA ficou pior
+  que a regra simples. O ponto fraco: a faixa de incerteza é **quase duas vezes mais larga**.
+  Ranking completo na seção 7.
 - **Principal lição:** um modelo só conhece o passado que viu. Quando o clima muda de patamar
-  (como em meados de outubro de 2026), um modelo desatualizado erra de 2 a 6 vezes mais — e com
-  falsa confiança. A ferramenta já se protege disso retreinando todo dia.
-- **IA moderna x estatística clássica (Chronos-2):** o Chronos-2, uma rede neural da Amazon já
-  treinada com milhões de séries, **empatou com o melhor** na temperatura (0,31 °C) e ficou no
-  nível da regra simples na sensação (0,33 °C). Sem nenhum ajuste, ele chega perto dos melhores
-  — mas com uma faixa de incerteza **quase duas vezes mais larga**. Não muda a recomendação
-  (seção 11.2).
+  (como em meados de outubro de 2026), um modelo desatualizado erra de 2 a 3 vezes mais — e,
+  quando a faixa é estreita, com falsa confiança. A ferramenta já se protege disso atualizando os
+  dados e refazendo os modelos todo dia.
 
 ---
 
@@ -84,27 +86,23 @@ do que uma regra simples?** Resposta curta: sim, com ganho moderado (seção 6).
 | Item | Valor |
 |---|---|
 | Local | Fortaleza-CE (lat −3,72, lon −38,54), fuso `America/Fortaleza` |
-| Variáveis | Temperatura média diária e sensação térmica média diária |
+| Variável | Temperatura média diária |
 | Período | 90 dias terminando **ontem** (hoje ainda está incompleto) — no retrato: 28-08-2026 a 25-11-2026 |
 | Fonte | Open-Meteo, API histórica (`best_match`), gratuita e sem cadastro |
 | Atualização | Automática: ao primeiro acesso do dia, a ferramenta baixa os dados novos e retreina |
 
-**Sensação térmica** é a temperatura que o corpo "sente", combinando temperatura, umidade e vento.
-Em Fortaleza ela fica ~2,7 °C acima da temperatura. As duas variáveis são previstas **de forma
-independente**, cada uma só pelo seu próprio histórico.
-
 **Como a série se comporta (90 dias):**
 
-| °C | Temperatura | Sensação |
-|---|---|---|
-| Média | 28,15 | 30,87 |
-| Variação típica (desvio-padrão) | 0,52 | 0,88 |
-| Mínimo / máximo | 27,2 / 29,3 | 29,5 / 32,9 |
+| °C | Temperatura |
+|---|---|
+| Média | 28,15 |
+| Variação típica (desvio-padrão) | 0,52 |
+| Mínimo / máximo | 27,2 / 29,3 |
 
 - **Fortaleza varia pouco:** a temperatura oscila tipicamente ±0,5 °C em torno da média. Por isso
   os erros dos modelos são pequenos em °C — e as diferenças entre eles também.
-- **A série tem "memória":** o valor de hoje se parece muito com o de ontem (correlação de 0,75 na
-  temperatura e 0,87 na sensação). É isso que torna a previsão possível.
+- **A série tem "memória":** o valor de hoje se parece muito com o de ontem (correlação de
+  0,75). É isso que torna a previsão possível.
 - **Não há padrão semanal:** o clima não sabe que dia da semana é. Os modelos foram configurados
   sem ciclo de 7 dias.
 - **2026 está mais quente que o normal:** detalhes logo abaixo.
@@ -123,28 +121,28 @@ dias com **o mesmo período do calendário (28/08 a 25/11) em 2024 e 2025**. Os 
 - **Subida no período:** a média dos últimos 15 dias menos a dos primeiros 15. Se todo ano sobe,
   é a **estação do ano** (de agosto a novembro Fortaleza esquenta).
 
-| Mesmo período (28/08–25/11) | Temp. média | Subida no período | Sensação média | Subida no período |
-|---|---|---|---|---|
-| 2024 | 27,34 °C | +0,95 °C | 28,96 °C | +2,67 °C |
-| 2025 | 27,63 °C | +0,55 °C | 29,63 °C | +0,75 °C |
-| **2026** | **28,15 °C** | **+0,94 °C** | **30,87 °C** | **+1,58 °C** |
-
-| Anomalia de 2026 | Temperatura | Sensação |
+| Mesmo período (28/08–25/11) | Temp. média | Subida no período |
 |---|---|---|
-| No período (média) | +0,66 °C | +1,58 °C |
-| Nos últimos 10 dias | +0,79 °C | +1,54 °C |
-| Degrau (mudança de patamar) | **15-10-2026**: +0,49 → +0,86 °C | **23-10-2026**: +1,35 → +1,96 °C |
+| 2024 | 27,34 °C | +0,95 °C |
+| 2025 | 27,63 °C | +0,55 °C |
+| **2026** | **28,15 °C** | **+0,94 °C** |
+
+| Anomalia de 2026 | Temperatura |
+|---|---|
+| No período (média) | +0,66 °C |
+| Nos últimos 10 dias | +0,79 °C |
+| Degrau (mudança de patamar) | **15-10-2026**: +0,49 → +0,86 °C |
 
 ![Mesmo período em cada ano](img/etapa2_contexto.png)
 
 ![Anomalia de 2026](img/etapa2_anomalia.png)
 
 **O que isso mostra:**
-1. **Parte da alta é estação:** todo ano a temperatura e a sensação sobem nesse período — em 2024
-   e 2025 também.
-2. **Parte é anomalia:** 2026 inteiro está acima do normal (+0,66 °C na temperatura, +1,58 °C na
-   sensação), e a partir de meados de outubro a diferença subiu mais um degrau.
-3. **O degrau é a base do caso de estudo (seção 8):** as datas 15-10 e 23-10 foram encontradas
+1. **Parte da alta é estação:** todo ano a temperatura sobe nesse período — em 2024 e 2025
+   também.
+2. **Parte é anomalia:** 2026 inteiro está acima do normal (+0,66 °C), e a partir de meados de
+   outubro a diferença subiu mais um degrau.
+3. **O degrau é a base do caso de estudo (seção 8):** a data 15-10 foi encontrada
    automaticamente na anomalia, testando cada data de corte e escolhendo a que melhor divide a
    série em dois trechos com médias diferentes (D26).
 
@@ -162,15 +160,15 @@ dias. A linha contínua é o histórico real; as tracejadas são as previsões; 
 
 ![Previsões dos 5 modelos](img/etapa3_previsoes.png)
 
-| Previsão (°C) | Temp. 26-11 | Temp. 02-12 | Sens. 26-11 | Sens. 02-12 |
-|---|---|---|---|---|
-| Linha de base | 29,06 | 29,06 | 32,16 | 32,16 |
-| ETS | 29,07 | 29,07 | 32,04 | 32,04 |
-| SARIMA | 29,09 | 29,26 | 32,04 | 32,23 |
-| Prophet | 28,99 | 29,11 | 32,34 | 32,53 |
-| Chronos-2 | 29,16 | 29,26 | 32,15 | 32,30 |
+| Previsão (°C) | 26-11 | 02-12 |
+|---|---|---|
+| Linha de base | 29,06 | 29,06 |
+| ETS | 29,07 | 29,07 |
+| SARIMA | 29,09 | 29,26 |
+| Prophet | 28,99 | 29,11 |
+| Chronos-2 | 29,16 | 29,26 |
 
-Último valor real (25-11-2026): 29,1 °C (temperatura) e 32,0 °C (sensação).
+Último valor real (25-11-2026): 29,1 °C.
 
 Os modelos se dividem em dois grupos: **linha de base e ETS** preveem estabilidade; **SARIMA,
 Prophet e Chronos-2** prolongam a alta recente (≈ +0,1 a +0,2 °C na semana).
@@ -213,7 +211,7 @@ Esta seção explica cada modelo do zero. Antes, quatro ideias que valem para to
   passado: aplicamos a regra em todos os dias do histórico, medimos quanto ela errou 1, 2, ... 7
   dias depois e usamos esse tamanho de erro como faixa. É honesto (mostra o quanto a própria
   regra costuma errar) e a faixa cresce com a distância.
-- **Configuração:** fixa — não há nada a escolher. Igual para as duas variáveis.
+- **Configuração:** fixa — não há nada a escolher.
 
 ### 5.3 ETS (suavização exponencial)
 
@@ -231,14 +229,13 @@ Esta seção explica cada modelo do zero. Antes, quatro ideias que valem para to
   Nenhum com sazonalidade, porque não há ciclo semanal.
 - **Escolhido pelo AICc:**
 
-| | Temperatura | Sensação |
-|---|---|---|
-| Versão | sem tendência | sem tendência |
-| α | **0,29** — média de vários dias | **0,89** — quase "amanhã = hoje" |
+| | Temperatura |
+|---|---|
+| Versão | sem tendência |
+| α | **0,29** — média de vários dias |
 
-- **O que isso significa:** o ETS prevê uma reta horizontal (estabilidade). Na sensação, o α alto
-  faz a faixa de 95% "explodir" de 1,7 °C para 4,2 °C de largura em 7 dias: como o modelo segue
-  muito o último dia, ele admite que pode errar bastante mais à frente.
+- **O que isso significa:** o ETS prevê uma reta horizontal (estabilidade), parecida com a regra
+  simples, mas dando mais peso aos dias recentes.
 - **Ferramenta:** `ETSModel` da biblioteca statsmodels, que calcula a faixa de incerteza.
 
 ### 5.4 SARIMA
@@ -266,12 +263,12 @@ Esta seção explica cada modelo do zero. Antes, quatro ideias que valem para to
   combinações** (p e q de 0 a 2, com e sem parte sazonal, com e sem tendência — D31).
 - **Escolhido (treino com os 90 dias):**
 
-| | Temperatura | Sensação |
-|---|---|---|
-| Teste ADF | p = 0,17 → inconclusivo → d = 1 | p = 0,002 → volta para uma reta → d = 0 |
-| Configuração | **SARIMA(1, 1, 1) + drift** | **SARIMA(1, 0, 0) + tendência linear** |
-| Em palavras | variações diárias com memória de 1 dia, correção pelo erro de ontem e leve alta | valor de hoje puxa o de amanhã, em torno de uma reta levemente inclinada |
-| Melhor versão *com* ciclo semanal | 3º lugar | 5º lugar |
+| | Temperatura |
+|---|---|
+| Teste ADF | p = 0,17 → inconclusivo → d = 1 |
+| Configuração | **SARIMA(1, 1, 1) + drift** |
+| Em palavras | variações diárias com memória de 1 dia, correção pelo erro de ontem e leve alta |
+| Melhor versão *com* ciclo semanal | 3º lugar |
 
 - **Observação importante:** no treino da validação (só 80 dias), a temperatura passou no teste
   ADF e ficou com SARIMA(1, 0, 0) + tendência linear. **Com séries curtas, a configuração
@@ -290,14 +287,13 @@ Esta seção explica cada modelo do zero. Antes, quatro ideias que valem para to
   mostrar o que acontece quando a ferramenta não combina com o problema (D07).
 - **Tendência por partes:** a tendência é uma linha que pode **mudar de inclinação** em alguns
   pontos (os "pontos de mudança"), que o próprio Prophet escolhe.
-- **Configuração (D32), igual para as duas variáveis:** todas as sazonalidades **desligadas** —
+- **Configuração (D32):** todas as sazonalidades **desligadas** —
   90 dias não contêm um ano inteiro (a sazonalidade anual seria inventada) e não há ciclo
   semanal. Sobra só a tendência por partes. Faixa de 95%; semente aleatória fixa para que a faixa
   (calculada por simulação) saia igual a cada execução.
 - **Característica decisiva:** o Prophet **não tem memória de curto prazo** — ele desenha a linha
-  de tendência sem olhar o último valor. Por isso começa a previsão em 28,99 °C (abaixo do último
-  real, 29,1) na temperatura, e em 32,34 °C (acima do último real, 32,0) na sensação. Isso o ajuda
-  quando a tendência continua e o atrapalha quando ela para.
+  de tendência sem olhar o último valor. Por isso começa a previsão em 28,99 °C, abaixo do último
+  real (29,1 °C). Isso o ajuda quando a tendência continua e o atrapalha quando ela para.
 
 ### 5.6 Chronos-2 — IA moderna (evolução 11.2)
 
@@ -349,8 +345,6 @@ Um teste automático garante isso.
 
 ![Previsão x real no período de teste](img/etapa4_teste.png)
 
-**Temperatura média**
-
 | Modelo | Erro médio (MAE) | RMSE | Cobertura | Viés | vs regra simples |
 |---|---|---|---|---|---|
 | Linha de base | 0,46 °C | 0,55 | 7 de 10 dias | −0,24 | — |
@@ -359,121 +353,81 @@ Um teste automático garante isso.
 | **Prophet** | **0,31 °C** | **0,46** | 9 de 10 dias | −0,01 | **−33%** |
 | Chronos-2 | **0,31 °C** | 0,49 | 9 de 10 dias | +0,05 | −32% |
 
-**Sensação térmica média**
-
-| Modelo | Erro médio (MAE) | RMSE | Cobertura | Viés | vs regra simples |
-|---|---|---|---|---|---|
-| Linha de base | 0,34 °C | 0,49 | 10 de 10 dias | −0,24 | — |
-| ETS | 0,33 °C | 0,42 | 10 de 10 dias | −0,03 | −2% |
-| **SARIMA** | **0,29 °C** | 0,44 | 10 de 10 dias | −0,16 | **−15%** |
-| Prophet | 0,38 °C | 0,43 | 10 de 10 dias | +0,19 | +13% (pior) |
-| Chronos-2 | 0,33 °C | 0,44 | 10 de 10 dias | −0,05 | −1% (empate) |
-
 **Largura média da faixa de 95% no teste (°C)** — quanto mais estreita, mais útil, desde que
 acerte:
 
-| | Linha de base | ETS | SARIMA | Prophet | Chronos-2 |
-|---|---|---|---|---|---|
-| Temperatura | 1,19 | 1,30 | 1,14 | 1,01 | **2,14** |
-| Sensação | 2,21 | 3,42 | 2,02 | 1,66 | **4,05** |
+| Linha de base | ETS | SARIMA | Prophet | Chronos-2 |
+|---|---|---|---|---|
+| 1,19 | 1,30 | 1,14 | 1,01 | **2,14** |
 
 **Leitura:**
-- **Quase todos os modelos bateram a regra simples** — a exceção foi o Prophet na sensação.
-  Entre ETS e linha de base a diferença (0,01–0,03 °C) é um empate prático.
-- **Na temperatura, quem prolongou a alta errou menos:** a temperatura continuou subindo durante
-  o teste (viés negativo em todos). Prophet e SARIMA, que seguem a tendência, ganharam.
-- **Na sensação, o Prophet exagerou:** previu subida, e a sensação ficou estável nos últimos dias
-  (viés +0,19). Sem memória de curto prazo, ele não percebeu que a alta tinha parado.
+- **Todos os modelos bateram a regra simples**, mas ETS por pouco (−6%): na prática, um empate.
+- **Quem prolongou a alta errou menos:** a temperatura continuou subindo durante o teste (viés
+  negativo em quase todos). Prophet, Chronos-2 e SARIMA, que seguem a tendência, ganharam.
 - **Um dia atípico:** 16-11-2026 teve 27,5 °C (provável dia de chuva). Todos os modelos erraram
   esse dia em +1,1 a +1,3 °C. Sem ele, o ranking da temperatura não muda.
-- **Faixas honestas:** cobertura de 90–100% nos modelos, perto dos 95% prometidos. Só a linha de
-  base na temperatura ficou abaixo (70%), porque a alta continuou nos últimos dias.
-- **Chronos-2, a IA moderna:** sem nenhum treino, empatou com o Prophet na temperatura (0,31 °C) e
-  ficou no nível da regra simples na sensação (0,33 °C). Acerta a faixa tanto quanto os outros,
-  mas com uma faixa **quase duas vezes mais larga** — acertar uma faixa larga é fácil. Por isso a
-  cobertura deve ser lida junto com a largura.
+- **Faixas honestas:** cobertura de 90% nos modelos, perto dos 95% prometidos. Só a linha de
+  base ficou abaixo (70%), porque a alta continuou nos últimos dias.
+- **Chronos-2, a IA moderna:** sem nenhum treino, empatou com o Prophet no menor erro (0,31 °C).
+  Acerta a faixa tanto quanto os outros, mas com uma faixa **quase duas vezes mais larga** —
+  acertar uma faixa larga é fácil. Por isso a cobertura deve ser lida junto com a largura.
 
 ---
 
 ## 7. Modelo vencedor
 
-**Recomendação: SARIMA**, com erro médio esperado de **~0,3 a 0,4 °C** por dia na próxima
-semana. Abaixo, o ranking completo dos cinco modelos e o porquê da escolha.
+**Recomendação: Chronos-2** (D52), com erro médio esperado de **~0,3 a 0,4 °C** por dia na
+próxima semana. Abaixo, o ranking dos cinco modelos e o porquê da escolha.
 
-### 7.1 Ranking em cada variável (erro médio no teste)
+### 7.1 Ranking (erro médio no teste)
 
 Posição pelo **erro médio (MAE)** — quanto a previsão errou, em média, nos 10 dias de teste.
 Menor erro = melhor posição. "vs regra" = quanto o erro ficou menor (−) ou maior (+) que o da
-regra simples.
+regra simples. Para conferir se o resultado se repete, rodamos o mesmo teste **um dia depois**
+(dados até 26-11-2026, teste de 17-11 a 26-11).
 
-| Posição | Temperatura | Erro | vs regra | Sensação | Erro | vs regra |
-|---|---|---|---|---|---|---|
-| 1º | Prophet | 0,31 °C | −33% | **SARIMA** | 0,29 °C | −15% |
-| 2º | Chronos-2 | 0,31 °C | −32% | ETS | 0,33 °C | −2% |
-| 3º | **SARIMA** | 0,38 °C | −18% | Chronos-2 | 0,33 °C | −1% |
-| 4º | ETS | 0,43 °C | −6% | Linha de base | 0,34 °C | — |
-| 5º | Linha de base | 0,46 °C | — | Prophet | 0,38 °C | +13% |
+| Posição | Modelo | Teste 16–25/11 | vs regra | Largura da faixa | Teste 17–26/11 |
+|---|---|---|---|---|---|
+| 1º | Prophet | 0,31 °C | −33% | 1,01 °C | 0,47 °C |
+| 2º | **Chronos-2** | **0,31 °C** | −32% | 2,14 °C | **0,38 °C (1º)** |
+| 3º | SARIMA | 0,38 °C | −18% | 1,14 °C | 0,68 °C (pior que a regra) |
+| 4º | ETS | 0,43 °C | −6% | 1,30 °C | 0,63 °C |
+| 5º | Linha de base | 0,46 °C | — | 1,19 °C | 0,62 °C |
 
-*Prophet e Chronos-2 empatam em 0,31 °C na temperatura; o Prophet fica na frente por milésimos.
-O mesmo vale para ETS e Chronos-2 na sensação.*
+*Prophet e Chronos-2 empatam em 0,31 °C no teste principal; o Prophet fica na frente por
+milésimos. O teste de 17–26/11 foi feito na ferramenta, com os dados atualizados sozinhos.*
 
-O líder **muda** de uma variável para a outra: o Prophet vai do 1º ao 5º lugar. Só o SARIMA
-fica entre os três primeiros nas duas.
+Na ferramenta web, a mesma comparação aparece no card **"Comparação dos modelos"**, recalculada
+todo dia; a largura da faixa fica em "Mostrar detalhes técnicos".
 
-### 7.2 Ranking geral (as duas variáveis juntas)
+### 7.2 Por que o Chronos-2, e não os outros
 
-| Geral | Modelo | Posição média | Erro médio das duas | Bate a regra simples nas duas? | Largura média da faixa (temp. / sens.) | Caso de estudo "só antes" (temp. / sens.) |
-|---|---|---|---|---|---|---|
-| **1º** | **SARIMA** | **2,0** (3º e 1º) | 0,34 °C | **Sim, com folga** (−18% e −15%) | **1,14 / 2,02 °C** | 1,11 / 1,79 °C |
-| 2º | Chronos-2 | 2,5 (2º e 3º) | **0,32 °C** | Só na temperatura (na sensação, empate: −1%) | 2,14 / 4,05 °C | 1,04 / 1,49 °C |
-| 3º | Prophet | 3,0 (1º e 5º) | 0,35 °C | Não (+13% na sensação) | 1,01 / 1,66 °C | **0,31 / 0,35 °C** |
-| 4º | ETS | 3,0 (4º e 2º) | 0,38 °C | Só na temperatura (na sensação, empate: −2%) | 1,30 / 3,42 °C | 0,95 / 1,36 °C |
-| 5º | Linha de base | 4,5 (5º e 4º) | 0,40 °C | — (é a régua) | 1,19 / 2,21 °C | 0,94 / 1,29 °C |
+- **Chronos-2 (recomendado):** foi o **único entre os melhores nos dois testes** — empatou no
+  primeiro e venceu sozinho no segundo. Não exige escolher configuração (nada de AICc), é rápido
+  e dá sempre o mesmo resultado para a mesma série. O ponto fraco é a **faixa larga**: em média
+  2,14 °C entre o mínimo e o máximo, contra 1,14 °C do SARIMA — diz menos sobre o dia. E, como todos,
+  ele não percebe uma mudança que não viu (seção 8).
+- **Prophet:** o melhor no primeiro teste, mas só porque **prolonga a tendência** sem olhar o
+  último dia. No segundo teste caiu para 0,47 °C. Num mês em que a tendência mude de direção (como
+  em dezembro, quando a temperatura estabiliza), ele seria o primeiro a errar.
+- **SARIMA:** tem a faixa mais estreita entre os que acertam e parte do último dia observado — por
+  isso era o recomendado quando havia duas séries (era o mais regular entre elas). Só com a
+  temperatura, ficou em 3º no primeiro teste e **pior que a regra simples** no segundo.
+- **ETS:** sempre perto da regra simples (−6% no primeiro teste, pior no segundo). Na prática, um
+  empate com ela.
+- **Linha de base:** é a régua. Serve para saber se os outros valem a pena.
 
-Como ler as colunas:
-- **Posição média:** a média das duas posições da tabela 7.1. Menor = mais regular. É o critério
-  do ranking geral. No empate (Prophet e ETS, 3,0), desempata o erro médio.
-- **Erro médio das duas:** a média simples dos dois erros. Mostra quem erra menos no total, mas
-  não mostra se o modelo é regular.
-- **Largura da faixa:** distância média entre o limite de cima e o de baixo da faixa de 95%. Faixa
-  estreita que acerta = previsão útil; faixa larga "acerta" com facilidade, mas diz pouco.
-- **Caso de estudo "só antes":** o erro do modelo que só conhecia os dias anteriores à mudança de
-  outubro (seção 8). Mede como ele se sai quando o clima muda e ele não viu.
-
-Na ferramenta web, este ranking aparece no topo da tela, na aba **"Ranking"** do card **"Visão
-geral dos modelos"**, calculado com os números do dia e sem depender da variável escolhida.
-
-### 7.3 Por que o SARIMA, e não os outros
-
-- **SARIMA (1º):** é o mais **regular** — 3º e 1º lugar, e o único que bate a regra simples com
-  folga nas duas variáveis. Tem a faixa mais estreita entre os modelos que nunca ficaram por
-  último, e parte do último dia observado. O ponto fraco: é o que mais sofre quando o clima muda
-  e ele não viu (1,11 e 1,79 °C) — por isso a ferramenta retreina todo dia.
-- **Chronos-2 (2º):** tem o **menor erro médio somando as duas variáveis** (0,32 °C contra
-  0,34 °C do SARIMA) — a diferença é de 0,02 °C, pequena demais para 10 dias de teste. Perde por
-  dois motivos: na sensação empatou com a regra simples (−1%), e sua faixa é **quase o dobro** da
-  do SARIMA. Uma previsão que diz "entre 30,6 e 34,0 °C" ajuda menos que uma que diz "entre 31,2 e
-  33,3 °C". Para uma métrica nova, porém, é ótimo no primeiro dia: não exige escolher nada
-  (seção 11.2).
-- **Prophet (3º):** o melhor na temperatura, mas o **pior** na sensação, onde perdeu até para a
-  regra simples. Ele segue a tendência sem olhar o último dia: acerta quando a tendência continua
-  e erra quando ela para. É também por isso que foi o melhor no caso de estudo — a subida de
-  outubro continuou. Num mês em que a tendência mude de direção, ele seria o primeiro a errar.
-- **ETS (4º):** sempre um pouco melhor que a regra simples, mas tão pouco (−6% e −2%) que, na
-  prática, é um empate. Tem a segunda faixa mais larga.
-- **Linha de base (5º):** é a régua. Serve para saber se os outros valem a pena — e os outros
-  quatro modelos ficaram, na média, à frente dela.
-
-**Resumo:** para uma ferramenta que vai prever todos os dias, **regularidade e faixa útil valem
-mais que o melhor número em um teste** — e é aí que o SARIMA ganha.
+**Resumo:** nesta série, a IA moderna **sem ajuste nenhum** foi a mais estável entre os melhores. A
+faixa larga é o preço; ela deve ser lida como "o intervalo onde o real quase certamente cai", não
+como uma previsão precisa.
 
 **Cuidados com esta conclusão:**
-- É um teste de **10 dias**, numa fase de **subida sazonal** (agosto → novembro). Em dezembro,
-  quando a temperatura estabiliza no pico do ciclo anual, modelos que prolongam a tendência podem
-  passar do ponto.
-- As diferenças entre modelos são de décimos de grau. Com mais tempo de uso, o ideal é repetir a
-  comparação em várias semanas antes de fixar um vencedor.
-- Na ferramenta, o usuário pode escolher qualquer um dos cinco modelos e ver o erro de cada um.
+- São testes de **10 dias**, numa fase de **subida sazonal** (agosto → novembro). As diferenças
+  entre modelos são de décimos de grau e os vencedores mudaram de um dia para o outro.
+- Antes de fixar um modelo em produção, o ideal é repetir a comparação em **várias semanas** e
+  escolher pelo resultado médio (seção 11.2).
+- Na ferramenta, o usuário pode escolher qualquer um dos cinco modelos e ver o erro de cada um. A
+  tela abre no Chronos-2.
 
 ---
 
@@ -481,8 +435,7 @@ mais que o melhor número em um teste** — e é aí que o SARIMA ganha.
 
 **Quebra estrutural** é quando a série muda de patamar e passa a se comportar de outro jeito.
 Em 2026, a anomalia (diferença em relação ao normal dos anos anteriores) subiu um degrau em
-**15-10-2026** na temperatura (+0,49 → +0,86 °C) e em **23-10-2026** na sensação
-(+1,35 → +1,96 °C). As datas foram encontradas automaticamente: o método testa cada data de corte
+**15-10-2026** (+0,49 → +0,86 °C). A data foi encontrada automaticamente: o método testa cada data de corte
 e escolhe a que melhor divide a série em dois trechos com médias diferentes (D26).
 
 **A pergunta:** o que acontece com um modelo que não viu essa mudança?
@@ -497,50 +450,50 @@ mesmos 10 dias de teste (16-11-2026 a 25-11-2026):
 
 **Erro médio no teste (°C) e cobertura da faixa**
 
-| Modelo | Temp. só antes | Temp. tudo | Temp. só depois | Sens. só antes | Sens. tudo | Sens. só depois |
-|---|---|---|---|---|---|---|
-| Linha de base | 0,94 (1/10) | 0,46 (7/10) | 0,46 (9/10) | 1,29 (5/10) | 0,34 (10/10) | 0,34 (9/10) |
-| ETS | 0,95 (5/10) | 0,43 (9/10) | 0,31 (9/10) | 1,36 (10/10) | 0,33 (10/10) | 0,34 (10/10) |
-| SARIMA | **1,11 (1/10)** | 0,38 (9/10) | 0,31 (9/10) | **1,79 (0/10)** | 0,29 (10/10) | 0,45 (8/10) |
-| Prophet | 0,31 (9/10) | 0,31 (9/10) | 0,47 (6/10) | 0,35 (9/10) | 0,38 (10/10) | 0,30 (10/10) |
-| Chronos-2 | 1,04 (10/10) | 0,31 (9/10) | 0,35 (9/10) | 1,49 (10/10) | 0,33 (10/10) | 0,33 (10/10) |
+| Modelo | Só antes | Tudo | Só depois |
+|---|---|---|---|
+| Linha de base | 0,94 (1/10) | 0,46 (7/10) | 0,46 (9/10) |
+| ETS | 0,95 (5/10) | 0,43 (9/10) | 0,31 (9/10) |
+| SARIMA | **1,11 (1/10)** | 0,38 (9/10) | 0,31 (9/10) |
+| Prophet | 0,31 (9/10) | 0,31 (9/10) | 0,47 (6/10) |
+| Chronos-2 | 1,04 (10/10) | 0,31 (9/10) | 0,35 (9/10) |
 
 *No Chronos-2, "treinado com" quer dizer "recebeu como contexto": ele não é treinado.*
 
 **Quanto cada modelo piorou sem ver a mudança** (erro "só antes" ÷ erro com "tudo"; 2,0× = errou
 o dobro) e a faixa do modelo "só antes" (dias em que o real caiu dentro / largura):
 
-| Modelo | Temp.: piorou | Temp.: faixa "só antes" | Sens.: piorou | Sens.: faixa "só antes" |
-|---|---|---|---|---|
-| SARIMA | 2,9× | 1 de 10 dias / 1,05 °C | **6,2×** | **0 de 10 dias / 1,77 °C** |
-| Chronos-2 | **3,4×** | 10 de 10 dias / 3,51 °C | 4,5× | 10 de 10 dias / 4,54 °C |
-| ETS | 2,2× | 5 de 10 dias / 2,01 °C | 4,1× | 10 de 10 dias / 5,92 °C |
-| Linha de base | 2,0× | 1 de 10 dias / 1,12 °C | 3,8× | 5 de 10 dias / 2,43 °C |
-| Prophet | 1,0× | 9 de 10 dias / 1,50 °C | 0,9× | 9 de 10 dias / 1,89 °C |
+| Modelo | Piorou | Faixa "só antes" |
+|---|---|---|
+| Chronos-2 | **3,4×** | 10 de 10 dias / 3,51 °C |
+| SARIMA | 2,9× | **1 de 10 dias / 1,05 °C** |
+| ETS | 2,2× | 5 de 10 dias / 2,01 °C |
+| Linha de base | 2,0× | 1 de 10 dias / 1,12 °C |
+| Prophet | 1,0× | 9 de 10 dias / 1,50 °C |
 
-**Em uma frase:** sem ver a mudança, 4 dos 5 modelos erraram de 2,0 a 6,2 vezes mais; os de faixa
-estreita (SARIMA, linha de base) ficaram **confiantes no nível errado**, e os de faixa larga
-(Chronos-2, ETS na sensação) "acertaram" a faixa só porque ela era larga. Só o Prophet passou ileso.
+**Em uma frase:** sem ver a mudança, 4 dos 5 modelos erraram de 2,0 a 3,4 vezes mais; os de faixa
+estreita (SARIMA, linha de base) ficaram **confiantes no nível errado**, e o de faixa larga
+(Chronos-2) "acertou" a faixa só porque ela era larga. Só o Prophet passou ileso.
 
 Na ferramenta web, esta comparação está na aba **"Caso de estudo"** do card **"Visão geral dos
 modelos"**, no topo da tela; o card de baixo continua mostrando o gráfico de um modelo por vez.
 
 **O que aprendemos:**
 1. **O modelo desatualizado erra muito e sempre para o mesmo lado.** Linha de base, ETS e SARIMA
-   "só antes" erraram de **2 a 6 vezes mais** que com "tudo", sempre para baixo: continuaram
+   "só antes" erraram de **2 a 3 vezes mais** que com "tudo", sempre para baixo: continuaram
    prevendo o patamar antigo.
-2. **A faixa de 95% não protege contra mudanças.** O SARIMA "só antes" acertou a faixa em 1 e
-   0 de 10 dias: a faixa era estreita e confiante — no regime errado. Uma faixa só mede a
+2. **A faixa de 95% não protege contra mudanças.** O SARIMA "só antes" acertou a faixa em 1 de
+   10 dias: a faixa era estreita e confiante — no regime errado. Uma faixa só mede a
    incerteza do mundo que o modelo conhece.
 3. **O Prophet sobreviveu, mas por sorte de calendário.** Mesmo treinado "só antes", ele aprendeu
    a subida de setembro/outubro e a prolongou — e a série continuou subindo. Um modelo de
    **tendência** sobrevive a uma mudança que continua a tendência; em dezembro, essa reta passaria
    do ponto.
-4. **Descartar o passado ajuda às vezes, mas é arriscado.** "Só depois" melhorou ETS e SARIMA na
-   temperatura, mas piorou o SARIMA na sensação (só 24 dias de treino = parâmetros instáveis).
-   "Tudo" foi a escolha mais segura.
-5. **A IA moderna também não percebe a mudança.** O Chronos-2 "só antes" errou 3 a 4 vezes mais
-   que com "tudo", para baixo, como o SARIMA: ele só conhece o contexto que recebe. E acertou a
+4. **Descartar o passado ajuda às vezes, mas é arriscado.** "Só depois" melhorou ETS e SARIMA,
+   mas piorou o Prophet e o Chronos-2 — e treinar com poucos dias (32) deixa os parâmetros
+   instáveis. "Tudo" foi a escolha mais segura.
+5. **A IA moderna também não percebe a mudança.** O Chronos-2 "só antes" errou 3,4 vezes mais
+   que com "tudo" — foi o que mais piorou — para baixo, como o SARIMA: ele só conhece o contexto que recebe. E acertou a
    faixa em 10 de 10 dias **mesmo errando o nível** — só porque a faixa era larga. Acertar a
    faixa não quer dizer que a previsão foi boa.
 
@@ -574,7 +527,8 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
   estatística clássica costuma ser igual ou melhor, e é bem mais fácil de explicar.
 - **A exceção são os modelos fundacionais:** como já vêm treinados com milhões de séries, eles
   conseguem prever uma série curta sem treino próprio. Por isso o Chronos-2 entrou como 5º modelo
-  (seção 11.2) — e, nesta série, empatou com a estatística clássica, sem superá-la.
+  (seção 11.2) — e, nesta série, empatou com o melhor modelo clássico e foi o mais estável entre
+  os melhores, o que o tornou o recomendado (seção 7).
 
 **Como descrever o projeto, de forma honesta:**
 
@@ -586,9 +540,11 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
 
 ## 10. Limites da POC
 
-- **Não enxerga umidade nem vento.** Eles influenciam a sensação térmica, mas para usá-los na
-  previsão seria preciso saber a umidade e o vento *futuros* — que também teriam de ser previstos
-  (D19). Temperatura e sensação são previstas de forma independente.
+- **Não enxerga umidade, vento nem chuva.** Para usá-los na previsão seria preciso saber os
+  valores *futuros* deles — que também teriam de ser previstos (D19). A temperatura é prevista só
+  pelo seu próprio histórico.
+- **Uma série só.** A sensação térmica foi retirada para simplificar (D52); ela tinha os mesmos
+  comportamentos da temperatura e não trazia uma lição nova.
 - **Não conhece o ciclo anual.** Fortaleza tem um ciclo de ~2 °C ao longo do ano, e 90 dias não
   mostram um ano inteiro. A alta de novembro de 2026 é em parte estação, que se estabiliza em
   dezembro — algo que os modelos não sabem (D23, D24).
@@ -605,7 +561,7 @@ Depende do que se chama de "IA". Vale ser preciso para não criar expectativas e
   sempre os números atuais.
 - **Roda localmente.** A ferramenta ainda não está publicada na internet.
 - **O Chronos-2 pesa.** Exige o PyTorch (~200 MB) e o modelo (456 MB, baixado na primeira vez) e
-  mais memória. A faixa dele é larga demais para esta série (seção 6).
+  mais memória. A faixa dele é larga para esta série (seção 6).
 
 ---
 
@@ -619,27 +575,29 @@ dados são atualizados até ontem e os modelos retreinados, sem ação manual (D
 O **Chronos-2** (Amazon) entrou como 5º modelo pela interface comum (D27, D47) e aparece
 sozinho na validação, no caso de estudo, na API e na tela. Como funciona: seção 5.6.
 
-**A pergunta era: "IA moderna ganha da estatística clássica nesta série?" Resposta: não — empata.**
+**A pergunta era: "IA moderna ganha da estatística clássica nesta série?" Resposta: empata no
+melhor — e é o mais estável entre os melhores.** Por isso virou o modelo recomendado (D52).
 
-| | Temperatura | Sensação | Largura da faixa |
+| | Teste 16–25/11 | Teste 17–26/11 | Largura da faixa |
 |---|---|---|---|
-| Chronos-2 | 0,31 °C (empate com o melhor, Prophet) | 0,33 °C (empate com a regra simples) | a maior: ~2x |
-| Melhor clássico | 0,31 °C (Prophet) | 0,29 °C (SARIMA) | — |
+| Chronos-2 | 0,31 °C (empate com o melhor, Prophet) | 0,38 °C (o melhor) | a maior: ~2x |
+| Melhor clássico | 0,31 °C (Prophet) | 0,47 °C (Prophet) | — |
 
 - **Onde ele brilha:** zero-shot (sem treino nem escolha de configuração) e rápido (0,06 s). Numa
   **métrica nova do cliente**, é um ótimo primeiro resultado no primeiro dia, enquanto não há
   histórico para comparar modelos.
-- **Onde ele perde:** faixa larga demais para uma série calma; não percebe mudanças de patamar
+- **Onde ele perde:** faixa larga para uma série calma; não percebe mudanças de patamar
   que não estejam no contexto (seção 8).
 - **Custo:** gratuito (Apache 2.0, uso comercial permitido — confirmar antes de usar em produto).
   O custo é técnico: PyTorch (~200 MB), o modelo (456 MB) e mais memória.
-- **Próximo teste possível com ele:** repetir a comparação em várias semanas (o teste de 10
-  dias é curto). A largura da faixa já virou métrica oficial da ferramenta (D48).
+- **Próximo teste importante:** repetir a comparação em várias semanas (o teste de 10 dias é
+  curto e os vencedores mudaram de um dia para o outro) antes de fixar o Chronos-2 em produção.
+  A largura da faixa já é métrica oficial da ferramenta (D48).
 
 ### 11.3 Explicações em texto por IA
 Hoje os textos da tela são gerados por **regras** (D46): sempre corretos, mas fixos. Uma melhoria é
 um **modelo de linguagem** escrever a explicação de forma mais natural e responder perguntas ("por
-que o SARIMA ganhou?"):
+que o Chronos-2 foi recomendado?"):
 - **Gemma via Ollama:** gratuito, roda no computador, os dados não saem.
 - **Gemini, camada gratuita:** mais capaz, mas com limites de uso e dados enviados ao Google (ler
   os termos antes de usar com dados do cliente).
@@ -658,7 +616,7 @@ a atualização automática e os testes. O que precisaria ser generalizado:
 | Ponto | Hoje | Para qualquer métrica |
 |---|---|---|
 | Fonte de dados | Open-Meteo fixo | Envio de CSV, banco de dados ou API do cliente, num formato padrão (data, valor, nome da série) |
-| Configuração | Duas variáveis fixas no código | Cadastro por métrica: nome, unidade (°C, R$, unidades), frequência, horizonte |
+| Configuração | Uma série fixa no código (temperatura) | Cadastro por métrica: nome, unidade (°C, R$, unidades), frequência, horizonte |
 | Ciclo semanal | Desligado (o clima não tem) | Ligado conforme a métrica — vendas quase sempre têm. A busca do ETS e do SARIMA já testa ciclos de 7 dias |
 | Feriados e datas especiais | Não usados | Importantes em negócio (Black Friday, Natal) — ponto forte do Prophet |
 | Regras do negócio | Nenhuma | Ex.: vendas nunca negativas; muitos dias com zero |

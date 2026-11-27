@@ -10,15 +10,11 @@ Termos do projeto explicados de forma simples. Novos termos são adicionados con
 temperatura média de cada dia. A ordem importa: o valor de hoje depende dos dias anteriores.
 
 **Série univariada x multivariada** — univariada tem uma única variável medida ao longo do tempo
-(só a temperatura); multivariada usa várias juntas (temperatura + umidade + vento). Neste projeto
-tratamos temperatura e sensação como **duas séries univariadas** separadas.
-
-**Sensação térmica (temperatura aparente)** — a temperatura que o corpo "sente". Combina a
-temperatura do ar com umidade, vento e radiação solar. Em lugares úmidos como Fortaleza, costuma
-ficar acima da temperatura real.
+(só a temperatura); multivariada usa várias juntas (temperatura + umidade + vento). Este projeto
+usa **uma série univariada**: a temperatura média diária (D52).
 
 **Variável exógena (externa)** — informação de fora da série usada para ajudar a prever.
-Ex.: usar umidade e vento para prever a sensação. O problema: para prever o futuro, é preciso
+Ex.: usar umidade e vento para prever a temperatura. O problema: para prever o futuro, é preciso
 saber também o valor futuro da variável externa. (Não usamos neste projeto — decisão D19.)
 
 **Reanálise (ERA5)** — "histórico reconstruído" do clima: um modelo meteorológico é rodado de
@@ -126,9 +122,6 @@ caso. O Chronos-2 prevê a temperatura de Fortaleza "zero-shot".
 (D48). Faixa estreita que acerta = previsão útil; uma faixa larga "acerta" com facilidade, mas diz
 pouco. Por isso a cobertura deve ser lida junto com a largura.
 
-**Posição média** — no ranking geral, a média das posições de um modelo na temperatura e na
-sensação (1 = menor erro). Mede **regularidade**: 3º e 1º (média 2,0) é melhor que 1º e 5º (3,0).
-
 **Quantil** — valor de corte de uma previsão: o quantil de 2,5% é o valor com só 2,5% de chance de
 o real ficar abaixo dele. O de 50% é a **mediana** (o valor do meio). O Chronos-2 dá a faixa de 95%
 com os quantis de 2,5% e 97,5%.
@@ -167,7 +160,7 @@ sem executá-lo.
 **Parâmetro `past_days`** — só na API de previsão: "devolva também os N dias que já passaram",
 calculados pelo modelo de previsão. Serve para tapar o atraso de uma fonte histórica.
 
-**Resposta da API** — JSON com uma lista de datas (`time`) e, para cada variável, uma lista de
+**Resposta da API** — JSON com uma lista de datas (`time`) e, para a variável pedida, uma lista de
 valores na mesma ordem. Dia sem dado vem como `null`.
 
 ## Exploração
@@ -221,7 +214,7 @@ AICc = erro no treino + multa por parâmetro + correção para poucos dados. Com
 
 | Diferença de AICc | Leitura | Exemplo |
 |---|---|---|
-| menos de 2 | praticamente empate | sensação: 99,60 x 100,19 |
+| menos de 2 | praticamente empate | — |
 | ~4 a 7 | vitória clara | temperatura: 43,59 x 47,79 |
 | mais de 10 | o segundo é bem pior | — |
 
@@ -269,8 +262,8 @@ contra quebras: o modelo "fica sabendo" do novo regime.
 
 **Excesso de confiança (faixa estreita demais)** — quando a faixa de 95% deixa de fora muito mais
 que 5% dos dias reais. O intervalo de um modelo só mede a incerteza **dentro do regime que ele
-conhece**; ele não sabe que o mundo pode mudar. Ex.: o SARIMA "só antes" teve cobertura de 0%
-(sensação) e 10% (temperatura).
+conhece**; ele não sabe que o mundo pode mudar. Ex.: o SARIMA "só antes" teve cobertura de 10%
+(acertou a faixa em 1 de 10 dias).
 
 **Reversão à média** — modelos sem tendência (ex.: SARIMA com d = 0 e sem tendência) puxam a
 previsão de volta para a média do treino. Se o treino é de um regime antigo, puxam para o nível
@@ -285,7 +278,7 @@ errado.
 criar, alterar, apagar. Nossa API só tem GET.
 
 **Parâmetros de URL (query string)** — o que vem depois do `?` no endereço, no formato
-`nome=valor`, separados por `&`. Ex.: `/api/previsao?variavel=sensacao&horizonte=7`.
+`nome=valor`, separados por `&`. Ex.: `/api/previsao?modelo=sarima&horizonte=7`.
 
 **Código de status HTTP** — número que resume o resultado: **200** = deu certo; **400** = pedido
 inválido (culpa de quem pediu); **404** = rota não existe; **405** = método não permitido;

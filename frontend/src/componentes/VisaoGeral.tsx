@@ -1,28 +1,22 @@
 // Card "Visão geral": um card só, com abas (D49), para as comparações que juntam TODOS os
-// modelos e as DUAS variáveis — independente da variável escolhida nos seletores.
+// modelos — independente do modelo escolhido nos seletores. A aba "Ranking" saiu com a sensação
+// térmica (D52): com uma série só, ela repetia a tabela "Comparação dos modelos".
 // Cada aba busca os próprios dados só quando é aberta (o caso de estudo é o cálculo mais pesado).
 import { useState } from 'react'
 import type { Modelo } from '../api'
-import { useCasoEstudoTodos, useContexto, useMetricas } from '../consultas'
+import { useCasoEstudoTodos, useContexto } from '../consultas'
 import { AnosAnteriores } from './AnosAnteriores'
 import { Cartao, EstadoConsulta } from './Cartao'
 import { CasoEstudoGeral } from './CasoEstudoGeral'
-import { RankingGeral } from './RankingGeral'
 
-type Aba = 'ranking' | 'caso' | 'anos'
+type Aba = 'caso' | 'anos'
 
 const ABAS: { id: Aba; rotulo: string; subtitulo: string }[] = [
-  {
-    id: 'ranking',
-    rotulo: 'Ranking',
-    subtitulo:
-      'Temperatura e sensação térmica juntas, no mesmo teste de 10 dias que os modelos não conheciam. Clique num modelo para selecioná-lo.',
-  },
   {
     id: 'caso',
     rotulo: 'Caso de estudo',
     subtitulo:
-      'E se o modelo só conhecesse os dias antes da mudança de outubro? Todos os modelos, nas duas variáveis, avaliados no mesmo período de teste.',
+      'E se o modelo só conhecesse os dias antes da mudança de outubro? Todos os modelos, avaliados no mesmo período de teste. Clique num modelo para selecioná-lo.',
   },
   {
     id: 'anos',
@@ -32,55 +26,19 @@ const ABAS: { id: Aba; rotulo: string; subtitulo: string }[] = [
   },
 ]
 
-function PainelRanking(props: { modelo: Modelo; aoSelecionar: (m: Modelo) => void }) {
-  const temp = useMetricas('temperatura')
-  const sens = useMetricas('sensacao')
-  return (
-    <EstadoConsulta
-      carregando={temp.isPending || sens.isPending}
-      erro={temp.error ?? sens.error}
-      aoTentarDeNovo={() => {
-        temp.refetch()
-        sens.refetch()
-      }}
-      alturaEsqueleto="h-64"
-      mensagemCarregando="Testando todos os modelos nas duas variáveis…"
-      dicaCarregando="Na primeira vez do dia leva cerca de 20 a 60 segundos."
-    >
-      {temp.data && sens.data && (
-        <RankingGeral
-          temperatura={temp.data}
-          sensacao={sens.data}
-          modeloSelecionado={props.modelo}
-          aoSelecionar={props.aoSelecionar}
-        />
-      )}
-    </EstadoConsulta>
-  )
-}
-
 function PainelCaso(props: { modelo: Modelo; aoSelecionar: (m: Modelo) => void }) {
-  const temp = useCasoEstudoTodos('temperatura')
-  const sens = useCasoEstudoTodos('sensacao')
+  const caso = useCasoEstudoTodos()
   return (
     <EstadoConsulta
-      carregando={temp.isPending || sens.isPending}
-      erro={temp.error ?? sens.error}
-      aoTentarDeNovo={() => {
-        temp.refetch()
-        sens.refetch()
-      }}
+      carregando={caso.isPending}
+      erro={caso.error}
+      aoTentarDeNovo={() => caso.refetch()}
       alturaEsqueleto="h-64"
-      mensagemCarregando="Treinando os 3 cenários de todos os modelos nas duas variáveis…"
-      dicaCarregando="É o cálculo mais pesado: na primeira vez do dia pode levar 1 a 2 minutos."
+      mensagemCarregando="Treinando os 3 cenários de todos os modelos…"
+      dicaCarregando="É o cálculo mais pesado: na primeira vez do dia pode levar 1 minuto ou mais."
     >
-      {temp.data && sens.data && (
-        <CasoEstudoGeral
-          temperatura={temp.data}
-          sensacao={sens.data}
-          modeloSelecionado={props.modelo}
-          aoSelecionar={props.aoSelecionar}
-        />
+      {caso.data && (
+        <CasoEstudoGeral resposta={caso.data} modeloSelecionado={props.modelo} aoSelecionar={props.aoSelecionar} />
       )}
     </EstadoConsulta>
   )
@@ -103,7 +61,7 @@ function PainelAnos() {
 }
 
 export function VisaoGeral(props: { modelo: Modelo; aoSelecionar: (m: Modelo) => void }) {
-  const [aba, setAba] = useState<Aba>('ranking')
+  const [aba, setAba] = useState<Aba>('caso')
   const atual = ABAS.find((a) => a.id === aba) ?? ABAS[0]
 
   return (
@@ -129,7 +87,6 @@ export function VisaoGeral(props: { modelo: Modelo; aoSelecionar: (m: Modelo) =>
       </div>
       <div role="tabpanel" id={`painel-${aba}`} aria-labelledby={`aba-${aba}`}>
         {/* Só o painel aberto é montado: o caso de estudo só é calculado quando alguém abre a aba. */}
-        {aba === 'ranking' && <PainelRanking modelo={props.modelo} aoSelecionar={props.aoSelecionar} />}
         {aba === 'caso' && <PainelCaso modelo={props.modelo} aoSelecionar={props.aoSelecionar} />}
         {aba === 'anos' && <PainelAnos />}
       </div>

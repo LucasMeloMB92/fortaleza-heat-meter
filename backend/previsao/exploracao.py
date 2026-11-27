@@ -122,19 +122,19 @@ def mesmo_periodo_por_ano(
     return pd.concat(partes, ignore_index=True)
 
 
-def climatologia(periodos: pd.DataFrame, ano_atual: int, suavizar: int = 7) -> pd.DataFrame:
+def climatologia(periodos: pd.DataFrame, ano_atual: int, suavizar: int = 7) -> pd.Series:
     """O "normal" para cada dia: média dos anos ANTERIORES no mesmo dia do calendário.
 
     Com só 2 anos anteriores a média ainda é ruidosa, então suavizamos com uma média
     móvel centrada de `suavizar` dias (3 dias antes, o dia, 3 dias depois).
     """
     anteriores = periodos[periodos["ano"] != ano_atual]
-    media = anteriores.groupby("data_ref")[list(coleta.VARIAVEIS)].mean()
+    media = anteriores.groupby("data_ref")[coleta.COLUNA].mean()
     return media.rolling(suavizar, center=True, min_periods=1).mean()
 
 
-def anomalia(periodos: pd.DataFrame, ano_atual: int) -> pd.DataFrame:
+def anomalia(periodos: pd.DataFrame, ano_atual: int) -> pd.Series:
     """Anomalia = valor do ano atual - climatologia. Positivo = mais quente que o normal."""
-    atual = periodos[periodos["ano"] == ano_atual].set_index("data_ref")[list(coleta.VARIAVEIS)]
+    atual = periodos[periodos["ano"] == ano_atual].set_index("data_ref")[coleta.COLUNA]
     normal = climatologia(periodos, ano_atual)
     return atual - normal.reindex(atual.index)

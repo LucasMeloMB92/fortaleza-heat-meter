@@ -47,7 +47,7 @@ def _contexto_falso() -> pd.DataFrame:
     """3 anos em que 2024 e 2025 valem 27 °C e 2026 vale 28 °C no mesmo período."""
     datas = pd.date_range("2023-11-26", "2026-11-25", freq="D")
     valor = np.where(datas.year == 2026, 28.0, 27.0)
-    return pd.DataFrame({"data": datas, "temperatura_media": valor, "sensacao_media": valor + 3})
+    return pd.DataFrame({"data": datas, "temperatura_media": valor})
 
 
 def test_mesmo_periodo_alinha_os_anos_no_calendario_atual():
@@ -67,5 +67,4 @@ def test_anomalia_e_diferenca_para_o_normal_dos_anos_anteriores():
     anom = exploracao.anomalia(periodos, 2026)
 
     assert len(anom) == 90
-    assert np.allclose(anom["temperatura_media"], 1.0)  # 28 - 27
-    assert np.allclose(anom["sensacao_media"], 1.0)  # 31 - 30
+    assert np.allclose(anom, 1.0)  # 28 - 27

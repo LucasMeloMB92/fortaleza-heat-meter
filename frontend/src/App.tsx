@@ -1,8 +1,9 @@
-// Tela principal: aviso no topo, visão geral com abas (todos os modelos, as duas variáveis —
-// D48, D49), seletores e quatro seções por variável (previsão, métricas, teste, caso de estudo). O estado (variável, modelo, horizonte) fica aqui e desce para os componentes.
+// Tela principal: aviso no topo, visão geral com abas (todos os modelos — D49), seletores e
+// quatro seções (previsão, métricas, teste, caso de estudo). O estado (modelo, horizonte) fica
+// aqui e desce para os componentes. Uma série só: a temperatura média (D52).
 import { useQueryClient } from '@tanstack/react-query'
 import { lazy, useEffect, useRef, useState } from 'react'
-import type { Modelo, Variavel } from './api'
+import type { Modelo } from './api'
 import { AvisoTopo } from './componentes/AvisoTopo'
 import { Cartao, EstadoConsulta } from './componentes/Cartao'
 import { LimiteDeErro } from './componentes/LimiteDeErro'
@@ -15,7 +16,6 @@ import {
   useOpcoes,
   usePrevisao,
   useSaude,
-  useSerie,
   useTeste,
 } from './consultas'
 import { ResumoPrevisao } from './componentes/ResumoPrevisao'
@@ -53,22 +53,16 @@ export default function App() {
   const clienteConsultas = useQueryClient()
   const opcoes = useOpcoes()
   const saude = useSaude()
-  const [variavel, setVariavel] = useState<Variavel>('temperatura')
-  const [modelo, setModelo] = useState<Modelo>('sarima')
+  const [modelo, setModelo] = useState<Modelo>('chronos') // recomendado (D52)
   const [horizonte, setHorizonte] = useState(7)
-  const [comparar, setComparar] = useState(false)
 
   useRecarregarQuandoODiaVirar(saude.data?.dados.fim)
 
-  const outraVariavel: Variavel = variavel === 'temperatura' ? 'sensacao' : 'temperatura'
-  const previsao = usePrevisao(variavel, modelo, horizonte)
-  const serieOutra = useSerie(outraVariavel, comparar)
-  const metricas = useMetricas(variavel)
-  const teste = useTeste(variavel, modelo)
-  const caso = useCasoEstudo(variavel, modelo)
+  const previsao = usePrevisao(modelo, horizonte)
+  const metricas = useMetricas()
+  const teste = useTeste(modelo)
+  const caso = useCasoEstudo(modelo)
 
-  const nomeVariavel = opcoes.data?.variaveis.find((v) => v.id === variavel)?.nome ?? ''
-  const nomeOutra = opcoes.data?.variaveis.find((v) => v.id === outraVariavel)?.nome ?? ''
   const nomeModelo = opcoes.data?.modelos.find((m) => m.id === modelo)?.nome ?? ''
 
   // "Tentar de novo" geral: refaz todas as consultas que falharam.
@@ -79,8 +73,8 @@ export default function App() {
       <header>
         <h1 className="text-2xl font-bold">Fortaleza Heat Meter</h1>
         <p className="mt-1 text-sm text-tinta-2">
-          Previsão de séries temporais — temperatura e sensação térmica médias diárias de
-          Fortaleza-CE (fonte: Open-Meteo).
+          Previsão de séries temporais — temperatura média diária de Fortaleza-CE (fonte:
+          Open-Meteo).
           {saude.data && (
             <>
               {' '}
@@ -109,10 +103,8 @@ export default function App() {
           <div className="rounded-xl border border-borda bg-superficie p-4 shadow-sm">
             <Seletores
               opcoes={opcoes.data}
-              variavel={variavel}
               modelo={modelo}
               horizonte={horizonte}
-              aoMudarVariavel={setVariavel}
               aoMudarModelo={setModelo}
               aoMudarHorizonte={setHorizonte}
             />
@@ -121,7 +113,7 @@ export default function App() {
       </EstadoConsulta>
 
       <Cartao
-        titulo={`Previsão dos próximos ${horizonte} ${horizonte === 1 ? 'dia' : 'dias'}${comTraco(nomeVariavel)}`}
+        titulo={`Previsão dos próximos ${horizonte} ${horizonte === 1 ? 'dia' : 'dias'}`}
         atualizando={previsao.isFetching && !previsao.isPending}
         subtitulo={
           <>
@@ -141,18 +133,10 @@ export default function App() {
             <>
               <ResumoPrevisao
                 resposta={previsao.data}
-                nomeVariavel={nomeVariavel}
                 metricasDoModelo={metricas.data?.metricas.find((m) => m.modelo === modelo)}
                 diasTeste={metricas.data?.teste.dias}
               />
-              <GraficoPrevisao
-                resposta={previsao.data}
-                outraVariavel={outraVariavel}
-                nomeOutra={nomeOutra}
-                serieOutra={serieOutra.data}
-                comparar={comparar}
-                aoMudarComparar={setComparar}
-              />
+              <GraficoPrevisao resposta={previsao.data} />
             </>
           )}
         </EstadoConsulta>
@@ -224,7 +208,7 @@ export default function App() {
           mensagemCarregando="Treinando os 3 cenários (só antes, tudo, só depois)…"
           dicaCarregando="É o cálculo mais pesado: na primeira vez do dia pode levar 1 minuto ou mais."
         >
-          {caso.data && <CasoEstudo resposta={caso.data} nomeVariavel={nomeVariavel} />}
+          {caso.data && <CasoEstudo resposta={caso.data} />}
         </EstadoConsulta>
       </Cartao>
 

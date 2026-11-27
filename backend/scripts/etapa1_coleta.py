@@ -24,8 +24,8 @@ def main() -> None:
     print("\nDias por fonte:")
     print(tabela["fonte"].value_counts().to_string())
 
-    print("\nResumo das variáveis (°C):")
-    print(tabela[list(coleta.VARIAVEIS)].describe().round(2).to_string())
+    print("\nResumo da temperatura média (°C):")
+    print(tabela[coleta.COLUNA].describe().round(2).to_string())
 
     print("\nPrimeiros e últimos dias:")
     print(tabela.head(3).to_string(index=False))

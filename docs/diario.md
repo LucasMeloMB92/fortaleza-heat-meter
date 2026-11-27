@@ -755,3 +755,40 @@ mostrava consultas ao Hugging Face a cada carga.
 - **Opção que não é repassada não adianta:** `local_files_only=True` sozinho não bastava, porque
   o Chronos faz uma consulta antes (procura um "adaptador") sem repassá-la. Carregar pela pasta
   local resolve na raiz.
+
+## Simplificação: só a temperatura (D52) — 2026-11-27
+
+### Dúvida
+Ao estudar a POC pronta, o usuário achou que ela ficou complexa demais e que a sensação térmica
+estava "deslocada": dobrava telas e tabelas sem trazer uma lição nova. Pedido: remover tudo dela.
+
+### O que foi feito
+- **Backend:** coleta, serviço, rotas, scripts das etapas 1–5 e testes com uma série só; parâmetro
+  `variavel` removido da API; CSVs sem a coluna `sensacao_media`; 7 gráficos de `docs/img`
+  refeitos. Backend: **69 testes** (saiu o de `variavel` inválida) + ruff limpo.
+- **Frontend:** sem seletor de variável, sem "comparar com a sensação", sem a aba "Ranking"
+  (largura da faixa foi para os detalhes da comparação). Frontend: **35 testes** (saíram os 7 do
+  ranking) + tsc + oxlint + build limpos. Tela conferida no navegador.
+- **Docs:** README, api.md, relatório final, guia técnico e glossário só com a temperatura.
+- **Recomendação:** SARIMA → **Chronos-2** (ver abaixo). Modelo padrão da API e da tela: `chronos`.
+
+### Resultado
+| Modelo | Teste 16–25/11 | Teste 17–26/11 |
+|---|---|---|
+| Chronos-2 | 0,31 °C | **0,38 °C** |
+| Prophet | 0,31 °C | 0,47 °C |
+| SARIMA | 0,38 °C | 0,68 °C |
+| ETS | 0,43 °C | 0,63 °C |
+| Linha de base | 0,46 °C | 0,62 °C |
+
+O teste de 17–26/11 apareceu ao abrir a tela: a API atualizou os dados sozinha (D44), o que
+também confirmou que a coleta nova funciona de ponta a ponta. Os CSVs do repositório voltaram ao
+retrato de 25-11 para bater com os documentos.
+
+### O que aprendi
+- **Uma recomendação depende do que se compara.** O SARIMA ganhava por ser regular entre duas
+  séries; com uma só, esse argumento sumiu e o resultado mudou.
+- **Um dia a mais já mudou o ranking.** Com 10 dias de teste, os vencedores trocam de lugar — por
+  isso repetir a comparação em várias semanas é o próximo passo antes de fixar um modelo.
+- **Tirar uma série mudou o formato das funções, não só apagou linhas:** `anomalia` passou a
+  devolver uma série e o caso de estudo uma data só — o código ficou mais simples de ler.

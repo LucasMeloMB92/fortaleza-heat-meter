@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import type { VariavelContexto } from './api'
+import type { RespostaContexto } from './api'
 import { textoAnosAnteriores } from './textos'
 
 // Números reais de 26-11-2026 (etapa 2 e /api/contexto).
-function variavel(id: 'temperatura' | 'sensacao', medias: number[], subidas: number[], anomalia: number): VariavelContexto {
+function contexto(medias: number[], subidas: number[], anomalia: number): RespostaContexto {
   return {
-    id,
-    nome: id === 'temperatura' ? 'Temperatura média' : 'Sensação térmica média',
+    nome: 'Temperatura média',
+    ano_atual: 2026,
+    anos_anteriores: [2024, 2025],
+    dias_subida: 15,
+    dias_anomalia_recente: 10,
     anos: [2024, 2025, 2026].map((ano, i) => ({
       ano,
       inicio: `${ano}-08-28`,
@@ -24,7 +27,7 @@ function variavel(id: 'temperatura' | 'sensacao', medias: number[], subidas: num
 
 describe('textoAnosAnteriores', () => {
   it('separa a estação (todo ano sobe) do nível (anomalia) e cita o degrau', () => {
-    const texto = textoAnosAnteriores(variavel('temperatura', [27.34, 27.63, 28.15], [0.95, 0.55, 0.94], 0.66), [2024, 2025])
+    const texto = textoAnosAnteriores(contexto([27.34, 27.63, 28.15], [0.95, 0.55, 0.94], 0.66))
     expect(texto).toBe(
       'Em 2026, a temperatura média do período (média dos 90 dias) foi 28,2 °C — 0,66 °C acima do normal ' +
         '(a média de 2024 e 2025 no mesmo dia). Todo ano ela sobe nesse período (2024: +0,95 °C; 2025: +0,55 °C; ' +
@@ -34,7 +37,7 @@ describe('textoAnosAnteriores', () => {
   })
 
   it('perto do normal: não fala de degrau', () => {
-    const texto = textoAnosAnteriores(variavel('temperatura', [27.3, 27.6, 27.5], [0.9, 0.5, 0.1], 0.1), [2024, 2025])
+    const texto = textoAnosAnteriores(contexto([27.3, 27.6, 27.5], [0.9, 0.5, 0.1], 0.1))
     expect(texto).toContain('perto do normal')
     expect(texto).toContain('A subida dentro do período variou entre os anos')
     expect(texto).not.toContain('patamar')

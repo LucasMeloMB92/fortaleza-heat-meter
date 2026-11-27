@@ -35,11 +35,10 @@ URL_HISTORICO = "https://archive-api.open-meteo.com/v1/archive"
 MODELO_HISTORICO = "best_match"
 URL_PREVISAO = "https://api.open-meteo.com/v1/forecast"
 
-# Nome da coluna no nosso CSV -> nome da variável na API do Open-Meteo (decisão D02).
-VARIAVEIS = {
-    "temperatura_media": "temperature_2m_mean",
-    "sensacao_media": "apparent_temperature_mean",
-}
+# Coluna do nosso CSV e a variável correspondente na API do Open-Meteo (decisões D02 e D52:
+# só a temperatura média; a sensação térmica foi retirada para simplificar a POC).
+COLUNA = "temperatura_media"
+VARIAVEL_API = "temperature_2m_mean"
 
 # Valores possíveis da coluna "fonte" (de onde veio cada dia).
 FONTE_HISTORICO = "historico"
@@ -61,12 +60,12 @@ def calcular_periodo(hoje: date, dias: int = DIAS) -> tuple[date, date]:
 
 
 def _parametros_comuns() -> dict:
-    """Parâmetros iguais nas duas APIs: local, fuso e quais variáveis diárias queremos."""
+    """Parâmetros iguais nas duas APIs: local, fuso e qual variável diária queremos."""
     return {
         "latitude": LATITUDE,
         "longitude": LONGITUDE,
         "timezone": FUSO,
-        "daily": ",".join(VARIAVEIS.values()),
+        "daily": VARIAVEL_API,
     }
 
 
@@ -80,13 +79,12 @@ def _baixar_json(url: str, parametros: dict) -> dict:
 def resposta_para_tabela(resposta: dict) -> pd.DataFrame:
     """Converte o JSON do Open-Meteo numa tabela com uma linha por dia.
 
-    O JSON vem assim: {"daily": {"time": [...], "temperature_2m_mean": [...], ...}}.
+    O JSON vem assim: {"daily": {"time": [...], "temperature_2m_mean": [...]}}.
     Dias sem dado chegam como null (None) e viram NaN ("não é um número") no pandas.
     """
     diario = resposta["daily"]
     tabela = pd.DataFrame({"data": pd.to_datetime(diario["time"])})
-    for nome_coluna, nome_api in VARIAVEIS.items():
-        tabela[nome_coluna] = pd.to_numeric(pd.Series(diario[nome_api]), errors="coerce")
+    tabela[COLUNA] = pd.to_numeric(pd.Series(diario[VARIAVEL_API]), errors="coerce")
     return tabela
 
 
@@ -111,14 +109,13 @@ def juntar_fontes(
 ) -> pd.DataFrame:
     """Junta histórico e recentes, dando prioridade ao histórico.
 
-    - Linhas com algum valor vazio são descartadas (a API histórica devolve null nos dias
+    - Linhas com valor vazio são descartadas (a API histórica devolve null nos dias
       que ainda não processou).
     - Da fonte "recentes" só entram os dias que NÃO existem no histórico.
     - O resultado fica limitado ao período [início, fim] e ganha a coluna "fonte".
     """
-    colunas = list(VARIAVEIS)
-    hist = historico.dropna(subset=colunas).assign(fonte=FONTE_HISTORICO)
-    rec = recentes.dropna(subset=colunas).assign(fonte=FONTE_PREVISAO)
+    hist = historico.dropna(subset=[COLUNA]).assign(fonte=FONTE_HISTORICO)
+    rec = recentes.dropna(subset=[COLUNA]).assign(fonte=FONTE_PREVISAO)
     rec = rec[~rec["data"].isin(hist["data"])]  # "~" significa "NÃO"
 
     tabela = pd.concat([hist, rec]).sort_values("data")
@@ -140,10 +137,9 @@ def verificar_tabela(tabela: pd.DataFrame, inicio: date, fim: date) -> list[str]
     if not faltando.empty:
         problemas.append(f"Dias faltando: {[d.date().isoformat() for d in faltando]}")
 
-    vazios = tabela[list(VARIAVEIS)].isna().sum()
-    for coluna, quantidade in vazios.items():
-        if quantidade > 0:
-            problemas.append(f"Coluna {coluna} tem {quantidade} valor(es) vazio(s)")
+    vazios = int(tabela[COLUNA].isna().sum())
+    if vazios > 0:
+        problemas.append(f"Coluna {COLUNA} tem {vazios} valor(es) vazio(s)")
 
     return problemas
 
@@ -153,15 +149,13 @@ def comparar_sobreposicao(historico: pd.DataFrame, recentes: pd.DataFrame) -> pd
 
     As APIs usam modelos diferentes (reanálise x previsão), então os valores não batem
     exatamente. Medir essa diferença mostra quanto "ruído" a junção pode introduzir.
-    Devolve uma linha por dia com a diferença (previsão - histórico) de cada variável.
+    Devolve uma linha por dia com a diferença (previsão - histórico).
     """
-    colunas = list(VARIAVEIS)
-    juntas = historico.dropna(subset=colunas).merge(
-        recentes.dropna(subset=colunas), on="data", suffixes=("_hist", "_prev")
+    juntas = historico.dropna(subset=[COLUNA]).merge(
+        recentes.dropna(subset=[COLUNA]), on="data", suffixes=("_hist", "_prev")
     )
     diferencas = pd.DataFrame({"data": juntas["data"]})
-    for coluna in colunas:
-        diferencas[f"dif_{coluna}"] = juntas[f"{coluna}_prev"] - juntas[f"{coluna}_hist"]
+    diferencas[f"dif_{COLUNA}"] = juntas[f"{COLUNA}_prev"] - juntas[f"{COLUNA}_hist"]
     return diferencas
 
 

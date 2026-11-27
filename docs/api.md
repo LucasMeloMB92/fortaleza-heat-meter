@@ -32,14 +32,16 @@ Endereço base: `http://127.0.0.1:5000/api`. Para recarregar ao editar o código
   | `/api/saude`, `/api/opcoes`, `/api/serie` | ~2 ms | ~2 ms |
   | `/api/previsao` (SARIMA) | ~6 s | ~3 ms |
   | `/api/metricas` (roda os 5 modelos) | ~11 s | ~25 ms |
-  | `/api/teste` (depois de `/metricas` da mesma variável) | ~3 ms | ~3 ms |
+  | `/api/teste` (depois de `/metricas`) | ~3 ms | ~3 ms |
   | `/api/caso-estudo` (3 cenários x 5 modelos) | ~30 s | ~5 ms |
-| `/api/previsao` (Chronos-2) | ~1–2 s (carrega o modelo) | ~3 ms |
+  | `/api/previsao` (Chronos-2) | ~1–2 s (carrega o modelo) | ~3 ms |
 
   Tempos medidos com 4 modelos; o Chronos-2 (D47) soma ~1–2 s só na 1ª chamada do processo
   (carregar o modelo na memória) e ~0,06 s por previsão. Na 1ª vez em um computador, ele ainda
   baixa o modelo (456 MB) do Hugging Face.
 
+- **Uma série só (D52):** a API trata só a **temperatura média** diária. O parâmetro `variavel`
+  (que escolhia entre temperatura e sensação térmica) foi removido; se for enviado, é ignorado.
 - **CORS (D39):** o navegador só deixa chamar a API a partir de `http://localhost:5173` e
   `http://127.0.0.1:5173` (o frontend em desenvolvimento). Outras origens não recebem o cabeçalho
   `Access-Control-Allow-Origin`.
@@ -48,8 +50,7 @@ Endereço base: `http://127.0.0.1:5000/api`. Para recarregar ao editar o código
 
 | Parâmetro | Valores aceitos | Padrão |
 |---|---|---|
-| `variavel` | `temperatura`, `sensacao` | `temperatura` |
-| `modelo` | `linha_base`, `ets`, `sarima`, `prophet`, `chronos` | `sarima` |
+| `modelo` | `linha_base`, `ets`, `sarima`, `prophet`, `chronos` | `chronos` (recomendado — D52) |
 | `horizonte` | inteiro de 1 a 14 (dias) | `7` |
 
 ### Erros
@@ -58,7 +59,7 @@ Todos os erros vêm em JSON:
 
 | Status | Quando | Exemplo de corpo |
 |---|---|---|
-| **400** | parâmetro inválido | `{"erro": "Variável inválida: 'chuva'.", "parametro": "variavel", "valores_aceitos": ["temperatura", "sensacao"]}` |
+| **400** | parâmetro inválido | `{"erro": "Modelo inválido: 'arima_magico'.", "parametro": "modelo", "valores_aceitos": ["linha_base", "ets", "sarima", "prophet", "chronos"]}` |
 | **400** | horizonte fora do limite | `{"erro": "Horizonte fora do limite: 30. Use um número inteiro de 1 a 14.", "parametro": "horizonte"}` |
 | **404** | rota inexistente | `{"erro": "Rota não encontrada. Veja as rotas disponíveis em docs/api.md.", "status": 404}` |
 | **405** | método diferente de GET | `{"erro": "Método não permitido nesta rota. A API só aceita GET.", "status": 405}` |
@@ -109,7 +110,7 @@ Exemplo com falha na atualização (a API continua respondendo com os dados que 
 
 ## GET `/api/opcoes`
 
-Variáveis, modelos e limites aceitos — o frontend usa para montar os seletores sem repetir listas.
+Série, modelos e limites aceitos — o frontend usa para montar os seletores sem repetir listas.
 
 - **Parâmetros:** nenhum.
 - **Requisição:** `GET /api/opcoes`
@@ -117,10 +118,7 @@ Variáveis, modelos e limites aceitos — o frontend usa para montar os seletore
 
 ```json
 {
-  "variaveis": [
-    { "id": "temperatura", "nome": "Temperatura média", "unidade": "°C" },
-    { "id": "sensacao", "nome": "Sensação térmica média", "unidade": "°C" }
-  ],
+  "serie": { "nome": "Temperatura média", "unidade": "°C" },
   "modelos": [
     { "id": "linha_base", "nome": "Linha de base (média 7 dias)" },
     { "id": "ets", "nome": "ETS" },
@@ -128,7 +126,7 @@ Variáveis, modelos e limites aceitos — o frontend usa para montar os seletore
     { "id": "prophet", "nome": "Prophet" },
     { "id": "chronos", "nome": "Chronos-2" }
   ],
-  "padroes": { "variavel": "temperatura", "modelo": "sarima" },
+  "padroes": { "modelo": "chronos" },
   "horizonte": { "padrao": 7, "minimo": 1, "maximo": 14 },
   "nivel_intervalo": 0.95
 }
@@ -138,15 +136,14 @@ Variáveis, modelos e limites aceitos — o frontend usa para montar os seletore
 
 ## GET `/api/serie`
 
-Histórico de 90 dias de uma variável.
+Histórico de 90 dias da temperatura média.
 
-- **Parâmetros:** `variavel`.
-- **Requisição:** `GET /api/serie?variavel=temperatura`
+- **Parâmetros:** nenhum.
+- **Requisição:** `GET /api/serie`
 - **Resposta 200** (lista `dados` encurtada):
 
 ```json
 {
-  "variavel": "temperatura",
   "nome": "Temperatura média",
   "unidade": "°C",
   "periodo": { "inicio": "2026-08-28", "fim": "2026-11-25", "dias": 90 },
@@ -157,9 +154,7 @@ Histórico de 90 dias de uma variável.
 }
 ```
 
-- O card "Ranking geral" da tela (D48) usa esta rota para as duas variáveis e monta o ranking
-  no próprio frontend (`frontend/src/ranking.ts`).
-- **Erros:** 400 (`variavel` inválida).
+- A tela não usa esta rota (o histórico já vem em `/api/previsao`); ela fica para consultas diretas.
 
 ---
 
@@ -168,13 +163,12 @@ Histórico de 90 dias de uma variável.
 Histórico + previsão dos próximos dias com faixa de 95%. Alimenta o **gráfico principal**. O
 modelo é treinado com os 90 dias.
 
-- **Parâmetros:** `variavel`, `modelo`, `horizonte`.
-- **Requisição:** `GET /api/previsao?variavel=temperatura&modelo=sarima&horizonte=7`
+- **Parâmetros:** `modelo`, `horizonte`.
+- **Requisição:** `GET /api/previsao?modelo=sarima&horizonte=7`
 - **Resposta 200** (listas encurtadas):
 
 ```json
 {
-  "variavel": "temperatura",
   "modelo": "sarima",
   "nome_modelo": "SARIMA",
   "horizonte": 7,
@@ -193,7 +187,7 @@ modelo é treinado com os 90 dias.
 
 - `configuracao`: o que o modelo escolheu sozinho (ex.: ordem do SARIMA pelo AICc).
 - `inferior`/`superior`: limites da faixa onde o valor real deve cair com 95% de chance.
-- **Erros:** 400 (`variavel`, `modelo` ou `horizonte` inválidos).
+- **Erros:** 400 (`modelo` ou `horizonte` inválidos).
 
 ---
 
@@ -202,13 +196,12 @@ modelo é treinado com os 90 dias.
 Tabela comparativa dos 5 modelos no período de teste (treino nos 80 primeiros dias, teste nos
 10 últimos). Alimenta a **tabela de métricas**.
 
-- **Parâmetros:** `variavel`.
-- **Requisição:** `GET /api/metricas?variavel=temperatura`
+- **Parâmetros:** nenhum.
+- **Requisição:** `GET /api/metricas`
 - **Resposta 200** (2 dos 5 modelos mostrados):
 
 ```json
 {
-  "variavel": "temperatura",
   "teste": { "inicio": "2026-11-16", "fim": "2026-11-25", "dias": 10 },
   "metricas": [
     {
@@ -239,8 +232,6 @@ Tabela comparativa dos 5 modelos no período de teste (treino nos 80 primeiros d
 | `largura_faixa` | largura média da faixa de 95% em °C (D48): faixa estreita que acerta = previsão útil |
 | `mae_vs_linha_base` | % a menos (−) ou a mais (+) de erro que a linha de base |
 
-- **Erros:** 400 (`variavel` inválida).
-
 ---
 
 ## GET `/api/teste`
@@ -248,13 +239,12 @@ Tabela comparativa dos 5 modelos no período de teste (treino nos 80 primeiros d
 Previsão x real, dia a dia, no período de teste, para um modelo. Alimenta o **gráfico de
 previsão x real**.
 
-- **Parâmetros:** `variavel`, `modelo`.
-- **Requisição:** `GET /api/teste?variavel=temperatura&modelo=sarima`
+- **Parâmetros:** `modelo`.
+- **Requisição:** `GET /api/teste?modelo=sarima`
 - **Resposta 200** (listas encurtadas):
 
 ```json
 {
-  "variavel": "temperatura",
   "modelo": "sarima",
   "nome_modelo": "SARIMA",
   "configuracao": "SARIMA(1, 0, 0) (sem parte sazonal) + tendência linear",
@@ -279,7 +269,7 @@ previsão x real**.
 
 - `treino_final`: os 20 últimos dias do treino, para dar contexto ao gráfico.
 - `erro` = previsão − real (positivo = previu alto demais).
-- **Erros:** 400 (`variavel` ou `modelo` inválidos).
+- **Erros:** 400 (`modelo` inválido).
 
 ---
 
@@ -289,37 +279,36 @@ Caso de estudo de quebra estrutural: o mesmo modelo treinado **só antes** da mu
 **tudo** e **só depois**, todos avaliados no mesmo período de teste. Alimenta a **visualização
 antes x depois**.
 
-- **Parâmetros:** `variavel`; `modelo` **opcional** (sem ele, vêm os 5 modelos).
-- **Requisição:** `GET /api/caso-estudo?variavel=sensacao&modelo=sarima`
+- **Parâmetros:** `modelo` **opcional** (sem ele, vêm os 5 modelos).
+- **Requisição:** `GET /api/caso-estudo?modelo=sarima`
 - **Resposta 200** (listas encurtadas):
 
 ```json
 {
-  "variavel": "sensacao",
-  "data_mudanca": "2026-10-23",
+  "data_mudanca": "2026-10-15",
   "teste": { "inicio": "2026-11-16", "fim": "2026-11-25", "dias": 10 },
   "cenarios": [
     { "id": "so_antes", "nome": "Só antes da mudança",
-      "inicio": "2026-08-28", "fim": "2026-10-22", "dias": 56, "media_treino": 30.3 },
+      "inicio": "2026-08-28", "fim": "2026-10-14", "dias": 48, "media_treino": 27.79 },
     { "id": "tudo", "nome": "Tudo (até a véspera do teste)",
-      "inicio": "2026-08-28", "fim": "2026-11-15", "dias": 80, "media_treino": 30.72 },
+      "inicio": "2026-08-28", "fim": "2026-11-15", "dias": 80, "media_treino": 28.06 },
     { "id": "so_depois", "nome": "Só depois da mudança",
-      "inicio": "2026-10-23", "fim": "2026-11-15", "dias": 24, "media_treino": 31.68 }
+      "inicio": "2026-10-15", "fim": "2026-11-15", "dias": 32, "media_treino": 28.48 }
   ],
   "real": [
-    { "data": "2026-08-28", "valor": 30.1 },
-    { "data": "2026-08-29", "valor": 29.8 }
+    { "data": "2026-08-28", "valor": 27.8 },
+    { "data": "2026-08-29", "valor": 27.6 }
   ],
   "resultados": [
     {
       "cenario": "so_antes",
       "modelo": "sarima",
       "nome_modelo": "SARIMA",
-      "horizonte": 34,
-      "metricas": { "mae": 1.79, "rmse": 1.84, "cobertura": 0.0, "mae_dias_1_7": 1.67, "vies": -1.79, "largura_faixa": 1.77 },
+      "horizonte": 42,
+      "metricas": { "mae": 1.11, "rmse": 1.16, "cobertura": 10.0, "mae_dias_1_7": 0.98, "vies": -1.05, "largura_faixa": 1.05 },
       "previsao": [
-        { "data": "2026-10-23", "previsao": 30.48, "inferior": 29.76, "superior": 31.2 },
-        { "data": "2026-10-24", "previsao": 30.4, "inferior": 29.57, "superior": 31.24 }
+        { "data": "2026-10-15", "previsao": 27.84, "inferior": 27.37, "superior": 28.32 },
+        { "data": "2026-10-16", "previsao": 27.81, "inferior": 27.3, "superior": 28.31 }
       ]
     },
     {
@@ -327,9 +316,9 @@ antes x depois**.
       "modelo": "sarima",
       "nome_modelo": "SARIMA",
       "horizonte": 10,
-      "metricas": { "mae": 0.29, "rmse": 0.44, "cobertura": 100.0, "mae_dias_1_7": 0.22, "vies": -0.16, "largura_faixa": 2.02 },
+      "metricas": { "mae": 0.38, "rmse": 0.5, "cobertura": 90.0, "mae_dias_1_7": 0.35, "vies": -0.1, "largura_faixa": 1.14 },
       "previsao": [
-        { "data": "2026-11-16", "previsao": 32.0, "inferior": 31.21, "superior": 32.79 }
+        { "data": "2026-11-16", "previsao": 28.77, "inferior": 28.25, "superior": 29.29 }
       ]
     }
   ]
@@ -337,10 +326,10 @@ antes x depois**.
 ```
 
 - `data_mudanca`: detectada automaticamente na anomalia (diferença para o normal dos anos
-  anteriores) — 15/10 para temperatura, 23/10 para sensação.
+  anteriores) — 15/10/2026.
 - `horizonte`: dias previstos a partir do fim do treino de cada cenário (o "só antes" prevê de
   mais longe). As `metricas` usam só os dias do período de `teste`.
-- **Erros:** 400 (`variavel` ou `modelo` inválidos).
+- **Erros:** 400 (`modelo` inválido).
 
 ---
 
@@ -351,7 +340,7 @@ D26, D50). Separa o que é estação do ano do que é anomalia. Alimenta a aba *
 do card "Visão geral dos modelos". Os dados servem só para **entender** a série (os modelos não
 os usam).
 
-- **Parâmetros:** nenhum (vêm as duas variáveis).
+- **Parâmetros:** nenhum.
 - **Requisição:** `GET /api/contexto`
 - **Cálculo leve, fora da fila dos modelos:** responde em menos de 1 s mesmo quando a fila está
   ocupada (trava própria, `_calculo_leve`). Fica em cache até o dia virar (D44).
@@ -359,33 +348,28 @@ os usam).
 
 ```json
 {
+  "nome": "Temperatura média",
   "ano_atual": 2026,
   "anos_anteriores": [2024, 2025],
   "dias_subida": 15,
   "dias_anomalia_recente": 10,
-  "variaveis": [
-    {
-      "id": "temperatura",
-      "nome": "Temperatura média",
-      "anos": [
-        { "ano": 2024, "inicio": "2024-08-28", "fim": "2024-11-25", "dias": 90, "media": 27.34, "subida": 0.95 },
-        { "ano": 2025, "inicio": "2025-08-28", "fim": "2025-11-25", "dias": 90, "media": 27.63, "subida": 0.55 },
-        { "ano": 2026, "inicio": "2026-08-28", "fim": "2026-11-25", "dias": 90, "media": 28.15, "subida": 0.94 }
-      ],
-      "anomalia_media": 0.66,
-      "anomalia_recente": 0.79,
-      "mudanca": { "data": "2026-10-15", "anomalia_antes": 0.49, "anomalia_depois": 0.86 },
-      "dias": [
-        { "data": "2026-08-28", "valores": { "2024": 27.3, "2025": 27.8, "2026": 27.8 }, "normal": 27.29, "anomalia": 0.51 }
-      ]
-    }
+  "anos": [
+    { "ano": 2024, "inicio": "2024-08-28", "fim": "2024-11-25", "dias": 90, "media": 27.34, "subida": 0.95 },
+    { "ano": 2025, "inicio": "2025-08-28", "fim": "2025-11-25", "dias": 90, "media": 27.63, "subida": 0.55 },
+    { "ano": 2026, "inicio": "2026-08-28", "fim": "2026-11-25", "dias": 90, "media": 28.15, "subida": 0.94 }
+  ],
+  "anomalia_media": 0.66,
+  "anomalia_recente": 0.79,
+  "mudanca": { "data": "2026-10-15", "anomalia_antes": 0.49, "anomalia_depois": 0.86 },
+  "dias": [
+    { "data": "2026-08-28", "valores": { "2024": 27.3, "2025": 27.8, "2026": 27.8 }, "normal": 27.29, "anomalia": 0.51 }
   ]
 }
 ```
 
 | Campo | Significado |
 |---|---|
-| `anos[].media` | média da variável no mesmo período do calendário naquele ano |
+| `anos[].media` | média da temperatura no mesmo período do calendário naquele ano |
 | `anos[].subida` | média dos últimos `dias_subida` dias − média dos primeiros (se todo ano sobe = estação) |
 | `anomalia_media` | quanto o período atual ficou acima (+) ou abaixo (−) do normal, em média |
 | `anomalia_recente` | o mesmo, só nos últimos `dias_anomalia_recente` dias |
