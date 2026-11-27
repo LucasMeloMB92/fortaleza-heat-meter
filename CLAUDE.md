@@ -72,12 +72,13 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
   Melhorias ainda registradas no relatório: textos por IA (Gemma/Gemini), outras métricas
   (cliente ainda sem métrica real — exemplo genérico: vendas diárias), publicação online,
   repetir a comparação em várias semanas.
-- **Card "Visão geral dos modelos" com abas (D49) ✅** — no topo da tela, todos os modelos, sem
-  depender dos seletores; só a aba aberta busca dados. Abas: Caso de estudo (`casoGeral.ts`),
-  Anos anteriores (D50, `/api/contexto`;
-  relatório seção 3 "Comparação com os anos anteriores"). Compara com 2 anos anteriores (2024,
-  2025): o CSV de contexto começa em 26-11-2023.
-- **Última decisão registrada: D52** — a próxima é D53 (`docs/decisoes.md`).
+- **Menos peças (D53–D56) ✅** — as abas da "Visão geral" (D49) saíram. Caso de estudo = um card só:
+  tabela de todos os modelos (`casoGeral.ts`) + gráfico do modelo escolhido, de UMA consulta
+  (`/api/caso-estudo` sem parâmetros; a tela filtra). Card próprio "Comparação com os anos
+  anteriores" (D50, `/api/contexto`; relatório seção 3). Compara com 2 anos anteriores (2024,
+  2025): o CSV de contexto começa em 26-11-2023. Saíram `/api/serie` (D54), `padroes` de
+  `/api/opcoes` (D55) e os campos opcionais "para API antiga" no frontend (D56).
+- **Última decisão registrada: D56** — a próxima é D57 (`docs/decisoes.md`).
 - **Para retomar:** leia o fim de `docs/diario.md` (inclui as dúvidas discutidas). Para ver a tela:
   suba `backend` e `frontend` pelo `.claude/launch.json`. Os números da documentação são um retrato
   de 26-11-2026; a ferramenta atualiza os dados sozinha todo dia (D44).
@@ -96,7 +97,7 @@ Além de construir, o objetivo é **aprender e documentar cada decisão**.
    linguagem simples D46)
 8. Relatório final ✅
 
-Evoluções depois da POC: 11.2 Chronos-2 ✅ (D47); simplificação só temperatura ✅ (D52).
+Evoluções depois da POC: 11.2 Chronos-2 ✅ (D47); simplificação só temperatura ✅ (D52); menos peças ✅ (D53–D56).
 
 Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 
@@ -127,7 +128,7 @@ Atualize a marcação ✅ e o `docs/diario.md` ao concluir cada etapa.
 
 ### API (etapa 6)
 - `backend/app.py` (rotas, erros, CORS) + `backend/previsao/servico.py` (respostas + cache).
-- 8 rotas GET em `/api`: saude, opcoes, serie, previsao, metricas, teste, caso-estudo, contexto (D50,
+- 7 rotas GET em `/api`: saude, opcoes, previsao, metricas, teste, caso-estudo, contexto (D50,
   sem parâmetros; cálculo leve com trava própria `_calculo_leve`, fora da fila dos modelos). Parâmetros
   `modelo` (padrão `chronos`) e `horizonte` (1–14); sem `variavel` (D52). Detalhes em `docs/api.md`.
 - Cache em memória, calcula no 1º pedido, em fila única com RLock (D37 + atualização). CORS só

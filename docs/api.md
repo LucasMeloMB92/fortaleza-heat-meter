@@ -29,7 +29,7 @@ Endereço base: `http://127.0.0.1:5000/api`. Para recarregar ao editar o código
 
   | Pedido | 1ª chamada | Seguintes |
   |---|---|---|
-  | `/api/saude`, `/api/opcoes`, `/api/serie` | ~2 ms | ~2 ms |
+  | `/api/saude`, `/api/opcoes` | ~2 ms | ~2 ms |
   | `/api/previsao` (SARIMA) | ~6 s | ~3 ms |
   | `/api/metricas` (roda os 5 modelos) | ~11 s | ~25 ms |
   | `/api/teste` (depois de `/metricas`) | ~3 ms | ~3 ms |
@@ -126,35 +126,13 @@ Série, modelos e limites aceitos — o frontend usa para montar os seletores se
     { "id": "prophet", "nome": "Prophet" },
     { "id": "chronos", "nome": "Chronos-2" }
   ],
-  "padroes": { "modelo": "chronos" },
   "horizonte": { "padrao": 7, "minimo": 1, "maximo": 14 },
   "nivel_intervalo": 0.95
 }
 ```
 
----
-
-## GET `/api/serie`
-
-Histórico de 90 dias da temperatura média.
-
-- **Parâmetros:** nenhum.
-- **Requisição:** `GET /api/serie`
-- **Resposta 200** (lista `dados` encurtada):
-
-```json
-{
-  "nome": "Temperatura média",
-  "unidade": "°C",
-  "periodo": { "inicio": "2026-08-28", "fim": "2026-11-25", "dias": 90 },
-  "dados": [
-    { "data": "2026-08-28", "valor": 27.8 },
-    { "data": "2026-08-29", "valor": 27.6 }
-  ]
-}
-```
-
-- A tela não usa esta rota (o histórico já vem em `/api/previsao`); ela fica para consultas diretas.
+- O modelo inicial da tela é decidido pela própria tela (D55). Sem `modelo` na URL, as rotas usam
+  `chronos` (D52).
 
 ---
 
@@ -276,12 +254,12 @@ previsão x real**.
 ## GET `/api/caso-estudo`
 
 Caso de estudo de quebra estrutural: o mesmo modelo treinado **só antes** da mudança, com
-**tudo** e **só depois**, todos avaliados no mesmo período de teste. Alimenta a **visualização
-antes x depois**.
+**tudo** e **só depois**, todos avaliados no mesmo período de teste. Alimenta o card **"Caso de
+estudo"**: a tabela usa todos os modelos e o gráfico filtra, na tela, o modelo escolhido (D53).
 
-- **Parâmetros:** `modelo` **opcional** (sem ele, vêm os 5 modelos).
-- **Requisição:** `GET /api/caso-estudo?modelo=sarima`
-- **Resposta 200** (listas encurtadas):
+- **Parâmetros:** nenhum — sempre vêm os 5 modelos (o cálculo já roda para todos de uma vez).
+- **Requisição:** `GET /api/caso-estudo`
+- **Resposta 200** (listas encurtadas; só o SARIMA aparece em `resultados`):
 
 ```json
 {
@@ -329,15 +307,14 @@ antes x depois**.
   anteriores) — 15/10/2026.
 - `horizonte`: dias previstos a partir do fim do treino de cada cenário (o "só antes" prevê de
   mais longe). As `metricas` usam só os dias do período de `teste`.
-- **Erros:** 400 (`modelo` inválido).
 
 ---
 
 ## GET `/api/contexto`
 
 Os 90 dias de agora comparados com **o mesmo período do calendário nos anos anteriores** (D24,
-D26, D50). Separa o que é estação do ano do que é anomalia. Alimenta a aba **"Anos anteriores"**
-do card "Visão geral dos modelos". Os dados servem só para **entender** a série (os modelos não
+D26, D50). Separa o que é estação do ano do que é anomalia. Alimenta o card **"Comparação com
+os anos anteriores"**. Os dados servem só para **entender** a série (os modelos não
 os usam).
 
 - **Parâmetros:** nenhum.

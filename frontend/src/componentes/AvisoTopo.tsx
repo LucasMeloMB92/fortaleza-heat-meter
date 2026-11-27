@@ -27,10 +27,10 @@ export function AvisoTopo(props: { saude: UseQueryResult<Saude>; aoTentarDeNovo:
     )
   }
 
-  // Defensivo: uma API antiga (sem o campo "atualizacao") não pode quebrar a faixa — isso
-  // aconteceu de verdade no teste da tela, com uma resposta guardada de antes da mudança.
+  // Se um backend antigo (sem "atualizacao") estiver rodando, o LimiteDeErro em volta desta
+  // faixa a esconde sem derrubar a página (D45, D56).
   const { atualizacao, dados } = saude.data
-  if (atualizacao && !atualizacao.em_dia) {
+  if (!atualizacao.em_dia) {
     return (
       <Faixa tipo="alerta" aoTentarDeNovo={props.aoTentarDeNovo}>
         <strong>Dados desatualizados.</strong> Não foi possível buscar os dias mais recentes no

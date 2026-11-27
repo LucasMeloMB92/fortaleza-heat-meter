@@ -156,7 +156,7 @@ export function rotuloVsRegraSimples(linha: LinhaMetricas): string {
 }
 
 /**
- * Texto da aba "Caso de estudo" da visão geral (todos os modelos). Regras:
+ * Texto do caso de estudo com todos os modelos (topo do card — D53). Regras:
  * - "sofreu" = erro "só antes" ≥ 1,3x o erro com todos os dias;
  * - "quase não sentiu" = abaixo de 1,3x;
  * - faixa "confiante no nível errado" = dos que sofreram, acertou a faixa em metade dos dias ou
@@ -212,7 +212,7 @@ const LIMITE_ANOMALIA = 0.3
 const LIMITE_SUBIDA = 0.2
 
 /**
- * Texto da aba "Anos anteriores" (D50). Regras:
+ * Texto do card "Comparação com os anos anteriores" (D50). Regras:
  * - nível: anomalia média ≥ 0,3 °C = acima do normal; ≤ −0,3 = abaixo; senão perto do normal;
  * - estação: se TODOS os anos subiram ≥ 0,2 °C no período, a subida é da estação do ano;
  * - degrau: a data em que a anomalia mudou de patamar (a mesma do caso de estudo).

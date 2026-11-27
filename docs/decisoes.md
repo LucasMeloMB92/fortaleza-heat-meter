@@ -735,3 +735,49 @@ durante o projeto e aprovadas.
 - **Custo:** a faixa do Chronos-2 é ~2x mais larga (2,14 x 1,14 °C do SARIMA). E dois testes de
   10 dias ainda são pouco: antes de fixar um modelo em produção, repetir a comparação em várias
   semanas.
+
+## D53 — Caso de estudo em um card só, com uma consulta _(usuário)_
+- **Decisão:** como mostrar o caso de estudo, que aparecia duas vezes na tela.
+- **Contexto:** a aba "Caso de estudo" da visão geral (D49) mostrava a tabela com todos os
+  modelos, e o card de baixo mostrava o gráfico de um modelo, com outra consulta
+  (`/api/caso-estudo?modelo=...`). Mas o backend já calcula as 15 combinações (3 cenários x 5
+  modelos) de uma vez, mesmo quando se pede um modelo só: a segunda consulta não economizava nada.
+- **Opções consideradas:** (a) manter as duas partes separadas; (b) **um card só**: tabela de
+  todos os modelos em cima e, embaixo, gráfico + cenários do modelo escolhido, tudo de uma
+  consulta.
+- **Escolha:** (b). `/api/caso-estudo` não tem mais parâmetro e sempre devolve os 5 modelos; a tela
+  filtra o modelo escolhido (`CasoEstudo.tsx`). Clicar num modelo da tabela troca o gráfico **sem
+  chamar a API de novo**. Com isso a "Visão geral" ficou com uma aba só e as abas saíram
+  (`VisaoGeral.tsx` apagado): "Anos anteriores" virou o card **"Comparação com os anos
+  anteriores"**, logo antes do caso de estudo (ele explica de onde vem a data da mudança).
+- **Por quê:** menos uma consulta, menos um parâmetro (`validar_modelo` perdeu o `obrigatorio`) e
+  menos um componente; o caso de estudo fica num lugar só.
+- **Custo:** o caso de estudo com todos os modelos é calculado ao abrir a tela (antes só ao abrir a
+  aba). Na prática não muda nada: o card de baixo já pedia o caso de estudo ao abrir, e o backend
+  já calculava todos os modelos.
+
+## D54 — Rota `/api/serie` removida _(usuário)_
+- **Decisão:** manter ou não a rota que devolvia só o histórico de 90 dias.
+- **Opções consideradas:** (a) manter "para consultas diretas"; (b) remover.
+- **Escolha:** (b). A tela nunca usou essa rota: `/api/previsao` já devolve o `historico`.
+- **Por quê:** uma rota sem uso é código, teste e documentação para manter sem benefício. A API
+  ficou com 7 rotas.
+
+## D55 — `padroes` removido de `/api/opcoes` _(usuário)_
+- **Decisão:** quem define o modelo inicial da tela.
+- **Contexto:** `/api/opcoes` devolvia `padroes: {modelo: "chronos"}`, mas a tela não lia esse campo:
+  o modelo inicial (`chronos`) e o horizonte (7) já estavam fixos em `App.tsx` (a tela precisa
+  deles antes de a API responder).
+- **Opções consideradas:** (a) a tela passar a ler `padroes` (esperar a API para montar o estado);
+  (b) **remover `padroes`** e deixar a tela decidir.
+- **Escolha:** (b). Sem `modelo` na URL, as rotas continuam usando `MODELO_PADRAO = "chronos"`.
+- **Por quê:** um campo que ninguém lê dá a impressão errada de que muda algo na tela.
+
+## D56 — Campos "para API antiga" viraram obrigatórios no frontend _(usuário)_
+- **Decisão:** manter `largura_faixa?` e `atualizacao?` como opcionais nos tipos do frontend.
+- **Contexto:** eram opcionais porque, num teste da tela, um backend antigo (rodando com código de
+  antes) respondeu sem esses campos.
+- **Opções consideradas:** (a) manter opcionais e as checagens; (b) **obrigatórios**.
+- **Escolha:** (b). Frontend e backend ficam no mesmo repositório e mudam juntos.
+- **Por quê:** menos `?` e checagens espalhadas. Se um backend antigo responder, o limite de erro
+  em volta da faixa de aviso (D45) esconde só a faixa, sem derrubar a página.

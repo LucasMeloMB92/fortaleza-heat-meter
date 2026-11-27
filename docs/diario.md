@@ -792,3 +792,27 @@ retrato de 25-11 para bater com os documentos.
   isso repetir a comparação em várias semanas é o próximo passo antes de fixar um modelo.
 - **Tirar uma série mudou o formato das funções, não só apagou linhas:** `anomalia` passou a
   devolver uma série e o caso de estudo uma data só — o código ficou mais simples de ler.
+
+---
+
+## Simplificação: menos peças (D53–D56) — 27-11-2026
+
+### O que foi feito
+Pedido: mapear o projeto e achar o que ainda dava para simplificar sem perder o objetivo.
+- **Caso de estudo num card só (D53):** tabela de todos os modelos + gráfico do modelo escolhido,
+  de uma consulta (`/api/caso-estudo` sem parâmetro). As abas da "Visão geral" saíram;
+  "Anos anteriores" virou um card próprio.
+- **`/api/serie` removida (D54)**, **`padroes` fora de `/api/opcoes` (D55)**, **tipos sem campos
+  opcionais "para API antiga" (D56)**.
+- Backend: **69 testes** + ruff limpo. Frontend: **35 testes** + tsc + oxlint + build limpos. Tela
+  conferida: uma única chamada a `/api/caso-estudo`; clicar em outro modelo na tabela troca o
+  gráfico sem nova chamada; console sem erros.
+- **Layout dos seletores (pedido do usuário):** sobrava muito espaço à direita. Agora são duas
+  colunas: modelo e horizonte lado a lado à esquerda; "Sobre o modelo" ocupa o resto da linha. No
+  celular, a descrição desce para baixo dos controles.
+
+### O que aprendi
+- **Duas consultas para o mesmo cálculo é complexidade escondida.** O backend já fazia tudo de uma
+  vez; filtrar na tela é mais simples que pedir de novo.
+- **Código "por via das dúvidas" (rota sem uso, campo que ninguém lê, checagem para API antiga)
+  vai se acumulando.** Mapear quem usa cada peça é um jeito rápido de achar o que pode sair.

@@ -1,6 +1,6 @@
-// Aba "Caso de estudo" da visão geral: TODOS os modelos — quanto o erro piorou quando o modelo só
-// conhecia os dias antes da mudança (D35, D49). Contas em casoGeral.ts; frase em textos.ts (D46).
-// O gráfico de um modelo de cada vez continua no card de baixo.
+// Parte de cima do card "Caso de estudo": TODOS os modelos — quanto o erro piorou quando o modelo
+// só conhecia os dias antes da mudança (D35, D53). Contas em casoGeral.ts; frase em textos.ts (D46).
+// O gráfico do modelo escolhido vem logo abaixo, no mesmo card (CasoEstudo.tsx).
 import type { Modelo, RespostaCasoEstudo } from '../api'
 import { acertosSoAntes, impactos, LIMITE_PIOROU } from '../casoGeral'
 import { formatarData, formatarGraus, formatarNumero } from '../formatacao'

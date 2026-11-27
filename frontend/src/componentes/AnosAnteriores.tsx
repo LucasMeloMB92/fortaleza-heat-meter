@@ -1,4 +1,4 @@
-// Aba "Anos anteriores" da visão geral (D50): o período de agora comparado com o mesmo período
+// Card "Comparação com os anos anteriores" (D50): o período de agora comparado com o mesmo período
 // do calendário nos anos anteriores — separa o que é estação do ano do que é anomalia.
 // É sobre os DADOS (não sobre os modelos) e explica de onde vem a data do caso de estudo.
 import { lazy } from 'react'

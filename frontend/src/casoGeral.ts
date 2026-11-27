@@ -1,4 +1,4 @@
-// Caso de estudo com TODOS os modelos (aba da visão geral): para cada modelo, quanto o
+// Caso de estudo com TODOS os modelos (parte de cima do card "Caso de estudo"): para cada modelo, quanto o
 // erro piorou quando ele só conhecia os dias antes da mudança. Funções puras (só contas);
 // as frases ficam em textos.ts (D46). Testadas em casoGeral.test.ts.
 import type { Metricas, Modelo, RespostaCasoEstudo } from './api'

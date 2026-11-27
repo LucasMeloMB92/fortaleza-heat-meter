@@ -1,5 +1,7 @@
 // Caso de estudo (quebra estrutural): o mesmo modelo treinado só ANTES da mudança, com TUDO e
 // só DEPOIS — todos comparados no mesmo período de teste (decisão D35).
+// Um card só (D53): em cima, a tabela com TODOS os modelos (CasoEstudoGeral); embaixo, o gráfico
+// e os cenários do modelo escolhido — filtrado aqui da mesma resposta, sem outra consulta.
 import {
   Area,
   CartesianGrid,
@@ -13,11 +15,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import type { Cenario, RespostaCasoEstudo } from '../api'
+import type { Cenario, Modelo, RespostaCasoEstudo } from '../api'
 import { COR_GRADE, COR_REAL, COR_TEXTO_2, corCenario } from '../cores'
 import { formatarComSinal, formatarData, formatarGraus } from '../formatacao'
 import { AJUDA, textoCasoEstudo } from '../textos'
 import { Ajuda } from './Ajuda'
+import { CasoEstudoGeral } from './CasoEstudoGeral'
 import { DicaGrafico } from './DicaGrafico'
 import { PROPS_EIXO_X, PROPS_EIXO_Y } from './eixos'
 
@@ -40,8 +43,14 @@ function montarLinhas(resposta: RespostaCasoEstudo): Linha[] {
   return [...porData.values()].sort((a, b) => a.data.localeCompare(b.data))
 }
 
-export function CasoEstudo(props: { resposta: RespostaCasoEstudo }) {
-  const { resposta } = props
+export function CasoEstudo(props: {
+  resposta: RespostaCasoEstudo
+  modelo: Modelo
+  aoSelecionar: (m: Modelo) => void
+}) {
+  // Só os resultados do modelo escolhido: o texto, o gráfico e a tabela de cenários são dele.
+  const resposta = { ...props.resposta, resultados: props.resposta.resultados.filter((r) => r.modelo === props.modelo) }
+  const nomeModelo = resposta.resultados[0]?.nome_modelo ?? ''
   const metricasPorCenario = new Map(resposta.resultados.map((r) => [r.cenario, r.metricas]))
   const estilo: Record<Cenario, { tracejado: string; faixa: boolean }> = {
     so_antes: { tracejado: '6 4', faixa: true },
@@ -51,8 +60,11 @@ export function CasoEstudo(props: { resposta: RespostaCasoEstudo }) {
 
   return (
     <div>
+      <CasoEstudoGeral resposta={props.resposta} modeloSelecionado={props.modelo} aoSelecionar={props.aoSelecionar} />
+
+      <h3 className="mt-6 border-t border-borda pt-4 text-sm font-semibold">Em detalhe: {nomeModelo}</h3>
       {/* "O que isso significa", com os números reais (D46) — antes do gráfico, para ler primeiro. */}
-      <p className="mb-4 rounded-md bg-plano p-3 text-sm leading-relaxed">
+      <p className="mb-4 mt-2 rounded-md bg-plano p-3 text-sm leading-relaxed">
         <strong>O que isso significa:</strong> {textoCasoEstudo(resposta)}
       </p>
       <div className="h-80" role="img" aria-label="Previsões treinadas antes, com tudo e depois da mudança">

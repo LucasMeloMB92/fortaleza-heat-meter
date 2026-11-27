@@ -33,19 +33,9 @@ export const useTeste = (modelo: Modelo) =>
     queryFn: () => api.teste(modelo),
   })
 
-export const useCasoEstudo = (modelo: Modelo) =>
-  useQuery({
-    queryKey: ['caso-estudo', modelo],
-    queryFn: () => api.casoEstudo(modelo),
-  })
+// Caso de estudo com TODOS os modelos numa consulta só (D53): a tabela usa todos e o gráfico
+// filtra o modelo escolhido. Trocar de modelo não chama a API de novo.
+export const useCasoEstudo = () => useQuery({ queryKey: ['caso-estudo'], queryFn: api.casoEstudo })
 
-// Caso de estudo com TODOS os modelos (aba da visão geral). Só é chamado quando a aba é aberta
-// (o painel só é montado nessa hora) — é o cálculo mais pesado da API.
-export const useCasoEstudoTodos = () =>
-  useQuery({
-    queryKey: ['caso-estudo', 'todos'],
-    queryFn: () => api.casoEstudo(),
-  })
-
-// Comparação com anos anteriores (aba da visão geral, D50). Cálculo leve, sem parâmetros.
+// Comparação com anos anteriores (D50). Cálculo leve, sem parâmetros.
 export const useContexto = () => useQuery({ queryKey: ['contexto'], queryFn: api.contexto })

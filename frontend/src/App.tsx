@@ -1,6 +1,6 @@
-// Tela principal: aviso no topo, visão geral com abas (todos os modelos — D49), seletores e
-// quatro seções (previsão, métricas, teste, caso de estudo). O estado (modelo, horizonte) fica
-// aqui e desce para os componentes. Uma série só: a temperatura média (D52).
+// Tela principal: aviso no topo, seletores e cinco seções (previsão, métricas, teste, anos
+// anteriores, caso de estudo). O estado (modelo, horizonte) fica aqui e desce para os
+// componentes. Uma série só: a temperatura média (D52).
 import { useQueryClient } from '@tanstack/react-query'
 import { lazy, useEffect, useRef, useState } from 'react'
 import type { Modelo } from './api'
@@ -8,10 +8,11 @@ import { AvisoTopo } from './componentes/AvisoTopo'
 import { Cartao, EstadoConsulta } from './componentes/Cartao'
 import { LimiteDeErro } from './componentes/LimiteDeErro'
 import { Seletores } from './componentes/Seletores'
-import { VisaoGeral } from './componentes/VisaoGeral'
 import { TabelaMetricas } from './componentes/TabelaMetricas'
+import { AnosAnteriores } from './componentes/AnosAnteriores'
 import {
   useCasoEstudo,
+  useContexto,
   useMetricas,
   useOpcoes,
   usePrevisao,
@@ -61,7 +62,8 @@ export default function App() {
   const previsao = usePrevisao(modelo, horizonte)
   const metricas = useMetricas()
   const teste = useTeste(modelo)
-  const caso = useCasoEstudo(modelo)
+  const caso = useCasoEstudo()
+  const contexto = useContexto()
 
   const nomeModelo = opcoes.data?.modelos.find((m) => m.id === modelo)?.nome ?? ''
 
@@ -89,8 +91,6 @@ export default function App() {
       <LimiteDeErro titulo="O aviso de situação dos dados não pôde ser exibido.">
         <AvisoTopo saude={saude} aoTentarDeNovo={tentarTudoDeNovo} />
       </LimiteDeErro>
-
-      <VisaoGeral modelo={modelo} aoSelecionar={setModelo} />
 
       <EstadoConsulta
         carregando={opcoes.isPending}
@@ -197,18 +197,36 @@ export default function App() {
       </Cartao>
 
       <Cartao
-        titulo={`Caso de estudo: mudança forte de temperatura${comTraco(nomeModelo)}`}
+        titulo="Comparação com os anos anteriores"
+        atualizando={contexto.isFetching && !contexto.isPending}
+        alturaEsqueleto="h-64"
+        subtitulo="O período de agora comparado com o mesmo período do calendário nos anos anteriores: o que é estação do ano e o que é anomalia."
+      >
+        <EstadoConsulta
+          carregando={contexto.isPending}
+          erro={contexto.error}
+          aoTentarDeNovo={() => contexto.refetch()}
+          alturaEsqueleto="h-64"
+          mensagemCarregando="Comparando com os anos anteriores…"
+          dicaCarregando="Cálculo leve, separado da fila dos modelos: costuma levar menos de 1 segundo."
+        >
+          {contexto.data && <AnosAnteriores resposta={contexto.data} />}
+        </EstadoConsulta>
+      </Cartao>
+
+      <Cartao
+        titulo="Caso de estudo: mudança forte de temperatura"
         atualizando={caso.isFetching && !caso.isPending}
-        subtitulo="E se o modelo só conhecesse os dias antes da mudança? Comparamos três formas de treinar, todas avaliadas no mesmo período de teste."
+        subtitulo="E se o modelo só conhecesse os dias antes da mudança? Três formas de treinar, todas avaliadas no mesmo período de teste. Clique num modelo para ver o gráfico dele."
       >
         <EstadoConsulta
           carregando={caso.isPending}
           erro={caso.error}
           aoTentarDeNovo={() => caso.refetch()}
-          mensagemCarregando="Treinando os 3 cenários (só antes, tudo, só depois)…"
+          mensagemCarregando="Treinando os 3 cenários (só antes, tudo, só depois) de todos os modelos…"
           dicaCarregando="É o cálculo mais pesado: na primeira vez do dia pode levar 1 minuto ou mais."
         >
-          {caso.data && <CasoEstudo resposta={caso.data} />}
+          {caso.data && <CasoEstudo resposta={caso.data} modelo={modelo} aoSelecionar={setModelo} />}
         </EstadoConsulta>
       </Cartao>
 
